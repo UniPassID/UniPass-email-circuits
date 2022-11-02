@@ -1,0 +1,20 @@
+{
+  "name": "unipass-verifier-contract",
+  "version": "1.0.0",
+  "description": "",
+  "main": "hardhat.config.js",
+  "directories": {
+    "test": "test"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@nomiclabs/hardhat-waffle": "^2.0.3",
+    "chai": "^4.3.6",
+    "hardhat": "^2.12.1",
+    "hardhat-contract-sizer": "^2.6.1"
+  }
+}

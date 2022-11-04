@@ -38,13 +38,7 @@ fn main() -> Result<(), SerializationError> {
             }
             println!("----------------------------------------------------------------");
             println!("test circuit 1024-{}", index);
-            let circuit = Email1024CircuitInput::new(
-                &email_private_inputs.email_header,
-                email_private_inputs.from_left_index,
-                email_private_inputs.from_right_index,
-                from_pepper.clone(),
-            )
-            .unwrap();
+            let circuit = Email1024CircuitInput::new(email_private_inputs).unwrap();
             println!("[main] circuit construct finish");
             let mut cs = circuit.synthesize();
             println!("[main] synthesize finish");
@@ -107,6 +101,9 @@ fn main() -> Result<(), SerializationError> {
 
             // gen contract inputs data for test
             let contract_inputs = ContractInput::new(
+                circuit.from_left_index,
+                circuit.from_len,
+                circuit.email_header_pub_match,
                 &public_input,
                 verifier.domain,
                 verifier_comms_1024.as_ref().unwrap(),
@@ -149,13 +146,8 @@ fn main() -> Result<(), SerializationError> {
             // }
             println!("----------------------------------------------------------------");
             println!("Test circuit 2048-{}", index);
-            let circuit = Email2048CircuitInput::new(
-                &email_private_inputs.email_header,
-                email_private_inputs.from_left_index,
-                email_private_inputs.from_right_index,
-                from_pepper.clone(),
-            )
-            .unwrap();
+
+            let circuit = Email2048CircuitInput::new(email_private_inputs).unwrap();
             println!("[main] circuit construct finish");
             let mut cs = circuit.synthesize();
             println!("[main] synthesize finish");
@@ -220,6 +212,9 @@ fn main() -> Result<(), SerializationError> {
 
             // gen contract inputs data for test
             let contract_inputs = ContractInput::new(
+                circuit.from_left_index,
+                circuit.from_len,
+                circuit.email_header_pub_match,
                 &public_input,
                 verifier.domain,
                 verifier_comms_2048.as_ref().unwrap(),

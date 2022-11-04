@@ -553,6 +553,7 @@ dependencies = [
  "ark-poly-commit",
  "ark-serialize",
  "ark-std",
+ "email-parser",
  "hex",
  "plonk",
  "serde",

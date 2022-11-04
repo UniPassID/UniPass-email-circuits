@@ -4,28 +4,27 @@ import "./PlonkCoreLib.sol";
 import "./PlookupSingleCore.sol";
 import "hardhat/console.sol";
 
-contract UnipassVerifier is
-    Plonk4SingleVerifierWithAccessToDNext
-{
+contract UnipassVerifier is Plonk4SingleVerifierWithAccessToDNext {
     uint256 constant SERIALIZED_PROOF_LENGTH = 0;
 
     address admin;
 
-    modifier adminOnly {
+    modifier adminOnly() {
         require(msg.sender == admin, "!_!");
         _;
     }
 
-    receive() external payable { }
+    receive() external payable {}
 
-    constructor () public {
+    constructor() public {
         admin = address(msg.sender);
     }
 
     event Verified(address caller, uint256 success);
 
     // first register srshash
-    function setupSRSHash(uint256 srshash_init) public
+    function setupSRSHash(uint256 srshash_init)
+        public
         adminOnly
         returns (bool)
     {
@@ -39,9 +38,7 @@ contract UnipassVerifier is
         uint64 num_inputs,
         uint128 domain_size,
         uint256[] memory vkdata
-    ) public adminOnly returns (bool)
-    
-    {
+    ) public adminOnly returns (bool) {
         if (string_length == 1024) {
             vk1024hash = sha256(
                 abi.encodePacked(num_inputs, domain_size, vkdata)
@@ -56,6 +53,128 @@ contract UnipassVerifier is
         return true;
     }
 
+    function checkPublicInputs1024(
+        uint256 from_index,
+        uint256 from_len,
+        uint256[] memory public_inputs
+    )
+        public
+        returns (
+            bytes32,
+            bytes32,
+            bytes32
+        )
+    {
+        require(
+            from_index + from_len < 1024 && from_len >= 5 && from_len <= 192,
+            "from param error"
+        );
+        require(public_inputs.length == 12, "public inputs error");
+
+        bytes32 header_hash = (bytes32)(
+            (public_inputs[0] << 128) | ((public_inputs[1] << 128) >> 128)
+        );
+        bytes32 from_hash = (bytes32)(
+            (public_inputs[2] << 128) | ((public_inputs[3] << 128) >> 128)
+        );
+
+        uint256 start_index = from_index / 252;
+        uint256 header_offset = from_index % 252;
+        for (uint256 i = 0; i < from_len; i++) {
+            if (header_offset >= 252) {
+                start_index++;
+                header_offset = 0;
+            }
+
+            // check header mask string
+            require(
+                (public_inputs[4 + start_index] >> (252 - header_offset - 1)) &
+                    uint256(1) ==
+                    uint256(1),
+                "unmatch"
+            );
+
+            // check addr mask string
+            require(
+                (public_inputs[9] >> (192 - i - 1)) & uint256(1) == uint256(1),
+                "unmatch"
+            );
+
+            header_offset++;
+        }
+
+        bytes32 header_pub_match_hash = (bytes32)(
+            (public_inputs[10] << 128) | ((public_inputs[11] << 128) >> 128)
+        );
+
+        console.logBytes32(header_hash);
+        console.logBytes32(from_hash);
+        console.logBytes32(header_pub_match_hash);
+
+        return (header_hash, from_hash, header_pub_match_hash);
+    }
+
+    function checkPublicInputs2048(
+        uint256 from_index,
+        uint256 from_len,
+        uint256[] memory public_inputs
+    )
+        public
+        returns (
+            bytes32,
+            bytes32,
+            bytes32
+        )
+    {
+        require(
+            from_index + from_len < 2048 && from_len >= 5 && from_len <= 192,
+            "from param error"
+        );
+        require(public_inputs.length == 16, "public inputs error");
+
+        bytes32 header_hash = (bytes32)(
+            (public_inputs[0] << 128) | ((public_inputs[1] << 128) >> 128)
+        );
+        bytes32 from_hash = (bytes32)(
+            (public_inputs[2] << 128) | ((public_inputs[3] << 128) >> 128)
+        );
+
+        uint256 start_index = from_index / 252;
+        uint256 header_offset = from_index % 252;
+        for (uint256 i = 0; i < from_len; i++) {
+            if (header_offset >= 252) {
+                start_index++;
+                header_offset = 0;
+            }
+
+            // check header mask string
+            require(
+                (public_inputs[4 + start_index] >> (252 - header_offset - 1)) &
+                    uint256(1) ==
+                    uint256(1),
+                "unmatch"
+            );
+
+            // check addr mask string
+            require(
+                (public_inputs[13] >> (192 - i - 1)) & uint256(1) == uint256(1),
+                "unmatch"
+            );
+
+            header_offset++;
+        }
+
+        bytes32 header_pub_match_hash = (bytes32)(
+            (public_inputs[14] << 128) | ((public_inputs[15] << 128) >> 128)
+        );
+
+        console.logBytes32(header_hash);
+        console.logBytes32(from_hash);
+        console.logBytes32(header_pub_match_hash);
+
+        return (header_hash, from_hash, header_pub_match_hash);
+    }
+
     function verifyV1024(
         uint64 num_inputs,
         uint128 domain_size,
@@ -67,7 +186,7 @@ contract UnipassVerifier is
             abi.encodePacked(num_inputs, domain_size, vkdata)
         );
         console.log("-- [SC] verifyV1024 > start");
-        require(vk1024hash == vkhash, 'E: wrong vkey');
+        require(vk1024hash == vkhash, "E: wrong vkey");
 
         VerificationKey memory vk;
         vk.domain_size = domain_size;
@@ -165,7 +284,7 @@ contract UnipassVerifier is
             abi.encodePacked(num_inputs, domain_size, vkdata)
         );
         console.log("-- [SC] verifyV2048 > start");
-        require(vk2048hash == vkhash, 'E: wrong vkey');
+        require(vk2048hash == vkhash, "E: wrong vkey");
 
         VerificationKey memory vk;
         vk.domain_size = domain_size;

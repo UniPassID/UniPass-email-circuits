@@ -1,5 +1,6 @@
 use ark_bn254::Fr;
 use ark_ff::{One, Zero};
+use email_parser::types::PrivateInputs;
 use plonk::{
     sha256::{
         sha256_collect_8_outputs_to_2_128bits, sha256_collect_8_outputs_to_field,
@@ -14,10 +15,10 @@ pub struct Email2048CircuitInput {
     pub email_header_bytes_padding: Vec<u8>,
     pub email_addr_pepper_bytes_padding: Vec<u8>,
     pub email_header_pub_match: Vec<u8>,
-    pub from_left_index: i32,
-    pub from_len: i32,
-    pub from_padding_len: i32,
-    pub header_padding_len: i32,
+    pub from_left_index: u32,
+    pub from_len: u32,
+    pub from_padding_len: u32,
+    pub header_padding_len: u32,
 }
 
 impl Email2048CircuitInput {
@@ -25,31 +26,57 @@ impl Email2048CircuitInput {
         (2048, 192)
     }
 
-    pub fn new(
-        email_header_bytes: &[u8],
-        from_left_index: usize,
-        from_right_index: usize,
-        mut from_pepper: Vec<u8>,
-    ) -> Result<Self, ProverError> {
-        let email_addr_bytes = email_header_bytes[from_left_index..from_right_index + 1].to_vec();
+    pub fn new(mut private_inputs: PrivateInputs) -> Result<Self, ProverError> {
+        let email_addr_bytes = private_inputs.email_header
+            [private_inputs.from_left_index..private_inputs.from_right_index + 1]
+            .to_vec();
         let mut email_addr_pepper_bytes = email_addr_bytes.clone();
-        email_addr_pepper_bytes.append(&mut from_pepper);
+        email_addr_pepper_bytes.append(&mut private_inputs.from_pepper);
 
         // padding email header
-        let email_header_bytes_padding = padding_bytes(&email_header_bytes);
+        let email_header_bytes_padding = padding_bytes(&private_inputs.email_header);
         let email_addr_pepper_bytes_padding = padding_bytes(&email_addr_pepper_bytes);
 
-        // set any byte of "pub match string" to "0" is OK. 
+        // set any byte of "pub match string" to "0" is OK.
         // (you can only remain bytes for format checking, set all other bytes to 0)
         let mut email_header_pub_match = email_header_bytes_padding.clone();
-        for i in from_left_index..=from_right_index {
+        for i in 0..email_header_pub_match.len() {
+            if private_inputs.from_index == 0 {
+                if i >= private_inputs.from_index && i < private_inputs.from_left_index {
+                    continue;
+                }
+            } else {
+                if i >= private_inputs.from_index - 2 && i < private_inputs.from_left_index {
+                    continue;
+                }
+            }
+
+            if i == private_inputs.from_right_index + 1 {
+                continue;
+            }
+
+            if private_inputs.subject_index == 0 {
+                if i >= private_inputs.subject_index && i < private_inputs.subject_right_index {
+                    continue;
+                }
+            } else {
+                if i >= private_inputs.subject_index - 2 && i < private_inputs.subject_right_index {
+                    continue;
+                }
+            }
+
+            if i == private_inputs.dkim_header_index - 2 {
+                break;
+            }
+
             email_header_pub_match[i] = 0;
         }
-
-        let from_len = (from_right_index - from_left_index + 1) as i32;
-        let from_left_index = from_left_index as i32;
-        let from_padding_len = (email_addr_pepper_bytes_padding.len() / 64) as i32;
-        let header_padding_len = (email_header_bytes_padding.len() / 64) as i32;
+        
+        let from_len =
+            (private_inputs.from_right_index - private_inputs.from_left_index + 1) as u32;
+        let from_left_index = private_inputs.from_left_index as u32;
+        let from_padding_len = (email_addr_pepper_bytes_padding.len() / 64) as u32;
+        let header_padding_len = (email_header_bytes_padding.len() / 64) as u32;
 
         Ok(Self {
             email_header_bytes_padding,

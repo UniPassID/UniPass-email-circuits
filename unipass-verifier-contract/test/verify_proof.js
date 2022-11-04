@@ -40,6 +40,16 @@ describe("plonk contract", function () {
         console.log(`[INFO] Setup setupVKHash ... ok`);
       }
 
+      let chech_tx = await UnipassVerifier.checkPublicInputs1024(
+        contractInput.fromIndex,
+        contractInput.fromLen,
+        contractInput.publicInputs,
+      )
+
+      // wait the tx being mined
+      let check_rc = await chech_tx.wait(1);
+      console.log(`[Info] Check public input >>> gasUsed: ${check_rc.gasUsed}`);
+
       let tx = await UnipassVerifier.verifyV1024(
         contractInput.publicInputsNum,
         contractInput.domainSize,
@@ -59,8 +69,8 @@ describe("plonk contract", function () {
 
       let ecode = -1;
       if (rc.logs.length >= 1) {
-          let log = iface.parseLog(rc.logs[0]);
-          ecode = log.args["success"];
+        let log = iface.parseLog(rc.logs[0]);
+        ecode = log.args["success"];
       }
       if (ecode == 1) {
         console.log(`[INFO] Verification Succeed! ✅`);
@@ -79,7 +89,7 @@ describe("plonk contract", function () {
       let data = fs.readFileSync(path.join("../test_data/inputs_2048", files2048[i]), 'utf8');
       let contractInput = JSON.parse(data);
       if (i == 0) {
-        
+
         await UnipassVerifier.setupSRSHash(contractInput.srsHash);
         console.log(`[INFO] Setup SRS ... ok`);
 
@@ -91,6 +101,16 @@ describe("plonk contract", function () {
         );
         console.log(`[INFO] Setup setupVKHash ... ok`);
       }
+
+      let chech_tx = await UnipassVerifier.checkPublicInputs2048(
+        contractInput.fromIndex,
+        contractInput.fromLen,
+        contractInput.publicInputs,
+      )
+
+      // wait the tx being mined
+      let check_rc = await chech_tx.wait(1);
+      console.log(`[Info] Check public input >>> gasUsed: ${check_rc.gasUsed}`);
 
       let tx = await UnipassVerifier.verifyV2048(
         contractInput.publicInputsNum,
@@ -111,8 +131,8 @@ describe("plonk contract", function () {
 
       let ecode = -1;
       if (rc.logs.length >= 1) {
-          let log = iface.parseLog(rc.logs[0]);
-          ecode = log.args["success"];
+        let log = iface.parseLog(rc.logs[0]);
+        ecode = log.args["success"];
       }
       if (ecode == 1) {
         console.log(`[INFO] Verification Succeed! ✅`);

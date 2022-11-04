@@ -1,5 +1,4 @@
-pragma solidity >=0.5.0 <0.7.0;
-pragma experimental ABIEncoderV2;
+pragma solidity 0.8.17;
 
 import "./PlonkCoreLib.sol";
 import "hardhat/console.sol";
@@ -241,6 +240,7 @@ contract Plonk4SingleVerifierWithAccessToDNext {
             dens[i].assign(tmp_2); // all inversed
             dens[i].mul_assign(partial_products[i]); // clear lowest terms
             tmp_2.mul_assign(tmp3);
+            if (i == 0) break;
         }
 
         /// `nums[i] / dens[i]`

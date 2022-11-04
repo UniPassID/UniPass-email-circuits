@@ -25,6 +25,11 @@ pub struct ContractInput {
     pub vk_data: Vec<String>,
     pub public_inputs: Vec<String>,
     pub proof: Vec<String>,
+    #[serde(
+        deserialize_with = "deserialize_hex_string",
+        serialize_with = "serialize_hex_string"
+    )]
+    pub srs_hash: Vec<u8>,
 }
 
 impl ContractInput {
@@ -34,6 +39,7 @@ impl ContractInput {
         verifier_comms: &Vec<Commitment<E>>,
         g2x: E::G2Affine,
         proof: &Proof<F, E>,
+        srs_hash: &Vec<u8>,
     ) -> Self {
         // domain size
         let v0_domainsize = BigInteger128::from(domain.size() as u64);
@@ -235,6 +241,7 @@ impl ContractInput {
             vk_data,
             public_inputs,
             proof: proof_data,
+            srs_hash: srs_hash.clone(),
         }
     }
 }

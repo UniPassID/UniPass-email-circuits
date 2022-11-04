@@ -28,7 +28,6 @@ pub use composer::Composer;
 pub mod kzg10;
 pub mod proof;
 pub mod prover;
-pub mod serialize;
 pub mod sha256;
 mod transcript;
 mod utils;

@@ -112,6 +112,7 @@ fn main() -> Result<(), SerializationError> {
                 verifier_comms_1024.as_ref().unwrap(),
                 pckey.vk.beta_h,
                 &proof,
+                &sha256_of_srs,
             );
 
             let mut file = std::fs::OpenOptions::new()
@@ -224,6 +225,7 @@ fn main() -> Result<(), SerializationError> {
                 verifier_comms_2048.as_ref().unwrap(),
                 pckey.vk.beta_h,
                 &proof,
+                &sha256_of_srs,
             );
 
             let mut file = std::fs::OpenOptions::new()

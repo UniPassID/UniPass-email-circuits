@@ -11,7 +11,7 @@ task("ptest", "test sols").setAction(async () => {
  */
  module.exports = {
     solidity: {
-      version: "0.6.12",
+      version: "0.8.17",
       settings: {
         optimizer: {
           enabled: true,
@@ -22,7 +22,7 @@ task("ptest", "test sols").setAction(async () => {
     
     contractSizer: {
       alphaSort: true,
-      runOnCompile: false, // 这个地方推荐默认设置 false 
+      runOnCompile: false, 
       disambiguatePaths: false,
     },
     // gasReporter: {

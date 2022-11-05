@@ -1,7 +1,7 @@
-use ark_ec::PairingEngine;
-use ark_ff::{BigInteger, BigInteger128, PrimeField, ToBytes};
-use ark_poly_commit::kzg10::Commitment;
-use ark_std::Zero;
+use plonk::ark_ec::PairingEngine;
+use plonk::ark_ff::{BigInteger, BigInteger128, PrimeField, ToBytes};
+use plonk::ark_poly_commit::kzg10::Commitment;
+use plonk::ark_std::Zero;
 use plonk::{proof::Proof, Domain};
 use serde::{Deserialize, Serialize};
 

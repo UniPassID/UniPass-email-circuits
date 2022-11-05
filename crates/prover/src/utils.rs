@@ -1,4 +1,4 @@
-use ark_ff::{BigInteger, PrimeField};
+use plonk::ark_ff::{BigInteger, PrimeField};
 use serde::{de, Serializer};
 
 pub fn to_0x_hex<T>(data: T) -> String

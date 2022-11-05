@@ -35,6 +35,14 @@ pub mod verifier;
 
 pub use utils::*;
 
+pub use ark_ec;
+pub use ark_ff;
+pub use ark_std;
+pub use ark_poly;
+pub use ark_poly_commit;
+pub use ark_serialize;
+pub use ark_bn254;
+
 #[derive(Debug)]
 pub enum Error {
     PolynomialDegreeTooLarge,

@@ -1,10 +1,10 @@
 use std::{fs::File, io};
 
-use ark_ec::PairingEngine;
-use ark_ff::PrimeField;
-use ark_poly_commit::kzg10::Commitment;
-use ark_serialize::{CanonicalDeserialize, CanonicalSerialize, SerializationError, Write};
-use ark_std::rand::Rng;
+use plonk::ark_ec::PairingEngine;
+use plonk::ark_ff::PrimeField;
+use plonk::ark_poly_commit::kzg10::Commitment;
+use plonk::ark_serialize::{CanonicalDeserialize, CanonicalSerialize, SerializationError, Write};
+use plonk::ark_std::rand::Rng;
 use plonk::{
     kzg10::PCKey,
     prover::{Prover, ProverKey},

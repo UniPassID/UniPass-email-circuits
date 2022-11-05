@@ -41,7 +41,7 @@ describe("plonk contract", function () {
       }
 
       let chech_tx = await UnipassVerifier.checkPublicInputs1024(
-        contractInput.fromIndex,
+        contractInput.fromLeftIndex,
         contractInput.fromLen,
         contractInput.publicInputs,
       )
@@ -51,8 +51,6 @@ describe("plonk contract", function () {
       console.log(`[Info] Check public input >>> gasUsed: ${check_rc.gasUsed}`);
 
       let tx = await UnipassVerifier.verifyV1024(
-        contractInput.publicInputsNum,
-        contractInput.domainSize,
         contractInput.vkData,
         contractInput.publicInputs,
         contractInput.proof
@@ -103,7 +101,7 @@ describe("plonk contract", function () {
       }
 
       let chech_tx = await UnipassVerifier.checkPublicInputs2048(
-        contractInput.fromIndex,
+        contractInput.fromLeftIndex,
         contractInput.fromLen,
         contractInput.publicInputs,
       )
@@ -113,8 +111,6 @@ describe("plonk contract", function () {
       console.log(`[Info] Check public input >>> gasUsed: ${check_rc.gasUsed}`);
 
       let tx = await UnipassVerifier.verifyV2048(
-        contractInput.publicInputsNum,
-        contractInput.domainSize,
         contractInput.vkData,
         contractInput.publicInputs,
         contractInput.proof

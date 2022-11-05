@@ -12,7 +12,7 @@ use crate::utils::{
 #[derive(Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ContractInput {
-    pub from_index: u32,
+    pub from_left_index: u32,
     pub from_len: u32,
     #[serde(
         deserialize_with = "deserialize_hex_string",
@@ -41,7 +41,7 @@ pub struct ContractInput {
 
 impl ContractInput {
     pub fn new<F: PrimeField, D: Domain<F>, E: PairingEngine>(
-        from_index: u32,
+        from_left_index: u32,
         from_len: u32,
         header_pub_match: Vec<u8>,
         public_inputs: &[F],
@@ -246,7 +246,7 @@ impl ContractInput {
 
         let public_inputs = convert_public_inputs(public_inputs);
         Self {
-            from_index,
+            from_left_index,
             from_len,
             header_pub_match,
             public_inputs_num,

@@ -5,9 +5,11 @@ import "./PlookupSingleCore.sol";
 import "hardhat/console.sol";
 
 contract UnipassVerifier is Plonk4SingleVerifierWithAccessToDNext {
-    uint256 constant SERIALIZED_PROOF_LENGTH = 0;
+    // uint256 constant SERIALIZED_PROOF_LENGTH = 0;
 
     address admin;
+    uint128 domain_size_1024;
+    uint128 domain_size_2048;
 
     modifier adminOnly() {
         require(msg.sender == admin, "!_!");
@@ -43,10 +45,14 @@ contract UnipassVerifier is Plonk4SingleVerifierWithAccessToDNext {
             vk1024hash = sha256(
                 abi.encodePacked(num_inputs, domain_size, vkdata)
             );
+            domain_size_1024 = domain_size;
+            console.log("domain_size 1024: %s", domain_size);
         } else if (string_length == 2048) {
             vk2048hash = sha256(
                 abi.encodePacked(num_inputs, domain_size, vkdata)
             );
+            domain_size_2048 = domain_size;
+            console.log("domain_size 2048: %s", domain_size);
         } else {
             return false;
         }
@@ -54,8 +60,8 @@ contract UnipassVerifier is Plonk4SingleVerifierWithAccessToDNext {
     }
 
     function checkPublicInputs1024(
-        uint256 from_index,
-        uint256 from_len,
+        uint32 from_left_index,
+        uint32 from_len,
         uint256[] memory public_inputs
     )
         public
@@ -66,7 +72,9 @@ contract UnipassVerifier is Plonk4SingleVerifierWithAccessToDNext {
         )
     {
         require(
-            from_index + from_len < 1024 && from_len >= 5 && from_len <= 192,
+            from_left_index + from_len < 1024 &&
+                from_len >= 5 &&
+                from_len <= 192,
             "from param error"
         );
         require(public_inputs.length == 12, "public inputs error");
@@ -78,8 +86,8 @@ contract UnipassVerifier is Plonk4SingleVerifierWithAccessToDNext {
             (public_inputs[2] << 128) | ((public_inputs[3] << 128) >> 128)
         );
 
-        uint256 start_index = from_index / 252;
-        uint256 header_offset = from_index % 252;
+        uint256 start_index = from_left_index / 252;
+        uint256 header_offset = from_left_index % 252;
         for (uint256 i = 0; i < from_len; i++) {
             if (header_offset >= 252) {
                 start_index++;
@@ -115,8 +123,8 @@ contract UnipassVerifier is Plonk4SingleVerifierWithAccessToDNext {
     }
 
     function checkPublicInputs2048(
-        uint256 from_index,
-        uint256 from_len,
+        uint32 from_left_index,
+        uint32 from_len,
         uint256[] memory public_inputs
     )
         public
@@ -127,7 +135,9 @@ contract UnipassVerifier is Plonk4SingleVerifierWithAccessToDNext {
         )
     {
         require(
-            from_index + from_len < 2048 && from_len >= 5 && from_len <= 192,
+            from_left_index + from_len < 2048 &&
+                from_len >= 5 &&
+                from_len <= 192,
             "from param error"
         );
         require(public_inputs.length == 16, "public inputs error");
@@ -139,8 +149,8 @@ contract UnipassVerifier is Plonk4SingleVerifierWithAccessToDNext {
             (public_inputs[2] << 128) | ((public_inputs[3] << 128) >> 128)
         );
 
-        uint256 start_index = from_index / 252;
-        uint256 header_offset = from_index % 252;
+        uint256 start_index = from_left_index / 252;
+        uint256 header_offset = from_left_index % 252;
         for (uint256 i = 0; i < from_len; i++) {
             if (header_offset >= 252) {
                 start_index++;
@@ -176,20 +186,19 @@ contract UnipassVerifier is Plonk4SingleVerifierWithAccessToDNext {
     }
 
     function verifyV1024(
-        uint64 num_inputs,
-        uint128 domain_size,
         uint256[] memory vkdata,
         uint256[] memory public_inputs,
         uint256[] memory serialized_proof
     ) public returns (bool) {
+        uint64 num_inputs = uint64(public_inputs.length);
         bytes32 vkhash = sha256(
-            abi.encodePacked(num_inputs, domain_size, vkdata)
+            abi.encodePacked(num_inputs, domain_size_1024, vkdata)
         );
         console.log("-- [SC] verifyV1024 > start");
         require(vk1024hash == vkhash, "E: wrong vkey");
 
         VerificationKey memory vk;
-        vk.domain_size = domain_size;
+        vk.domain_size = domain_size_1024;
         vk.num_inputs = num_inputs;
 
         vk.omega = PairingsBn254.new_fr(vkdata[0]);
@@ -274,20 +283,19 @@ contract UnipassVerifier is Plonk4SingleVerifierWithAccessToDNext {
     }
 
     function verifyV2048(
-        uint64 num_inputs,
-        uint128 domain_size,
         uint256[] memory vkdata,
         uint256[] memory public_inputs,
         uint256[] memory serialized_proof
     ) public returns (bool) {
+        uint64 num_inputs = uint64(public_inputs.length);
         bytes32 vkhash = sha256(
-            abi.encodePacked(num_inputs, domain_size, vkdata)
+            abi.encodePacked(num_inputs, domain_size_2048, vkdata)
         );
         console.log("-- [SC] verifyV2048 > start");
         require(vk2048hash == vkhash, "E: wrong vkey");
 
         VerificationKey memory vk;
-        vk.domain_size = domain_size;
+        vk.domain_size = domain_size_2048;
         vk.num_inputs = num_inputs;
 
         vk.omega = PairingsBn254.new_fr(vkdata[0]);

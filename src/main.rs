@@ -1,8 +1,9 @@
 use std::time::Instant;
 
-use ark_bn254::Fr;
-use ark_serialize::{SerializationError, Write};
-use ark_std::test_rng;
+use plonk::ark_bn254::{Fr, Bn254};
+use plonk::ark_serialize::{SerializationError, Write};
+use plonk::ark_std::test_rng;
+
 use email_parser::parser::parse_email;
 use plonk::{prover::Prover, verifier::Verifier, GeneralEvaluationDomain};
 use prover::{
@@ -60,7 +61,7 @@ fn main() -> Result<(), SerializationError> {
                 );
             }
             println!("[main] compute_prover_key...done");
-            let mut prover = Prover::<Fr, GeneralEvaluationDomain<Fr>, ark_bn254::Bn254>::new(
+            let mut prover = Prover::<Fr, GeneralEvaluationDomain<Fr>, Bn254>::new(
                 pk_1024.as_ref().unwrap().clone(),
             );
             println!("[main] init_comms...");
@@ -170,7 +171,7 @@ fn main() -> Result<(), SerializationError> {
             }
 
             println!("[main] compute_prover_key...done");
-            let mut prover = Prover::<Fr, GeneralEvaluationDomain<Fr>, ark_bn254::Bn254>::new(
+            let mut prover = Prover::<Fr, GeneralEvaluationDomain<Fr>, Bn254>::new(
                 pk_2048.as_ref().unwrap().clone(),
             );
 

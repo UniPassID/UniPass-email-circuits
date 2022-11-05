@@ -1,6 +1,6 @@
 use std::io;
 
-use ark_serialize::SerializationError;
+use plonk::ark_serialize::SerializationError;
 
 /// Error thrown by the server.
 #[derive(Debug, thiserror::Error)]

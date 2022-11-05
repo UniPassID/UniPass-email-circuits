@@ -1,6 +1,6 @@
-use ark_bn254::Fr;
+use plonk::ark_bn254::Fr;
+use plonk::ark_ff::{One, Zero};
 
-use ark_ff::{One, Zero};
 use email_parser::types::PrivateInputs;
 use plonk::{
     sha256::{
@@ -91,7 +91,7 @@ impl Email1024CircuitInput {
         })
     }
 
-    pub fn synthesize(&self) -> Composer<ark_ff::Fp256<ark_bn254::FrParameters>> {
+    pub fn synthesize(&self) -> Composer<Fr> {
         // new '5 column' circuit
         let mut cs = Composer::new(5);
 

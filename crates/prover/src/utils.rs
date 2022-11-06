@@ -277,21 +277,3 @@ pub fn convert_proof<F: PrimeField, E: PairingEngine>(proof: &Proof<F, E>) -> Ve
     }
     proof_data
 }
-
-pub fn deserialize_hex_string<'de, D>(deserializer: D) -> Result<Vec<u8>, D::Error>
-where
-    D: de::Deserializer<'de>,
-{
-    let s: String = de::Deserialize::deserialize(deserializer)?;
-    Ok(hex::decode(s.trim_start_matches("0x"))
-        .map_err(|e| de::Error::custom(format!("deserialize call failed:{:?}", e)))?)
-}
-
-pub fn serialize_hex_string<S>(v: &[u8], serializer: S) -> Result<S::Ok, S::Error>
-where
-    S: Serializer,
-{
-    let mut s = String::from("0x");
-    s += &hex::encode(v);
-    serializer.serialize_str(&s)
-}

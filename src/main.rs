@@ -1,11 +1,12 @@
 use std::time::Instant;
 
-use plonk::ark_bn254::{Fr, Bn254};
+use plonk::ark_bn254::{Bn254, Fr};
 use plonk::ark_serialize::{SerializationError, Write};
 use plonk::ark_std::test_rng;
 
 use email_parser::parser::parse_email;
 use plonk::{prover::Prover, verifier::Verifier, GeneralEvaluationDomain};
+use prover::parameters::{store_params, store_prover_key, store_verifier_comms};
 use prover::{
     circuit::{circuit_1024::Email1024CircuitInput, circuit_2048::Email2048CircuitInput},
     parameters::prepare_generic_params,
@@ -18,6 +19,7 @@ fn main() -> Result<(), SerializationError> {
     // prepare SRS
     let pckey = prepare_generic_params(524300, &mut rng);
 
+    store_params(&pckey, "email.pckey").unwrap();
     // append 32bytes pepper
     let pepper = "03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4";
     let from_pepper = hex::decode(pepper).unwrap();
@@ -59,6 +61,8 @@ fn main() -> Result<(), SerializationError> {
                     cs.compute_prover_key::<GeneralEvaluationDomain<Fr>>()
                         .unwrap(),
                 );
+
+                store_prover_key(pk_1024.as_ref().clone().unwrap(), "email_1024.pk").unwrap();
             }
             println!("[main] compute_prover_key...done");
             let mut prover = Prover::<Fr, GeneralEvaluationDomain<Fr>, Bn254>::new(
@@ -67,6 +71,11 @@ fn main() -> Result<(), SerializationError> {
             println!("[main] init_comms...");
             if verifier_comms_1024.is_none() {
                 verifier_comms_1024 = Some(prover.init_comms(&pckey));
+                store_verifier_comms(
+                    verifier_comms_1024.as_ref().clone().unwrap(),
+                    "email_1024.vc",
+                )
+                .unwrap();
             } else {
                 // if already exists, no need "init_comms"
                 prover.insert_verifier_comms(verifier_comms_1024.as_ref().unwrap());
@@ -168,6 +177,7 @@ fn main() -> Result<(), SerializationError> {
                     cs.compute_prover_key::<GeneralEvaluationDomain<Fr>>()
                         .unwrap(),
                 );
+                store_prover_key(pk_2048.as_ref().clone().unwrap(), "email_2048.pk").unwrap();
             }
 
             println!("[main] compute_prover_key...done");
@@ -178,6 +188,12 @@ fn main() -> Result<(), SerializationError> {
             println!("[main] init_comms...");
             if verifier_comms_2048.is_none() {
                 verifier_comms_2048 = Some(prover.init_comms(&pckey));
+
+                store_verifier_comms(
+                    verifier_comms_2048.as_ref().clone().unwrap(),
+                    "email_2048.vc",
+                )
+                .unwrap();
             } else {
                 // if already exists, no need "init_comms"
                 prover.insert_verifier_comms(verifier_comms_2048.as_ref().unwrap());

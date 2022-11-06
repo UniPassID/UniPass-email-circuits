@@ -1,13 +1,11 @@
+use email_parser::types::{deserialize_hex_string, serialize_hex_string};
 use plonk::ark_ec::PairingEngine;
 use plonk::ark_ff::{BigInteger, BigInteger128, PrimeField};
 use plonk::ark_poly_commit::kzg10::Commitment;
 use plonk::{proof::Proof, Domain};
 use serde::{Deserialize, Serialize};
 
-use crate::utils::{
-    convert_proof, convert_public_inputs, convert_vk_data, deserialize_hex_string,
-    serialize_hex_string,
-};
+use crate::utils::{convert_proof, convert_public_inputs, convert_vk_data};
 
 #[derive(Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]

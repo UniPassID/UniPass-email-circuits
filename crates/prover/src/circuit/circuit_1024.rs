@@ -291,18 +291,18 @@ impl Email1024CircuitInput {
         cs.set_variable_public_input(pubmatch_hash128[0]);
         cs.set_variable_public_input(pubmatch_hash128[1]);
 
-        for elem in &email_header_hash128 {
-            let value = cs.get_assignment(*elem);
-            println!("a{}", value);
-        }
-        for elem in &email_addr_pepper_hash128 {
-            let value = cs.get_assignment(*elem);
-            println!("b{}", value);
-        }
-        for elem in &pubmatch_hash128 {
-            let value = cs.get_assignment(*elem);
-            println!("pubmatch{}", value);
-        }
+        // for elem in &email_header_hash128 {
+        //     let value = cs.get_assignment(*elem);
+        //     log::trace!("a{}", value);
+        // }
+        // for elem in &email_addr_pepper_hash128 {
+        //     let value = cs.get_assignment(*elem);
+        //     log::trace!("b{}", value);
+        // }
+        // for elem in &pubmatch_hash128 {
+        //     let value = cs.get_assignment(*elem);
+        //     log::trace!("pubmatch{}", value);
+        // }
 
         cs
     }

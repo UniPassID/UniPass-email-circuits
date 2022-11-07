@@ -35,6 +35,20 @@ fn main() -> Result<(), SerializationError> {
             let email_bytes = std::fs::read(dir.unwrap().path()).unwrap();
             let (email_public_inputs, email_private_inputs) =
                 parse_email(&email_bytes, from_pepper.clone()).unwrap();
+            let mut file = std::fs::OpenOptions::new()
+                .read(true)
+                .write(true)
+                .create(true)
+                .truncate(true)
+                .open(format!(
+                    "test_data/privates/{}.json",
+                    to_0x_hex(&email_public_inputs.header_hash)
+                ))
+                .unwrap();
+            file.write(&serde_json::to_vec_pretty(&email_private_inputs).unwrap())
+                .unwrap();
+            file.flush().unwrap();
+
             index += 1;
             if email_private_inputs.email_header.len() > 1024 {
                 continue;

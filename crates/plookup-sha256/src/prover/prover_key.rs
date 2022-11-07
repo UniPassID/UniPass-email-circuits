@@ -43,9 +43,9 @@ impl<F: Field, D: Domain<F>> ProverKey<F, D> {
         let coset = D::new((domain.size() + 1) * program_width + 2)
             .ok_or(Error::PolynomialDegreeTooLarge)?;
 
-        println!("circuit_size={}", circuit_size);
-        println!("domain.size()={}", domain.size());
-        println!("coset.size()={}", coset.size());
+        log::trace!("circuit_size={}", circuit_size);
+        log::trace!("domain.size()={}", domain.size());
+        log::trace!("coset.size()={}", coset.size());
 
         let coset_values = {
             let mut coset_values = Map::new();

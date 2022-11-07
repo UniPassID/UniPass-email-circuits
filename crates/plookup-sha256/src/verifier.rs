@@ -86,7 +86,7 @@ impl<F: Field, D: Domain<F>, E: PairingEngine> Verifier<F, D, E> {
     }
 
     pub fn verify(&mut self, pcvk: &VKey<E>, proof: &Proof<F, E>, sha256_of_srs: &Vec<u8>) -> bool {
-        println!("verify time start:");
+        log::trace!("verify time start:");
         let start = Instant::now();
 
         let mut z_labels = vec!["z".to_string(), "z_lookup".to_string()];
@@ -278,7 +278,7 @@ impl<F: Field, D: Domain<F>, E: PairingEngine> Verifier<F, D, E> {
 
         let pi_poly =
             Evaluations::from_vec_and_domain(self.public_input.clone(), self.domain).interpolate();
-        print!("check equality...");
+        log::trace!("check equality...");
         let lhs = {
             let v_zeta = self.domain.evaluate_vanishing_polynomial(zeta);
             self.evaluations["t4t_zeta"] * v_zeta
@@ -290,12 +290,12 @@ impl<F: Field, D: Domain<F>, E: PairingEngine> Verifier<F, D, E> {
         };
 
         if lhs != rhs {
-            println!("equality check fail");
+            log::info!("equality check fail");
             return false;
         }
-        println!("done");
+        log::trace!("check equality done");
 
-        print!("pc check...");
+        log::trace!("pc check...");
         let zeta_n = zeta.pow(&[self.domain.size() as u64]);
 
         //linear combine commitments at zeta. fixed order
@@ -574,12 +574,12 @@ impl<F: Field, D: Domain<F>, E: PairingEngine> Verifier<F, D, E> {
                 &[proof.Wz_pi, proof.Wzw_pi],
                 u,
             );
-            println!("multi_point PC? {}", multi_point_pcres);
+            log::trace!("multi_point PC? {}", multi_point_pcres);
             multi_point_pcres
         };
 
-        println!("verify time cost: {:?} ms", start.elapsed().as_millis()); // ms
-        println!("done");
+        log::trace!("verify time cost: {:?} ms", start.elapsed().as_millis()); // ms
+        log::trace!("verify done");
 
         result
     }

@@ -13,13 +13,11 @@ use plonk::{
 use crate::{error::ProverError, utils::padding_bytes};
 
 pub struct Email1024CircuitInput {
-    pub email_header_bytes_padding: Vec<u8>,
-    pub email_addr_pepper_bytes_padding: Vec<u8>,
+    pub email_header_bytes: Vec<u8>,
+    pub email_addr_pepper_bytes: Vec<u8>,
     pub email_header_pub_match: Vec<u8>,
     pub from_left_index: u32,
     pub from_len: u32,
-    pub from_padding_len: u32,
-    pub header_padding_len: u32,
 }
 
 impl Email1024CircuitInput {
@@ -34,13 +32,11 @@ impl Email1024CircuitInput {
         let mut email_addr_pepper_bytes = email_addr_bytes.clone();
         email_addr_pepper_bytes.append(&mut private_inputs.from_pepper);
 
-        // padding email header
-        let email_header_bytes_padding = padding_bytes(&private_inputs.email_header);
-        let email_addr_pepper_bytes_padding = padding_bytes(&email_addr_pepper_bytes);
+        let email_header_bytes = private_inputs.email_header.clone();
 
         // set any byte of "pub match string" to "0" is OK.
         // (you can only remain bytes for format checking, set all other bytes to 0)
-        let mut email_header_pub_match = email_header_bytes_padding.clone();
+        let mut email_header_pub_match = email_header_bytes.clone();
 
         for i in 0..email_header_pub_match.len() {
             if private_inputs.from_index == 0 {
@@ -77,29 +73,31 @@ impl Email1024CircuitInput {
         let from_len =
             (private_inputs.from_right_index - private_inputs.from_left_index + 1) as u32;
         let from_left_index = private_inputs.from_left_index as u32;
-        let from_padding_len = (email_addr_pepper_bytes_padding.len() / 64) as u32;
-        let header_padding_len = (email_header_bytes_padding.len() / 64) as u32;
 
         Ok(Self {
-            email_header_bytes_padding,
-            email_addr_pepper_bytes_padding,
+            email_header_bytes,
+            email_addr_pepper_bytes,
             email_header_pub_match,
             from_left_index,
             from_len,
-            from_padding_len,
-            header_padding_len,
         })
     }
 
     pub fn synthesize(&self) -> Composer<Fr> {
         // new '5 column' circuit
         let mut cs = Composer::new(5);
-
         let (email_header_max_lens, email_addr_max_lens) = Self::parameters();
+
+        // padding bytes
+        let email_header_bytes_padding = padding_bytes(&self.email_header_bytes);
+        let email_addr_pepper_bytes_padding = padding_bytes(&self.email_addr_pepper_bytes);
+        let email_header_pub_match_padding = padding_bytes(&self.email_header_pub_match);
+        let from_padding_len = (email_addr_pepper_bytes_padding.len() / 64) as u32;
+        let header_padding_len = (email_header_bytes_padding.len() / 64) as u32;
 
         // alloc variables for "a"
         let mut email_header_vars = vec![];
-        for e in &self.email_header_bytes_padding {
+        for e in &email_header_bytes_padding {
             email_header_vars.push(cs.alloc(Fr::from(*e)));
         }
         let n = email_header_vars.len();
@@ -110,7 +108,7 @@ impl Email1024CircuitInput {
 
         // alloc variables for "b"
         let mut email_addr_pepper_vars = vec![];
-        for e in &self.email_addr_pepper_bytes_padding {
+        for e in &email_addr_pepper_bytes_padding {
             email_addr_pepper_vars.push(cs.alloc(Fr::from(*e)));
         }
         let n = email_addr_pepper_vars.len();
@@ -125,9 +123,9 @@ impl Email1024CircuitInput {
         let m = cs.alloc(Fr::from(self.from_len));
 
         // "sample_a_bytes_padding" is 8*512 bits, so we need the index to output correct sha256
-        let email_header_data_len = cs.alloc(Fr::from(self.header_padding_len));
+        let email_header_data_len = cs.alloc(Fr::from(header_padding_len));
         // "sample_b_bytes_padding" is 2*512 bits, so we need the index to output correct sha256
-        let email_addr_pepper_data_len = cs.alloc(Fr::from(self.from_padding_len));
+        let email_addr_pepper_data_len = cs.alloc(Fr::from(from_padding_len));
         // 2 values above should be public, we will handle that later in the hash.
 
         // cal sha256 of "a"
@@ -197,7 +195,7 @@ impl Email1024CircuitInput {
         // pub match "a"
         // public string to be matched
         let mut email_header_pubmatch_vars = vec![];
-        for e in &self.email_header_pub_match {
+        for e in &email_header_pub_match_padding {
             email_header_pubmatch_vars.push(cs.alloc(Fr::from(*e)));
         }
         // padding to max_lens

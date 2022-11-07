@@ -272,9 +272,9 @@ impl<'a, F: Field, D: Domain<F>, E: PairingEngine> Prover<F, D, E> {
         }
 
         let mut trans = TranscriptLibrary::new();
-        println!("prove time start:");
+        log::trace!("prove start:");
         let start = Instant::now();
-        print!("initializing...");
+        log::trace!("initializing...");
 
         // sha256 SRS, put into the transcript
         let srshash = pckey.sha256_of_srs();
@@ -376,7 +376,7 @@ impl<'a, F: Field, D: Domain<F>, E: PairingEngine> Prover<F, D, E> {
             w.extend(zeros);
             self.domain_values.insert(k, w);
         }
-        println!("done");
+        log::trace!("initialize done");
 
         let w_poly: Vec<_> = (0..self.program_width)
             .into_iter()
@@ -391,13 +391,13 @@ impl<'a, F: Field, D: Domain<F>, E: PairingEngine> Prover<F, D, E> {
             trans.update_with_g1::<E>(&wi.0);
         }
 
-        print!("first round..."); //only lookup
+        log::trace!("first round..."); //only lookup
         let eta = trans.generate_challenge::<F>();
         self.add_challenge("eta", eta);
         for w in widgets.iter() {
             w.compute_oracles(1, self, rng)?;
         }
-        println!("done");
+        log::trace!("first round done");
 
         let polys = self.polynomials();
         let s_poly = &polys["s"];
@@ -405,7 +405,7 @@ impl<'a, F: Field, D: Domain<F>, E: PairingEngine> Prover<F, D, E> {
         self.commitments.insert("s".to_string(), s_comm);
         trans.update_with_g1::<E>(&s_comm.0);
 
-        print!("second_round...");
+        log::trace!("second_round...");
         let beta = trans.generate_challenge::<F>();
         let gamma = trans.generate_challenge::<F>();
         self.add_challenge("beta", beta);
@@ -413,7 +413,7 @@ impl<'a, F: Field, D: Domain<F>, E: PairingEngine> Prover<F, D, E> {
         for w in widgets.iter() {
             w.compute_oracles(2, self, rng)?;
         }
-        println!("done");
+        log::trace!("second_round done");
 
         for str in &z_labels {
             let z_poly = &self.polynomials()[str];
@@ -422,7 +422,7 @@ impl<'a, F: Field, D: Domain<F>, E: PairingEngine> Prover<F, D, E> {
             trans.update_with_g1::<E>(&z_comm.0);
         }
 
-        print!("third round...");
+        log::trace!("third round...");
         let alpha = trans.generate_challenge::<F>();
         self.add_challenge("alpha", alpha);
         let t = {
@@ -444,7 +444,7 @@ impl<'a, F: Field, D: Domain<F>, E: PairingEngine> Prover<F, D, E> {
         self.coset_values = Map::new();
 
         let mut t_chunks = split(t, self.domain_size());
-        println!("t_chunks.len() {}", t_chunks.len());
+        log::trace!("t_chunks.len() {}", t_chunks.len());
         while t_chunks.len() < self.program_width {
             //not always program_width. it depends on the 'max degree' which custom gates need
             t_chunks.push(DensePolynomial::zero());
@@ -453,7 +453,7 @@ impl<'a, F: Field, D: Domain<F>, E: PairingEngine> Prover<F, D, E> {
         if t_chunks.len() > self.program_width {
             //put the extra in the last
             let mut extra = t_chunks.pop().unwrap();
-            println!("t extra n {}", extra.coeffs.len());
+            log::trace!("t extra n {}", extra.coeffs.len());
             let mut last = t_chunks.pop().unwrap().coeffs.clone();
             last.append(&mut extra.coeffs);
             t_chunks.push(DensePolynomial::from_coefficients_vec(last));
@@ -465,7 +465,7 @@ impl<'a, F: Field, D: Domain<F>, E: PairingEngine> Prover<F, D, E> {
         for (i, t) in t_chunks.into_iter().enumerate() {
             self.add_polynomial(&format!("t_{}", i), t);
         }
-        println!("done");
+        log::trace!("third round done");
 
         let t_poly: Vec<_> = (0..self.program_width)
             .into_iter()
@@ -479,7 +479,7 @@ impl<'a, F: Field, D: Domain<F>, E: PairingEngine> Prover<F, D, E> {
             trans.update_with_g1::<E>(&ti.0);
         }
 
-        print!("forth round...");
+        log::trace!("forth round...");
         let zeta = trans.generate_challenge::<F>();
         self.add_challenge("zeta", zeta);
         self.add_challenge("zeta_omega", zeta * self.domain.generator());
@@ -557,7 +557,7 @@ impl<'a, F: Field, D: Domain<F>, E: PairingEngine> Prover<F, D, E> {
         };
         self.add_polynomial("t4t", t_split_poly);
         let t_zeta = self.evaluate("t4t", "zeta")?;
-        println!("done");
+        log::trace!("forth round done");
 
         let verify_open_zeta_labels =
             gen_verify_open_zeta_labels(self.program_width, self.enable_lookup);
@@ -609,7 +609,7 @@ impl<'a, F: Field, D: Domain<F>, E: PairingEngine> Prover<F, D, E> {
         let u = trans.generate_challenge::<F>();
         self.add_challenge("u", u);
 
-        print!("check equality...");
+        log::trace!("check equality...");
         let lhs = {
             let v_zeta = self.domain.evaluate_vanishing_polynomial(zeta);
             t_zeta * v_zeta
@@ -622,7 +622,7 @@ impl<'a, F: Field, D: Domain<F>, E: PairingEngine> Prover<F, D, E> {
         };
 
         assert_eq!(lhs, rhs, "prover equality check");
-        println!("done");
+        log::trace!("check equality done");
 
         // gen proof
         let mut proof_evals = vec![];
@@ -660,7 +660,7 @@ impl<'a, F: Field, D: Domain<F>, E: PairingEngine> Prover<F, D, E> {
             Wzw_pi: Wzw_pi,
         };
 
-        println!("prove time cost: {:?} ms", start.elapsed().as_millis()); // ms
+        log::trace!("prove time cost: {:?} ms", start.elapsed().as_millis()); // ms
         Ok(proof)
     }
 }

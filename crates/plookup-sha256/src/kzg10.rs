@@ -42,12 +42,12 @@ impl<E: PairingEngine> PCKey<E> {
     where
         R: RngCore,
     {
-        println!("[setup] start to setup...");
+        log::trace!("[setup] start to setup...");
         let beta = E::Fr::rand(rng);
 
         let g = E::G1Projective::prime_subgroup_generator();
         let h = E::G2Projective::prime_subgroup_generator();
-        println!("[setup] generate...ok.");
+        log::trace!("[setup] generate...ok.");
 
         let mut powers_of_beta = vec![E::Fr::one()];
 
@@ -69,7 +69,7 @@ impl<E: PairingEngine> PCKey<E> {
         );
         let powers_of_g = E::G1Projective::batch_normalization_into_affine(&powers_of_g);
 
-        println!(
+        log::trace!(
             "[setup] generate powers_of_g1...ok. max_degree = {}",
             max_degree
         );
@@ -85,7 +85,7 @@ impl<E: PairingEngine> PCKey<E> {
             max_degree,
             vk: vk.clone(),
         };
-        println!("[setup]finish.");
+        log::trace!("[setup]finish.");
         pckey
     }
 

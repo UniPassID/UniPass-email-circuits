@@ -5,7 +5,6 @@ use plonk::{
     proof::Proof,
     Domain,
 };
-use serde::{de, Serializer};
 
 pub fn to_0x_hex<T>(data: T) -> String
 where
@@ -24,7 +23,7 @@ pub fn padding_bytes(input_bytes: &[u8]) -> Vec<u8> {
     let mut input_bytes_padding = input_bytes.to_vec();
     let input_remainder = (input_bytes.len() * 8) % 512;
 
-    println!(
+    log::trace!(
         "input_bytes len: {}, input_remainder: {}",
         input_bytes.len(),
         input_remainder
@@ -37,7 +36,7 @@ pub fn padding_bytes(input_bytes: &[u8]) -> Vec<u8> {
         64
     };
 
-    println!("padding_count: {}", padding_count);
+    log::trace!("padding_count: {}", padding_count);
 
     input_bytes_padding.push(1u8 << 7);
     for _ in 0..padding_count - 1 {
@@ -46,7 +45,7 @@ pub fn padding_bytes(input_bytes: &[u8]) -> Vec<u8> {
 
     let input_bits_len = ((input_bytes.len() * 8) as u64).to_be_bytes();
 
-    println!("input_bits_len: {}", input_bits_len.len());
+    log::trace!("input_bits_len: {}", input_bits_len.len());
 
     for e in input_bits_len {
         input_bytes_padding.push(e);

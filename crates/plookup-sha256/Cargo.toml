@@ -9,7 +9,15 @@ edition = "2018"
 default = ["std", "parallel"]
 # default = ["std"]
 std = ["ark-ff/std", "ark-std/std", "ark-poly/std", "ark-poly-commit/std"]
-parallel = ["std", "rayon", "ark-ff/parallel", "ark-std/parallel", "ark-poly/parallel", "ark-poly-commit/parallel", "ark-ec/parallel"]
+parallel = [
+    "std",
+    "rayon",
+    "ark-ff/parallel",
+    "ark-std/parallel",
+    "ark-poly/parallel",
+    "ark-poly-commit/parallel",
+    "ark-ec/parallel",
+]
 # derive = [ "ark-serialize-derive" ]
 
 
@@ -31,6 +39,8 @@ sha2 = { version = "0.10", default-features = false }
 hex = "*"
 log = "0.4"
 
-ark-bn254 = {version = "0.3.0", default-features = false, features = ["curve"]}
+ark-bn254 = { version = "0.3.0", default-features = false, features = [
+    "curve",
+] }
 
 [dev-dependencies]

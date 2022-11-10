@@ -1,5 +1,6 @@
 use std::{fs::File, io};
 
+use plonk::ark_bn254::Bn254;
 use plonk::ark_ec::PairingEngine;
 use plonk::ark_ff::PrimeField;
 use plonk::ark_poly_commit::kzg10::Commitment;
@@ -12,6 +13,17 @@ use plonk::{
 };
 
 use crate::ProverResult;
+
+use self::iden3::BinFile;
+
+pub mod iden3;
+
+pub fn read_ptau_to_pckey(p: &str) -> std::io::Result<PCKey<Bn254>> {
+    let mut file = File::open(p).unwrap();
+    let mut binfile = BinFile::new(&mut file).unwrap();
+    log::trace!("binfile: {}", serde_json::to_string(&binfile)?);
+    binfile.pckey()
+}
 
 pub fn prepare_generic_params<E: PairingEngine>(max_degree: usize, rng: &mut impl Rng) -> PCKey<E> {
     PCKey::<E>::setup(max_degree, rng)

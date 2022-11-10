@@ -89,6 +89,44 @@ impl<E: PairingEngine> PCKey<E> {
         pckey
     }
 
+    pub fn check(&self) -> bool {
+        if !E::pairing(self.powers[0], self.vk.beta_h).eq(&E::pairing(self.powers[1], self.vk.h)) {
+            return false;
+        } else {
+            return true;
+        }
+    }
+
+    pub fn apply_new_rand(&self, new_beta: E::Fr) -> Self {
+        let mut powers_of_new_beta = vec![E::Fr::one()];
+        let mut cur = new_beta;
+        for _ in 0..self.max_degree {
+            powers_of_new_beta.push(cur);
+            cur *= &new_beta;
+        }
+        let powers = self.powers.clone();
+        let new_powers_of_g: Vec<_> = powers
+            .into_par_iter()
+            .zip(powers_of_new_beta)
+            .map(|(power_of_g, beta)| power_of_g.mul(beta))
+            .collect();
+        let new_powers_of_g = E::G1Projective::batch_normalization_into_affine(&new_powers_of_g);
+        let new_beta_h = self.vk.beta_h.mul(new_beta).into_affine();
+        let vk = VKey::<E> {
+            g: self.vk.g,
+            h: self.vk.h,
+            beta_h: new_beta_h,
+            max_degree: self.max_degree,
+        };
+
+        let pckey = PCKey::<E> {
+            powers: new_powers_of_g,
+            max_degree: self.max_degree,
+            vk,
+        };
+        pckey
+    }
+
     pub fn commit_vec<F: PrimeField>(
         &self,
         polynomials: &[DensePolynomial<F>],
@@ -193,11 +231,11 @@ impl<E: PairingEngine> PCKey<E> {
             for j in 32..64 {
                 y[64 - j - 1] = bytes[j];
             }
-            
+
             srshasher.update(x);
             srshasher.update(y);
         }
-        
+
         srshasher.finalize().to_vec()
     }
 }

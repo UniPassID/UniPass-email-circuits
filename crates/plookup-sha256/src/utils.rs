@@ -25,7 +25,6 @@ pub fn gen_verify_comms_labels(
     if enable_q0next {
         labels.push(format!("q0next"));
     }
-    labels.push(format!("q_arith"));
     if contain_lookup {
         labels.push(format!("q_lookup"));
         labels.push(format!("q_table"));
@@ -73,7 +72,6 @@ pub fn gen_verify_open_zeta_labels(
         let value = format!("sigma_{}", i);
         labels.push(value);
     }
-    labels.push(format!("q_arith"));
     if contain_lookup {
         labels.push(format!("q_table"));
         labels.push(format!("q_lookup"));

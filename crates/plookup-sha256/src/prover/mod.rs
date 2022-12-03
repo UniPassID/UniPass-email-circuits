@@ -620,10 +620,9 @@ impl<'a, F: Field, D: Domain<F>, E: PairingEngine> Prover<F, D, E> {
             t_zeta * v_zeta
         };
         let rhs = {
-            let q_arith_zeta = self.evaluate("q_arith", "zeta")?;
             let pi_zeta = self.evaluate("pi", "zeta")?;
 
-            r_zeta - r_complement - q_arith_zeta * pi_zeta
+            r_zeta - r_complement - pi_zeta
         };
 
         assert_eq!(lhs, rhs, "prover equality check");

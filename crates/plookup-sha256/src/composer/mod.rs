@@ -59,8 +59,8 @@ pub struct Composer<F: Field> {
 
 /// basics
 impl<F: Field> Composer<F> {
-    const SELECTOR_LABELS: [&'static str; 5] =
-        ["q_m", "q_c", "q_arith", "q_lookup", "q_table"];
+    const SELECTOR_LABELS: [&'static str; 4] =
+        ["q_m", "q_c", "q_lookup", "q_table"];
 
     /// new circuit of "program_width" column witness
     pub fn new(program_width: usize, enable_q0next: bool) -> Composer<F> {

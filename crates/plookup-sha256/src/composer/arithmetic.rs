@@ -43,7 +43,7 @@ impl<F: Field> Composer<F> {
         self.poly_gate(vec![(var, F::one())], F::zero(), -value);
     }
 
-    /// q_arith * (q_0 * w_0 + q_1 * w_1 + q_2 * w_2 + q_3 * w_3 +... + q_m * w_0 * w_1 + q_c) = 0
+    /// (q_0 * w_0 + q_1 * w_1 + q_2 * w_2 + q_3 * w_3 +... + q_m * w_0 * w_1 + q_c) = 0
     pub fn poly_gate(&mut self, wires: Vec<(Variable, F)>, mul_scaling: F, const_scaling: F) {
         assert!(!self.is_finalized);
         assert!(wires.len() <= self.program_width);
@@ -54,7 +54,6 @@ impl<F: Field> Composer<F> {
         }
         self.selectors.get_mut("q_m").unwrap()[index] = mul_scaling;
         self.selectors.get_mut("q_c").unwrap()[index] = const_scaling;
-        self.selectors.get_mut("q_arith").unwrap()[index] = F::one();
     }
 
     /// q_arith * (q_0 * w_0 + q_1 * w_1 + q_2 * w_2 + q_3 * w_3 +... + q_m * w_0 * w_1 + q_c + q0next * w0next) = 0.
@@ -76,7 +75,6 @@ impl<F: Field> Composer<F> {
         }
         self.selectors.get_mut("q_m").unwrap()[index] = mul_scaling;
         self.selectors.get_mut("q_c").unwrap()[index] = const_scaling;
-        self.selectors.get_mut("q_arith").unwrap()[index] = F::one();
 
         if next_wire.len() != 0 {
             let nextindex = self.insert_gate(vec![next_wire[0].0]);
@@ -117,7 +115,6 @@ impl<F: Field> Composer<F> {
             }
             self.selectors.get_mut("q_m").unwrap()[index] = q_m[i];
             self.selectors.get_mut("q_c").unwrap()[index] = q_c[i];
-            self.selectors.get_mut("q_arith").unwrap()[index] = q_arith[i];
             self.selectors.get_mut("q0next").unwrap()[index] = q0next[i];
 
             current_index += 1;

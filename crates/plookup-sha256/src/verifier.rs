@@ -290,7 +290,7 @@ impl<F: Field, D: Domain<F>, E: PairingEngine> Verifier<F, D, E> {
         let rhs = {
             let pi_zeta = pi_poly.evaluate(&zeta);
 
-            self.evaluations["r_zeta"] - r_complement - self.evaluations["q_arith_zeta"] * pi_zeta
+            self.evaluations["r_zeta"] - r_complement - pi_zeta
         };
 
         if lhs != rhs {
@@ -326,32 +326,26 @@ impl<F: Field, D: Domain<F>, E: PairingEngine> Verifier<F, D, E> {
                 let mut alpha_combinator = alpha;
 
                 acc += self.commitments["q_m"].0.into_projective().mul(
-                    (self.evaluations["q_arith_zeta"]
-                        * self.evaluations["w_0_zeta"]
+                    (self.evaluations["w_0_zeta"]
                         * self.evaluations["w_1_zeta"])
                         .into_repr(),
                 );
                 acc += self.commitments["q_c"]
                     .0
-                    .into_projective()
-                    .mul((self.evaluations["q_arith_zeta"]).into_repr());
+                    .into_projective();
                 if self.enable_q0next {
                     acc += self.commitments["q0next"].0.into_projective().mul(
-                        (self.evaluations["q_arith_zeta"] * self.evaluations["w_0_zeta_omega"])
+                        ( self.evaluations["w_0_zeta_omega"])
                             .into_repr(),
                     );
                 }
-                // acc += self.commitments["q0next"].0.into_projective().mul(
-                //     (self.evaluations["q_arith_zeta"] * self.evaluations["w_0_zeta_omega"])
-                //         .into_repr(),
-                // );
+
                 for i in 0..self.program_width {
                     acc += self.commitments[&format!("q_{}", i)]
                         .0
                         .into_projective()
                         .mul(
-                            (self.evaluations["q_arith_zeta"]
-                                * self.evaluations[&format!("w_{}_zeta", i)])
+                            self.evaluations[&format!("w_{}_zeta", i)]
                                 .into_repr(),
                         );
                 }

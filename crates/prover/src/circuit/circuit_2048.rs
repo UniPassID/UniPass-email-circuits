@@ -85,7 +85,7 @@ impl Email2048CircuitInput {
 
     pub fn synthesize(&self) -> Composer<Fr> {
         // new '5 column' circuit
-        let mut cs = Composer::new(5);
+        let mut cs = Composer::new(5, false);
         let (email_header_max_lens, email_addr_max_lens) = Self::parameters();
 
         // padding bytes

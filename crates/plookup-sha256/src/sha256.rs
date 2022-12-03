@@ -2669,331 +2669,332 @@ mod tests {
     use super::*;
     use std::time::Instant; // timer
 
-    #[test]
-    fn spread_table() -> Result<(), Error> {
-        Table::<Fr>::spread_table(3);
-
-        let mut cs = {
-            // x^3 + x + pi = 35
-            let mut cs = Composer::new(5);
-            let pi = cs.alloc_input(Fr::from(5));
-            let x = cs.alloc(Fr::from(3));
-            let y = cs.mul(x, x);
-            let z = cs.mul(x, y);
-            let u = cs.add(x, z);
-            let v = cs.add(pi, u);
-            cs.enforce_constant(v, Fr::from(35));
-
-            cs.enforce_range(v, 16)?;
-
-            let table_index = cs.add_table(Table::xor_table(4));
-            let xtt = cs.alloc(Fr::from(1));
-            let ytt = cs.alloc(Fr::from(2));
-            let ztt = cs.read_from_table(table_index, vec![xtt, ytt])?;
-            cs.enforce_constant(ztt[0], Fr::from(3));
-
-            let table_index = cs.add_table(Table::spread_table(5));
-            let stt = cs.alloc(Fr::from(7));
-            let ztt = cs.read_from_table(table_index, vec![stt])?;
-            cs.enforce_constant(ztt[0], Fr::from(21));
+    // #[test]
+    // fn spread_table() -> Result<(), Error> {
+    //     Table::<Fr>::spread_table(3);
+
+    //     let mut cs = {
+    //         // x^3 + x + pi = 35
+    //         let mut cs = Composer::new(5);
+    //         let pi = cs.alloc_input(Fr::from(5));
+    //         let x = cs.alloc(Fr::from(3));
+    //         let y = cs.mul(x, x);
+    //         let z = cs.mul(x, y);
+    //         let u = cs.add(x, z);
+    //         let v = cs.add(pi, u);
+    //         cs.enforce_constant(v, Fr::from(35));
+
+    //         cs.enforce_range(v, 16)?;
+
+    //         let table_index = cs.add_table(Table::xor_table(4));
+    //         let xtt = cs.alloc(Fr::from(1));
+    //         let ytt = cs.alloc(Fr::from(2));
+    //         let ztt = cs.read_from_table(table_index, vec![xtt, ytt])?;
+    //         cs.enforce_constant(ztt[0], Fr::from(3));
+
+    //         let table_index = cs.add_table(Table::spread_table(5));
+    //         let stt = cs.alloc(Fr::from(7));
+    //         let ztt = cs.read_from_table(table_index, vec![stt])?;
+    //         cs.enforce_constant(ztt[0], Fr::from(21));
 
-            cs
-        };
-
-        let public_input = cs.compute_public_input();
-        println!("circuit construct complete");
-
-        let rng = &mut test_rng();
+    //         cs
+    //     };
+
+    //     let public_input = cs.compute_public_input();
+    //     println!("circuit construct complete");
+
+    //     let rng = &mut test_rng();
 
-        println!("time start:");
-        let start = Instant::now();
-        println!("compute_prover_key...");
-        let pk = cs.compute_prover_key::<GeneralEvaluationDomain<Fr>>()?;
-        println!("compute_prover_key...done");
+    //     println!("time start:");
+    //     let start = Instant::now();
+    //     println!("compute_prover_key...");
+    //     let pk = cs.compute_prover_key::<GeneralEvaluationDomain<Fr>>()?;
+    //     println!("compute_prover_key...done");
 
-        let pckey = PCKey::<ark_bn254::Bn254>::setup(pk.domain_size() + pk.program_width + 6, rng);
+    //     let pckey = PCKey::<ark_bn254::Bn254>::setup(pk.domain_size() + pk.program_width + 6, rng);
 
-        let mut prover = Prover::<Fr, GeneralEvaluationDomain<Fr>, ark_bn254::Bn254>::new(pk);
-        println!("init_comms...");
-        let verifier_comms = prover.init_comms(&pckey);
-        println!("init_comms...done");
-        println!("time cost: {:?} ms", start.elapsed().as_millis()); // ms
-
-        let mut verifier = Verifier::new(&prover, &public_input, &verifier_comms);
-
-        let proof = prover.prove(&mut cs, &pckey, rng)?;
-
-        let sha256_of_srs = pckey.sha256_of_srs();
-        verifier.verify(&pckey.vk, &proof, &sha256_of_srs);
+    //     let mut prover = Prover::<Fr, GeneralEvaluationDomain<Fr>, ark_bn254::Bn254>::new(pk);
+    //     println!("init_comms...");
+    //     let verifier_comms = prover.init_comms(&pckey);
+    //     println!("init_comms...done");
+    //     println!("time cost: {:?} ms", start.elapsed().as_millis()); // ms
+
+    //     let mut verifier = Verifier::new(&prover, &public_input, &verifier_comms);
+
+    //     let proof = prover.prove(&mut cs, &pckey, rng)?;
+
+    //     let sha256_of_srs = pckey.sha256_of_srs();
+    //     verifier.verify(&pckey.vk, &proof, &sha256_of_srs);
 
-        Ok(())
-    }
+    //     Ok(())
+    // }
 
-    #[test]
-    fn sha256_inner_func() -> Result<(), Error> {
-        let mut cs = {
-            let mut cs = Composer::new(4);
-
-            let spread16_index = cs.add_table(Table::spread_table(16));
-
-            let _ = cs.add_table(Table::spread_table(3));
-            let _ = cs.add_table(Table::spread_table(2));
-            let _ = cs.add_table(Table::spread_table_2in1(5, 4));
-            let _ = cs.add_table(Table::spread_table_2in1(13, 11));
-            let _ = cs.add_table(Table::spread_table_2in1(10, 9));
-            let _ = cs.add_table(Table::spread_table_2in1(7, 6));
-            let _ = cs.add_table(Table::spread_table_2in1(16, 14));
-
-            let w = cs.alloc(Fr::from(65535 as u64));
-            let w_spread = cs.read_from_table(spread16_index, vec![w])?;
-
-            let value = cs.get_assignment(w_spread[0]);
-            println!("value{}", value);
-            let var = cs.alloc(value);
-            let word = Sha256Word::new_from_32bits_var(&mut cs, var)?;
-
-            let (hi, low) = sha256_sigma_0(&mut cs, &word)?;
-            println!("hi{}", cs.get_assignment(hi));
-            println!("low{}", cs.get_assignment(low));
-
-            let (hi, low) = sha256_sigma_1(&mut cs, &word)?;
-            println!("hi{}", cs.get_assignment(hi));
-            println!("low{}", cs.get_assignment(low));
-
-            let (hi, low) = sha256_sum_0(&mut cs, &word)?;
-            println!("sum hi{}", cs.get_assignment(hi));
-            println!("low{}", cs.get_assignment(low));
-
-            let (hi, low) = sha256_sum_1(&mut cs, &word)?;
-            println!("sum hi{}", cs.get_assignment(hi));
-            println!("low{}", cs.get_assignment(low));
-
-            let var2 = cs.alloc(Fr::from(65535u64 << 16));
-            let var3 = cs.alloc(Fr::from((1u64 << 32) - 1));
-            let word2 = Sha256Word::new_from_32bits_var(&mut cs, var2)?;
-            let word3 = Sha256Word::new_from_32bits_var(&mut cs, var3)?;
-
-            let (hi, low) = sha256_Maj(&mut cs, &word, &word2, &word3)?;
-            println!("maj hi{}", cs.get_assignment(hi));
-            println!("low{}", cs.get_assignment(low));
-
-            let ch = sha256_Ch(&mut cs, &word, &word2, &word3)?;
-            println!("ch {}", cs.get_assignment(ch));
-
-            cs
-        };
-
-        let public_input = cs.compute_public_input();
-        println!("circuit construct complete");
-
-        let rng = &mut test_rng();
-
-        println!("time start:");
-        let start = Instant::now();
-        println!("compute_prover_key...");
-        let pk = cs.compute_prover_key::<GeneralEvaluationDomain<Fr>>()?;
-        println!("compute_prover_key...done");
-
-        let pckey = PCKey::<ark_bn254::Bn254>::setup(pk.domain_size() + pk.program_width + 6, rng);
-
-        let mut prover = Prover::<Fr, GeneralEvaluationDomain<Fr>, ark_bn254::Bn254>::new(pk);
-        println!("init_comms...");
-        let verifier_comms = prover.init_comms(&pckey);
-        println!("init_comms...done");
-        println!("time cost: {:?} ms", start.elapsed().as_millis()); // ms
-
-        let mut verifier = Verifier::new(&prover, &public_input, &verifier_comms);
-
-        let proof = prover.prove(&mut cs, &pckey, rng)?;
-
-        let sha256_of_srs = pckey.sha256_of_srs();
-        verifier.verify(&pckey.vk, &proof, &sha256_of_srs);
-
-        Ok(())
-    }
-
-    #[test]
-    fn sha256_1_chars() -> Result<(), Error> {
-        // abc (padding to 512bits)
-        let test_message = [
-            "61626380", "00000000", "00000000", "00000000", "00000000", "00000000", "00000000",
-            "00000000", "00000000", "00000000", "00000000", "00000000", "00000000", "00000000",
-            "00000000", "00000018",
-        ];
-
-        let mut cs = {
-            let mut cs = Composer::new(4);
-
-            let _ = cs.add_table(Table::spread_table(3));
-            let _ = cs.add_table(Table::spread_table(2));
-            let _ = cs.add_table(Table::spread_table(8));
-
-            let _ = cs.add_table(Table::spread_table_2in1(5, 4));
-            let _ = cs.add_table(Table::spread_table_2in1(13, 11));
-            let _ = cs.add_table(Table::spread_table_2in1(10, 9));
-            let _ = cs.add_table(Table::spread_table_2in1(7, 6));
-            let _ = cs.add_table(Table::spread_table_2in1(16, 14));
-
-            let mut words = vec![];
-            for elem in test_message {
-                let mut value = BigUint::parse_bytes(elem.as_bytes(), 16).unwrap();
-                let char4 = &value % (1u64 << 8);
-                value >>= 8;
-                let char3 = &value % (1u64 << 8);
-                value >>= 8;
-                let char2 = &value % (1u64 << 8);
-                value >>= 8;
-                let char1 = &value % (1u64 << 8);
-                let char1 = cs.alloc(Fr::from(char1));
-                let char2 = cs.alloc(Fr::from(char2));
-                let char3 = cs.alloc(Fr::from(char3));
-                let char4 = cs.alloc(Fr::from(char4));
-                let word = Sha256Word::new_from_8bits(&mut cs, char1, char2, char3, char4)?;
-                words.push(word);
-            }
-            let mut init_hash = vec![];
-            for i in 0..8 {
-                let value =
-                    Fr::from(BigUint::parse_bytes(INIT_SHA256HASH[i].as_bytes(), 16).unwrap());
-                let var = cs.alloc(value);
-                let initword = Sha256Word::new_from_32bits_var(&mut cs, var)?;
-                cs.enforce_constant(initword.var, value);
-                init_hash.push(initword);
-            }
-            let reshash = sha256_chunk_words_var(&mut cs, &words, &init_hash)?;
-
-            for elem in &reshash {
-                let value = cs.get_assignment(elem.var);
-                println!("{}", value);
-            }
-
-            cs
-        };
-        println!("circuit rows {}", cs.size());
-        let public_input = cs.compute_public_input();
-        println!("circuit construct complete");
-
-        let rng = &mut test_rng();
-
-        println!("time start:");
-        let start = Instant::now();
-        println!("compute_prover_key...");
-        let pk = cs.compute_prover_key::<GeneralEvaluationDomain<Fr>>()?;
-        println!("compute_prover_key...done");
-
-        let pckey = PCKey::<ark_bn254::Bn254>::setup(pk.domain_size() + pk.program_width + 6, rng);
-
-        let mut prover = Prover::<Fr, GeneralEvaluationDomain<Fr>, ark_bn254::Bn254>::new(pk);
-        println!("init_comms...");
-        let verifier_comms = prover.init_comms(&pckey);
-        println!("init_comms...done");
-        println!("time cost: {:?} ms", start.elapsed().as_millis()); // ms
-
-        let mut verifier = Verifier::new(&prover, &public_input, &verifier_comms);
-
-        let proof = prover.prove(&mut cs, &pckey, rng)?;
-
-        let sha256_of_srs = pckey.sha256_of_srs();
-        verifier.verify(&pckey.vk, &proof, &sha256_of_srs);
-
-        Ok(())
-    }
-
-    #[test]
-    fn sha256_chars() -> Result<(), Error> {
-        // abc (padding to 512bits)
-        let test_message = [
-            "61626380", "00000000", "00000000", "00000000", "00000000", "00000000", "00000000",
-            "00000000", "00000000", "00000000", "00000000", "00000000", "00000000", "00000000",
-            "00000000", "00000018",
-        ];
-        // test_message padding
-        let test_message_extra = [
-            "80000000", "00000000", "00000000", "00000000", "00000000", "00000000", "00000000",
-            "00000000", "00000000", "00000000", "00000000", "00000000", "00000000", "00000000",
-            "00000000", "00000200",
-        ];
-
-        let mut cs = {
-            let mut cs = Composer::new(4);
-            let block_num_limit = 32;
-            let msg_len = cs.alloc(Fr::from(1));
-
-            let _ = cs.add_table(Table::spread_table(8));
-
-            let mut words = vec![];
-            for _ in 0..block_num_limit / 2 {
-                for elem in test_message {
-                    let mut value = BigUint::parse_bytes(elem.as_bytes(), 16).unwrap();
-                    let char4 = &value % (1u64 << 8);
-                    value >>= 8;
-                    let char3 = &value % (1u64 << 8);
-                    value >>= 8;
-                    let char2 = &value % (1u64 << 8);
-                    value >>= 8;
-                    let char1 = &value % (1u64 << 8);
-                    let char1 = cs.alloc(Fr::from(char1));
-                    let char2 = cs.alloc(Fr::from(char2));
-                    let char3 = cs.alloc(Fr::from(char3));
-                    let char4 = cs.alloc(Fr::from(char4));
-                    let word = Sha256Word::new_from_8bits(&mut cs, char1, char2, char3, char4)?;
-                    words.push(word);
-                }
-
-                for elem in test_message_extra {
-                    let mut value = BigUint::parse_bytes(elem.as_bytes(), 16).unwrap();
-                    let char4 = &value % (1u64 << 8);
-                    value >>= 8;
-                    let char3 = &value % (1u64 << 8);
-                    value >>= 8;
-                    let char2 = &value % (1u64 << 8);
-                    value >>= 8;
-                    let char1 = &value % (1u64 << 8);
-                    let char1 = cs.alloc(Fr::from(char1));
-                    let char2 = cs.alloc(Fr::from(char2));
-                    let char3 = cs.alloc(Fr::from(char3));
-                    let char4 = cs.alloc(Fr::from(char4));
-                    let word = Sha256Word::new_from_8bits(&mut cs, char1, char2, char3, char4)?;
-                    words.push(word);
-                }
-            }
-
-            let reshash = sha256_no_padding_words_var(&mut cs, &words, msg_len, block_num_limit)?;
-
-            for elem in reshash {
-                let value = cs.get_assignment(elem);
-                println!("{}", value);
-            }
-
-            cs
-        };
-        println!("circuit rows {}", cs.size());
-        let public_input = cs.compute_public_input();
-        println!("circuit construct complete");
-
-        let rng = &mut test_rng();
-
-        println!("time start:");
-        let start = Instant::now();
-        println!("compute_prover_key...");
-        let pk = cs.compute_prover_key::<GeneralEvaluationDomain<Fr>>()?;
-        println!("compute_prover_key...done");
-
-        let pckey = PCKey::<ark_bn254::Bn254>::setup(pk.domain_size() + pk.program_width + 6, rng);
-
-        let mut prover = Prover::<Fr, GeneralEvaluationDomain<Fr>, ark_bn254::Bn254>::new(pk);
-        println!("init_comms...");
-        let verifier_comms = prover.init_comms(&pckey);
-        println!("init_comms...done");
-        println!("time cost: {:?} ms", start.elapsed().as_millis()); // ms
-
-        let mut verifier = Verifier::new(&prover, &public_input, &verifier_comms);
-
-        let proof = prover.prove(&mut cs, &pckey, rng)?;
-
-        let sha256_of_srs = pckey.sha256_of_srs();
-        verifier.verify(&pckey.vk, &proof, &sha256_of_srs);
-
-        Ok(())
-    }
+    // #[test]
+    // fn sha256_inner_func() -> Result<(), Error> {
+    //     let mut cs = {
+    //         let mut cs = Composer::new(4);
+
+    //         let spread16_index = cs.add_table(Table::spread_table(16));
+
+    //         let _ = cs.add_table(Table::spread_table(3));
+    //         let _ = cs.add_table(Table::spread_table(2));
+    //         let _ = cs.add_table(Table::spread_table_2in1(5, 4));
+    //         let _ = cs.add_table(Table::spread_table_2in1(13, 11));
+    //         let _ = cs.add_table(Table::spread_table_2in1(10, 9));
+    //         let _ = cs.add_table(Table::spread_table_2in1(7, 6));
+    //         let _ = cs.add_table(Table::spread_table_2in1(16, 14));
+
+    //         let w = cs.alloc(Fr::from(65535 as u64));
+    //         let w_spread = cs.read_from_table(spread16_index, vec![w])?;
+
+    //         let value = cs.get_assignment(w_spread[0]);
+    //         println!("value{}", value);
+    //         let var = cs.alloc(value);
+    //         let word = Sha256Word::new_from_32bits_var(&mut cs, var)?;
+
+    //         let (hi, low) = sha256_sigma_0(&mut cs, &word)?;
+    //         println!("hi{}", cs.get_assignment(hi));
+    //         println!("low{}", cs.get_assignment(low));
+
+    //         let (hi, low) = sha256_sigma_1(&mut cs, &word)?;
+    //         println!("hi{}", cs.get_assignment(hi));
+    //         println!("low{}", cs.get_assignment(low));
+
+    //         let (hi, low) = sha256_sum_0(&mut cs, &word)?;
+    //         println!("sum hi{}", cs.get_assignment(hi));
+    //         println!("low{}", cs.get_assignment(low));
+
+    //         let (hi, low) = sha256_sum_1(&mut cs, &word)?;
+    //         println!("sum hi{}", cs.get_assignment(hi));
+    //         println!("low{}", cs.get_assignment(low));
+
+    //         let var2 = cs.alloc(Fr::from(65535u64 << 16));
+    //         let var3 = cs.alloc(Fr::from((1u64 << 32) - 1));
+    //         let word2 = Sha256Word::new_from_32bits_var(&mut cs, var2)?;
+    //         let word3 = Sha256Word::new_from_32bits_var(&mut cs, var3)?;
+
+    //         let (hi, low) = sha256_Maj(&mut cs, &word, &word2, &word3)?;
+    //         println!("maj hi{}", cs.get_assignment(hi));
+    //         println!("low{}", cs.get_assignment(low));
+
+    //         let ch = sha256_Ch(&mut cs, &word, &word2, &word3)?;
+    //         println!("ch {}", cs.get_assignment(ch));
+
+    //         cs
+    //     };
+
+    //     let public_input = cs.compute_public_input();
+    //     println!("circuit construct complete");
+
+    //     let rng = &mut test_rng();
+
+    //     println!("time start:");
+    //     let start = Instant::now();
+    //     println!("compute_prover_key...");
+    //     let pk = cs.compute_prover_key::<GeneralEvaluationDomain<Fr>>()?;
+    //     println!("compute_prover_key...done");
+
+    //     let pckey = PCKey::<ark_bn254::Bn254>::setup(pk.domain_size() + pk.program_width + 6, rng);
+
+    //     let mut prover = Prover::<Fr, GeneralEvaluationDomain<Fr>, ark_bn254::Bn254>::new(pk);
+    //     println!("init_comms...");
+    //     let verifier_comms = prover.init_comms(&pckey);
+    //     println!("init_comms...done");
+    //     println!("time cost: {:?} ms", start.elapsed().as_millis()); // ms
+
+    //     let mut verifier = Verifier::new(&prover, &public_input, &verifier_comms);
+
+    //     let proof = prover.prove(&mut cs, &pckey, rng)?;
+
+    //     let sha256_of_srs = pckey.sha256_of_srs();
+    //     verifier.verify(&pckey.vk, &proof, &sha256_of_srs);
+
+    //     Ok(())
+    // }
+
+    // #[test]
+    // fn sha256_1_chars() -> Result<(), Error> {
+    //     // abc (padding to 512bits)
+    //     let test_message = [
+    //         "61626380", "00000000", "00000000", "00000000", "00000000", "00000000", "00000000",
+    //         "00000000", "00000000", "00000000", "00000000", "00000000", "00000000", "00000000",
+    //         "00000000", "00000018",
+    //     ];
+
+    //     let mut cs = {
+    //         let mut cs = Composer::new(4);
+
+    //         let _ = cs.add_table(Table::spread_table(3));
+    //         let _ = cs.add_table(Table::spread_table(2));
+    //         let _ = cs.add_table(Table::spread_table(8));
+
+    //         let _ = cs.add_table(Table::spread_table_2in1(5, 4));
+    //         let _ = cs.add_table(Table::spread_table_2in1(13, 11));
+    //         let _ = cs.add_table(Table::spread_table_2in1(10, 9));
+    //         let _ = cs.add_table(Table::spread_table_2in1(7, 6));
+    //         let _ = cs.add_table(Table::spread_table_2in1(16, 14));
+
+    //         let mut words = vec![];
+    //         for elem in test_message {
+    //             let mut value = BigUint::parse_bytes(elem.as_bytes(), 16).unwrap();
+    //             let char4 = &value % (1u64 << 8);
+    //             value >>= 8;
+    //             let char3 = &value % (1u64 << 8);
+    //             value >>= 8;
+    //             let char2 = &value % (1u64 << 8);
+    //             value >>= 8;
+    //             let char1 = &value % (1u64 << 8);
+    //             let char1 = cs.alloc(Fr::from(char1));
+    //             let char2 = cs.alloc(Fr::from(char2));
+    //             let char3 = cs.alloc(Fr::from(char3));
+    //             let char4 = cs.alloc(Fr::from(char4));
+    //             let word = Sha256Word::new_from_8bits(&mut cs, char1, char2, char3, char4)?;
+    //             words.push(word);
+    //         }
+    //         let mut init_hash = vec![];
+    //         for i in 0..8 {
+    //             let value =
+    //                 Fr::from(BigUint::parse_bytes(INIT_SHA256HASH[i].as_bytes(), 16).unwrap());
+    //             let var = cs.alloc(value);
+    //             let initword = Sha256Word::new_from_32bits_var(&mut cs, var)?;
+    //             cs.enforce_constant(initword.var, value);
+    //             init_hash.push(initword);
+    //         }
+    //         let reshash = sha256_chunk_words_var(&mut cs, &words, &init_hash)?;
+
+    //         for elem in &reshash {
+    //             let value = cs.get_assignment(elem.var);
+    //             println!("{}", value);
+    //         }
+
+    //         cs
+    //     };
+    //     println!("circuit rows {}", cs.size());
+    //     let public_input = cs.compute_public_input();
+    //     println!("circuit construct complete");
+
+    //     let rng = &mut test_rng();
+
+    //     println!("time start:");
+    //     let start = Instant::now();
+    //     println!("compute_prover_key...");
+    //     let pk = cs.compute_prover_key::<GeneralEvaluationDomain<Fr>>()?;
+    //     println!("compute_prover_key...done");
+
+    //     let pckey = PCKey::<ark_bn254::Bn254>::setup(pk.domain_size() + pk.program_width + 6, rng);
+
+    //     let mut prover = Prover::<Fr, GeneralEvaluationDomain<Fr>, ark_bn254::Bn254>::new(pk);
+    //     println!("init_comms...");
+    //     let verifier_comms = prover.init_comms(&pckey);
+    //     println!("init_comms...done");
+    //     println!("time cost: {:?} ms", start.elapsed().as_millis()); // ms
+
+    //     let mut verifier = Verifier::new(&prover, &public_input, &verifier_comms);
+
+    //     let proof = prover.prove(&mut cs, &pckey, rng)?;
+
+    //     let sha256_of_srs = pckey.sha256_of_srs();
+    //     verifier.verify(&pckey.vk, &proof, &sha256_of_srs);
+
+    //     Ok(())
+    // }
+
+    // #[test]
+    // fn sha256_chars() -> Result<(), Error> {
+    //     // abc (padding to 512bits)
+    //     let test_message = [
+    //         "61626380", "00000000", "00000000", "00000000", "00000000", "00000000", "00000000",
+    //         "00000000", "00000000", "00000000", "00000000", "00000000", "00000000", "00000000",
+    //         "00000000", "00000018",
+    //     ];
+    //     // test_message padding
+    //     let test_message_extra = [
+    //         "80000000", "00000000", "00000000", "00000000", "00000000", "00000000", "00000000",
+    //         "00000000", "00000000", "00000000", "00000000", "00000000", "00000000", "00000000",
+    //         "00000000", "00000200",
+    //     ];
+
+    //     let mut cs = {
+    //         let mut cs = Composer::new(4);
+    //         let block_num_limit = 32;
+    //         let msg_len = cs.alloc(Fr::from(1));
+
+    //         let _ = cs.add_table(Table::spread_table(8));
+
+    //         let mut words = vec![];
+    //         for _ in 0..block_num_limit / 2 {
+    //             for elem in test_message {
+    //                 let mut value = BigUint::parse_bytes(elem.as_bytes(), 16).unwrap();
+    //                 let char4 = &value % (1u64 << 8);
+    //                 value >>= 8;
+    //                 let char3 = &value % (1u64 << 8);
+    //                 value >>= 8;
+    //                 let char2 = &value % (1u64 << 8);
+    //                 value >>= 8;
+    //                 let char1 = &value % (1u64 << 8);
+    //                 let char1 = cs.alloc(Fr::from(char1));
+    //                 let char2 = cs.alloc(Fr::from(char2));
+    //                 let char3 = cs.alloc(Fr::from(char3));
+    //                 let char4 = cs.alloc(Fr::from(char4));
+    //                 let word = Sha256Word::new_from_8bits(&mut cs, char1, char2, char3, char4)?;
+    //                 words.push(word);
+    //             }
+
+    //             for elem in test_message_extra {
+    //                 let mut value = BigUint::parse_bytes(elem.as_bytes(), 16).unwrap();
+    //                 let char4 = &value % (1u64 << 8);
+    //                 value >>= 8;
+    //                 let char3 = &value % (1u64 << 8);
+    //                 value >>= 8;
+    //                 let char2 = &value % (1u64 << 8);
+    //                 value >>= 8;
+    //                 let char1 = &value % (1u64 << 8);
+    //                 let char1 = cs.alloc(Fr::from(char1));
+    //                 let char2 = cs.alloc(Fr::from(char2));
+    //                 let char3 = cs.alloc(Fr::from(char3));
+    //                 let char4 = cs.alloc(Fr::from(char4));
+    //                 let word = Sha256Word::new_from_8bits(&mut cs, char1, char2, char3, char4)?;
+    //                 words.push(word);
+    //             }
+    //         }
+
+    //         let reshash = sha256_no_padding_words_var(&mut cs, &words, msg_len, block_num_limit)?;
+
+    //         for elem in reshash {
+    //             let value = cs.get_assignment(elem);
+    //             println!("{}", value);
+    //         }
+
+    //         cs
+    //     };
+    //     println!("circuit rows {}", cs.size());
+    //     let public_input = cs.compute_public_input();
+    //     println!("circuit construct complete");
+
+    //     let rng = &mut test_rng();
+
+    //     println!("time start:");
+    //     let start = Instant::now();
+    //     println!("compute_prover_key...");
+    //     let pk = cs.compute_prover_key::<GeneralEvaluationDomain<Fr>>()?;
+    //     println!("compute_prover_key...done");
+
+    //     let pckey = PCKey::<ark_bn254::Bn254>::setup(pk.domain_size() + pk.program_width + 6, rng);
+
+    //     let mut prover = Prover::<Fr, GeneralEvaluationDomain<Fr>, ark_bn254::Bn254>::new(pk);
+    //     println!("init_comms...");
+    //     let verifier_comms = prover.init_comms(&pckey);
+    //     println!("init_comms...done");
+    //     println!("time cost: {:?} ms", start.elapsed().as_millis()); // ms
+
+    //     let mut verifier = Verifier::new(&prover, &public_input, &verifier_comms);
+
+    //     let proof = prover.prove(&mut cs, &pckey, rng)?;
+
+    //     let sha256_of_srs = pckey.sha256_of_srs();
+    //     verifier.verify(&pckey.vk, &proof, &sha256_of_srs);
+
+    //     Ok(())
+    // }
+
 }

@@ -41,6 +41,7 @@ pub struct Verifier<F: Field, D: Domain<F>, E: PairingEngine> {
     pub enable_mimc: bool,
     pub enable_mask_poly: bool,
     pub enable_pubmatch: bool,
+    pub enable_q0next: bool,
 
     pub public_input: Vec<F>,
     pub commitments: Map<String, Commitment<E>>,
@@ -65,6 +66,7 @@ impl<F: Field, D: Domain<F>, E: PairingEngine> Verifier<F, D, E> {
             prover.enable_mimc,
             prover.enable_mask_poly,
             prover.enable_pubmatch,
+            prover.enable_q0next,
         );
         for (str, comm) in labels.iter().zip(v_comms) {
             commitments.insert(str.to_string(), comm.clone());
@@ -82,6 +84,7 @@ impl<F: Field, D: Domain<F>, E: PairingEngine> Verifier<F, D, E> {
             evaluations: Map::new(),
             enable_pubmatch: prover.enable_pubmatch,
             public_input: public_input.clone(),
+            enable_q0next: prover.enable_q0next,
         }
     }
 
@@ -115,6 +118,7 @@ impl<F: Field, D: Domain<F>, E: PairingEngine> Verifier<F, D, E> {
             self.enable_mimc,
             self.enable_mask_poly,
             self.enable_pubmatch,
+            self.enable_q0next,
         );
         for str in &verify_comms_labels {
             let comm = self.commitments[str];
@@ -331,10 +335,16 @@ impl<F: Field, D: Domain<F>, E: PairingEngine> Verifier<F, D, E> {
                     .0
                     .into_projective()
                     .mul((self.evaluations["q_arith_zeta"]).into_repr());
-                acc += self.commitments["q0next"].0.into_projective().mul(
-                    (self.evaluations["q_arith_zeta"] * self.evaluations["w_0_zeta_omega"])
-                        .into_repr(),
-                );
+                if self.enable_q0next {
+                    acc += self.commitments["q0next"].0.into_projective().mul(
+                        (self.evaluations["q_arith_zeta"] * self.evaluations["w_0_zeta_omega"])
+                            .into_repr(),
+                    );
+                }
+                // acc += self.commitments["q0next"].0.into_projective().mul(
+                //     (self.evaluations["q_arith_zeta"] * self.evaluations["w_0_zeta_omega"])
+                //         .into_repr(),
+                // );
                 for i in 0..self.program_width {
                     acc += self.commitments[&format!("q_{}", i)]
                         .0

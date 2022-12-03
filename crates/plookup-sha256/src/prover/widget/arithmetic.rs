@@ -49,6 +49,7 @@ impl<F: Field, D: Domain<F>, E: PairingEngine, R: RngCore> Widget<F, D, E, R> fo
         let values = prover.coset_values();
 
         let ratio = prover.coset_size() / prover.domain_size();
+        let q0next_enabled = prover.enable_q0next;
 
         quotient.into_par_iter().enumerate().for_each(|(i, quot)| {
             let next_i = if i / ratio == (len / ratio - 1) {
@@ -64,13 +65,15 @@ impl<F: Field, D: Domain<F>, E: PairingEngine, R: RngCore> Widget<F, D, E, R> fo
                 .map(|(w, q)| values[w][i] * values[q][i])
                 .sum::<F>();
 
-            *quot += *combinator
-                * values["q_arith"][i]
-                * (-values["pi"][i]
+            let mut arith_part = values["q_arith"][i] * (-values["pi"][i]
                     + values["q_m"][i] * values["w_0"][i] * values["w_1"][i]
                     + values["q_c"][i]
-                    + values["q0next"][i] * values["w_0"][next_i]
                     + sum);
+            if q0next_enabled {
+                arith_part += values["q0next"][i] * values["w_0"][next_i];
+            }
+
+            *quot += *combinator * arith_part;
         });
 
         let alpha = prover.get_challenge("alpha")?;
@@ -96,8 +99,12 @@ impl<F: Field, D: Domain<F>, E: PairingEngine, R: RngCore> Widget<F, D, E, R> fo
         let mut terms = vec![
             (q_arith_zeta * w_0_zeta * w_1_zeta, "q_m"),
             (q_arith_zeta, "q_c"),
-            (q_arith_zeta * w0_zeta_omega, "q0next"),
+            // (q_arith_zeta * w0_zeta_omega, "q0next"),
         ];
+        if prover.enable_q0next {
+            let w0_zeta_omega = prover.evaluate("w_0", "zeta_omega")?;
+            terms.push((w0_zeta_omega, "q0next"));
+        }
         for (w, q) in self.wire_labels.iter().zip(self.scaling_labels.iter()) {
             let w_zeta = prover.evaluate(w, "zeta")?;
             terms.push((q_arith_zeta * w_zeta, q));

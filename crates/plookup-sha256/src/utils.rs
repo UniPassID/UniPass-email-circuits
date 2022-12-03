@@ -13,6 +13,7 @@ pub fn gen_verify_comms_labels(
     contain_mimc: bool,
     contain_substring: bool,
     contain_pubmatch: bool,
+    enable_q0next: bool,
 ) -> Vec<String> {
     let mut labels = vec![];
     for i in 0..program_width {
@@ -21,7 +22,9 @@ pub fn gen_verify_comms_labels(
     }
     labels.push(format!("q_m"));
     labels.push(format!("q_c"));
-    labels.push(format!("q0next"));
+    if enable_q0next {
+        labels.push(format!("q0next"));
+    }
     labels.push(format!("q_arith"));
     if contain_lookup {
         labels.push(format!("q_lookup"));
@@ -58,7 +61,6 @@ pub fn gen_verify_comms_labels(
 pub fn gen_verify_open_zeta_labels(
     program_width: usize,
     contain_lookup: bool,
-    // contain_substring: bool,
 ) -> Vec<String> {
     let mut labels = vec![];
     labels.push(format!("t4t"));

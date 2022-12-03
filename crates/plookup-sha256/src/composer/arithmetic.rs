@@ -68,6 +68,7 @@ impl<F: Field> Composer<F> {
     ) {
         assert!(!self.is_finalized);
         assert!(wires.len() <= self.program_width);
+        assert!(self.selectors.contains_key("q0next"));
 
         let index = self.insert_gate(wires.iter().map(|(v, _)| *v).collect());
         for i in 0..wires.len() {
@@ -100,6 +101,7 @@ impl<F: Field> Composer<F> {
         assert_eq!(n, q_m.len());
         assert_eq!(n, q_c.len());
         assert_eq!(n, q0next.len());
+        assert!(self.selectors.contains_key("q0next"));
         for wires in &multiple_wires {
             assert!(wires.len() <= self.program_width);
         }

@@ -25,6 +25,7 @@ pub struct ProverKey<F: Field, D: Domain<F>> {
     pub enable_mimc: bool,
     pub enable_mask_poly: bool,
     pub enable_pubmatch: bool,
+    pub enable_q0next: bool,
 }
 
 impl<F: Field, D: Domain<F>> ProverKey<F, D> {
@@ -37,6 +38,7 @@ impl<F: Field, D: Domain<F>> ProverKey<F, D> {
         enable_mimc: bool,
         enable_mask_poly: bool,
         enable_pubmatch: bool,
+        enable_q0next: bool,
     ) -> Result<Self, Error> {
         let domain = D::new(circuit_size).ok_or(Error::PolynomialDegreeTooLarge)?;
 
@@ -84,6 +86,7 @@ impl<F: Field, D: Domain<F>> ProverKey<F, D> {
             enable_mimc,
             enable_mask_poly,
             enable_pubmatch,
+            enable_q0next,
         })
     }
 

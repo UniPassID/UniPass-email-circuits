@@ -47,6 +47,7 @@ pub struct Prover<F: Field, D: Domain<F>, E: PairingEngine> {
     pub enable_mimc: bool,
     pub enable_mask_poly: bool,
     pub enable_pubmatch: bool,
+    pub enable_q0next: bool,
 }
 
 impl<'a, F: Field, D: Domain<F>, E: PairingEngine> Prover<F, D, E> {
@@ -189,6 +190,7 @@ impl<'a, F: Field, D: Domain<F>, E: PairingEngine> Prover<F, D, E> {
             enable_mimc: prover_key.enable_mimc,
             enable_mask_poly: prover_key.enable_mask_poly,
             enable_pubmatch: prover_key.enable_pubmatch,
+            enable_q0next: prover_key.enable_q0next,
         }
     }
 
@@ -201,6 +203,7 @@ impl<'a, F: Field, D: Domain<F>, E: PairingEngine> Prover<F, D, E> {
             self.enable_mimc,
             self.enable_mask_poly,
             self.enable_pubmatch,
+            self.enable_q0next,
         );
 
         for (str, comm) in labels.iter().zip(vcomms) {
@@ -221,6 +224,7 @@ impl<'a, F: Field, D: Domain<F>, E: PairingEngine> Prover<F, D, E> {
             self.enable_mimc,
             self.enable_mask_poly,
             self.enable_pubmatch,
+            self.enable_q0next,
         );
         for str in labels {
             let v = &polys[str.as_str()];
@@ -293,6 +297,7 @@ impl<'a, F: Field, D: Domain<F>, E: PairingEngine> Prover<F, D, E> {
             self.enable_mimc,
             self.enable_mask_poly,
             self.enable_pubmatch,
+            self.enable_q0next,
         );
         for str in &verify_comms_labels {
             let comm = self.commitments[str];
@@ -721,7 +726,7 @@ mod tests {
     fn prover() -> Result<(), Error> {
         let mut cs = {
             // x^3 + x + pi = 35
-            let mut cs = Composer::new(4);
+            let mut cs = Composer::new(4, true);
             let pi = cs.alloc_input(Fr::from(5));
             let x = cs.alloc(Fr::from(3));
             let y = cs.mul(x, x);

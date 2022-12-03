@@ -54,15 +54,16 @@ pub struct Composer<F: Field> {
     pub enable_mimc: bool,
     pub enable_mask_poly: bool,
     pub enable_pubmatch: bool,
+    pub enable_q0next: bool,
 }
 
 /// basics
 impl<F: Field> Composer<F> {
-    const SELECTOR_LABELS: [&'static str; 6] =
-        ["q_m", "q_c", "q_arith", "q_lookup", "q_table", "q0next"];
+    const SELECTOR_LABELS: [&'static str; 5] =
+        ["q_m", "q_c", "q_arith", "q_lookup", "q_table"];
 
     /// new circuit of "program_width" column witness
-    pub fn new(program_width: usize) -> Composer<F> {
+    pub fn new(program_width: usize, enable_q0next: bool) -> Composer<F> {
         let mut cs = Composer::default();
 
         for j in 0..program_width {
@@ -72,7 +73,12 @@ impl<F: Field> Composer<F> {
         for label in Self::SELECTOR_LABELS {
             cs.selectors.insert(label.to_string(), Vec::new());
         }
+        if enable_q0next {
+            cs.enable_q0next = true;
+            cs.selectors.insert("q0next".to_string(), Vec::new());
+        }
         cs.program_width = program_width;
+
         // any()
         let _ = cs.alloc(F::zero());
 
@@ -187,6 +193,7 @@ impl<F: Field> Composer<F> {
             self.enable_mimc,
             self.enable_mask_poly,
             self.enable_pubmatch,
+            self.enable_q0next,
         )?;
 
         for (k, q) in self.selectors.iter() {
@@ -302,7 +309,7 @@ mod tests {
     fn composer_test_basic() -> Result<(), Error> {
         let mut cs = {
             // x^3 + x + pi = 35
-            let mut cs = Composer::new(4);
+            let mut cs = Composer::new(4, false);
             let pi = cs.alloc_input(Fr::from(5 as u64));
             let x = cs.alloc(Fr::from(3));
             let y = cs.mul(x, x);
@@ -310,6 +317,12 @@ mod tests {
             let u = cs.add(x, z);
             let v = cs.add(pi, u);
             cs.enforce_constant(v, Fr::from(BigUint::parse_bytes(b"23", 16).unwrap()));
+
+            let table_index = cs.add_table(Table::xor_table(2));
+            let xtt = cs.alloc(Fr::from(1));
+            let ytt = cs.alloc(Fr::from(2));
+            let ztt = cs.read_from_table(table_index, vec![xtt, ytt])?;
+            cs.enforce_constant(ztt[0], Fr::from(3));
 
             cs
         };

@@ -751,6 +751,28 @@ impl<F: Field> Composer<F> {
 
     /// ensure some positions are matched between "a" and "b". "b" is a public string.
     /// if any var is 0 in "b", we default that this byte is private (not match), otherwise must match to "a"
+    pub fn add_public_match_no_custom_gate(
+        &mut self,
+        a: &Vec<Variable>,
+        b: &Vec<Variable>,
+        max_lens: usize,
+    ) {
+        assert_eq!(a.len(), max_lens);
+        assert_eq!(b.len(), max_lens);
+
+        // prove public_match
+        // b * (a - b) === 0 
+        for i in 0..max_lens {
+            let ci = self.sub(a[i], b[i]);
+            self.mul_gate(ci, b[i], Composer::<F>::null());
+        }
+        
+        // recommend hash "b" to compress public_input
+    }
+
+    /// Deprecated.
+    /// ensure some positions are matched between "a" and "b". "b" is a public string.
+    /// if any var is 0 in "b", we default that this byte is private (not match), otherwise must match to "a"
     pub fn add_public_match(
         &mut self,
         a: &Vec<Variable>,

@@ -6,14 +6,11 @@ use ark_std::{end_timer, start_timer};
 
 pub use ark_ff::PrimeField as Field;
 
+use crate::composer::ComposerConfig;
+
 pub fn gen_verify_comms_labels(
     program_width: usize,
-    contain_range: bool,
-    contain_lookup: bool,
-    contain_mimc: bool,
-    contain_substring: bool,
-    contain_pubmatch: bool,
-    enable_q0next: bool,
+    composer_config: ComposerConfig,
 ) -> Vec<String> {
     let mut labels = vec![];
     for i in 0..program_width {
@@ -22,10 +19,11 @@ pub fn gen_verify_comms_labels(
     }
     labels.push(format!("q_m"));
     labels.push(format!("q_c"));
-    if enable_q0next {
+    if composer_config.enable_q0next {
         labels.push(format!("q0next"));
     }
-    if contain_lookup {
+    
+    if composer_config.enable_lookup {
         labels.push(format!("q_lookup"));
         labels.push(format!("q_table"));
     }
@@ -33,24 +31,24 @@ pub fn gen_verify_comms_labels(
         let value = format!("sigma_{}", i);
         labels.push(value);
     }
-    if contain_lookup {
+    if composer_config.enable_lookup {
         for i in 0..program_width + 1 {
             let value = format!("table_{}", i);
             labels.push(value);
         }
     }
 
-    if contain_range {
+    if composer_config.enable_range {
         labels.push(format!("q_range"));
     }
-    if contain_substring {
+    if composer_config.enable_private_substring {
         labels.push(format!("q_substring"));
         labels.push(format!("q_substring_r"));
     }
-    if contain_pubmatch {
+    if composer_config.enable_pubmatch {
         labels.push(format!("q_pubmatch"));
     }
-    if contain_mimc {
+    if composer_config.enable_mimc {
         labels.push(format!("q_mimc"));
     }
 
@@ -59,7 +57,7 @@ pub fn gen_verify_comms_labels(
 
 pub fn gen_verify_open_zeta_labels(
     program_width: usize,
-    contain_lookup: bool,
+    enable_lookup: bool,
 ) -> Vec<String> {
     let mut labels = vec![];
     labels.push(format!("t4t"));
@@ -72,7 +70,7 @@ pub fn gen_verify_open_zeta_labels(
         let value = format!("sigma_{}", i);
         labels.push(value);
     }
-    if contain_lookup {
+    if enable_lookup {
         labels.push(format!("q_table"));
         labels.push(format!("q_lookup"));
         labels.push(format!("table"));
@@ -83,18 +81,17 @@ pub fn gen_verify_open_zeta_labels(
 
 pub fn gen_verify_open_zeta_omega_labels(
     // program_width: usize,
-    contain_lookup: bool,
-    contain_substring: bool,
+    composer_config: ComposerConfig,
 ) -> Vec<String> {
     let mut labels = vec![];
     labels.push(format!("w_0"));
     labels.push(format!("z"));
-    if contain_lookup {
+    if composer_config.enable_lookup {
         labels.push(format!("s"));
         labels.push(format!("z_lookup"));
         labels.push(format!("table"));
     }
-    if contain_substring {
+    if composer_config.enable_private_substring {
         labels.push(format!("w_1"));
         labels.push(format!("w_2"));
         labels.push(format!("w_3"));

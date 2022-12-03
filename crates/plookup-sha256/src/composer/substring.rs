@@ -19,8 +19,8 @@ impl<F: Field> Composer<F> {
         let b_max_lens = 192;
         assert!(self.program_width >= 5);
 
-        if !self.enable_mask_poly {
-            self.enable_mask_poly = true;
+        if !self.switches.enable_private_substring {
+            self.switches.enable_private_substring = true;
         }
         if !self.selectors.contains_key("q_substring_r") {
             let current_index = self.size();
@@ -399,8 +399,8 @@ impl<F: Field> Composer<F> {
         let max_lens = 1024;
         let b_max_lens = 192;
         assert!(self.program_width >= 5);
-        if !self.enable_mask_poly {
-            self.enable_mask_poly = true;
+        if !self.switches.enable_private_substring {
+            self.switches.enable_private_substring = true;
         }
         if !self.selectors.contains_key("q_substring_r") {
             let current_index = self.size();
@@ -761,8 +761,8 @@ impl<F: Field> Composer<F> {
         assert_eq!(a.len(), max_lens);
         assert_eq!(b.len(), max_lens);
 
-        if !self.enable_pubmatch {
-            self.enable_pubmatch = true;
+        if !self.switches.enable_pubmatch {
+            self.switches.enable_pubmatch = true;
         }
         if !self.selectors.contains_key("q_pubmatch") {
             let current_index = self.size();

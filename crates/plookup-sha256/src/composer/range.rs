@@ -7,8 +7,8 @@ impl<F: Field> Composer<F> {
     /// here we enforce range constraint by quads (2-bit unit), so `num_bits` must be even.
     /// The quads are orgnized in the big-endian order.
     pub fn enforce_range(&mut self, var: Variable, num_bits: usize) -> Result<usize, Error> {
-        if !self.enable_range {
-            self.enable_range = true;
+        if !self.switches.enable_range {
+            self.switches.enable_range = true;
         }
         if !self.selectors.contains_key("q_range") {
             let current_index = self.size();

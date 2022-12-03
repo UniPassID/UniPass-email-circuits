@@ -49,7 +49,7 @@ impl<F: Field, D: Domain<F>, E: PairingEngine, R: RngCore> Widget<F, D, E, R> fo
         let values = prover.coset_values();
 
         let ratio = prover.coset_size() / prover.domain_size();
-        let q0next_enabled = prover.enable_q0next;
+        let q0next_enabled = prover.composer_config.enable_q0next;
 
         quotient.into_par_iter().enumerate().for_each(|(i, quot)| {
             let next_i = if i / ratio == (len / ratio - 1) {
@@ -97,7 +97,7 @@ impl<F: Field, D: Domain<F>, E: PairingEngine, R: RngCore> Widget<F, D, E, R> fo
             (w_0_zeta * w_1_zeta, "q_m"),
             (F::one(), "q_c"),
         ];
-        if prover.enable_q0next {
+        if prover.composer_config.enable_q0next {
             let w0_zeta_omega = prover.evaluate("w_0", "zeta_omega")?;
             terms.push((w0_zeta_omega, "q0next"));
         }

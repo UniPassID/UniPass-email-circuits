@@ -1,4 +1,5 @@
 use ark_std::{cfg_iter, cfg_iter_mut, cmp::max, format, vec, vec::Vec};
+use ark_serialize::*;
 
 #[cfg(feature = "parallel")]
 use rayon::prelude::*;
@@ -29,6 +30,17 @@ impl Wire {
 #[derive(Debug, Eq, PartialEq, Clone, Copy, Hash, Ord, PartialOrd, Default)]
 pub struct Variable(usize);
 
+#[derive(Debug, Default, Copy, Clone, CanonicalSerialize, CanonicalDeserialize)]
+pub struct ComposerConfig {
+    pub enable_q0next: bool,
+
+    pub enable_range: bool,
+    pub enable_lookup: bool,
+    pub enable_mimc: bool,
+    pub enable_private_substring: bool,
+    pub enable_pubmatch: bool,
+}
+
 #[derive(Debug, Default)]
 pub struct Composer<F: Field> {
     // number of witness columns of the circuit
@@ -49,12 +61,7 @@ pub struct Composer<F: Field> {
     tables: Vec<Table<F>>,
 
     // custom gates
-    pub enable_range: bool,
-    pub enable_lookup: bool,
-    pub enable_mimc: bool,
-    pub enable_mask_poly: bool,
-    pub enable_pubmatch: bool,
-    pub enable_q0next: bool,
+    pub switches: ComposerConfig,
 }
 
 /// basics
@@ -74,7 +81,7 @@ impl<F: Field> Composer<F> {
             cs.selectors.insert(label.to_string(), Vec::new());
         }
         if enable_q0next {
-            cs.enable_q0next = true;
+            cs.switches.enable_q0next = true;
             cs.selectors.insert("q0next".to_string(), Vec::new());
         }
         cs.program_width = program_width;
@@ -188,12 +195,7 @@ impl<F: Field> Composer<F> {
             size + 1,
             self.input_size(),
             self.program_width,
-            self.enable_range,
-            self.enable_lookup,
-            self.enable_mimc,
-            self.enable_mask_poly,
-            self.enable_pubmatch,
-            self.enable_q0next,
+            self.switches,
         )?;
 
         for (k, q) in self.selectors.iter() {

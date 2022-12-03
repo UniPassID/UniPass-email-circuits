@@ -157,8 +157,8 @@ impl<F: Field> Composer<F> {
     /// table index starts at 1.
     /// return index of the table.
     pub fn add_table(&mut self, mut table: Table<F>) -> usize {
-        if !self.enable_lookup {
-            self.enable_lookup = true;
+        if !self.switches.enable_lookup {
+            self.switches.enable_lookup = true;
         }
         let result = self.get_table_index(table.id.clone());
         if result != 0 {

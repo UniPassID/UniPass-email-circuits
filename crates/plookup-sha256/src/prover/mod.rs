@@ -16,6 +16,7 @@ use sha2::{Digest, Sha256};
 mod prover_key;
 pub use prover_key::*;
 
+use crate::composer::ComposerConfig;
 use crate::kzg10::PCKey;
 use crate::proof::Proof;
 use crate::prover::widget::{MiMCWidget, PubMatchWidget, SubStringWidget};
@@ -42,12 +43,8 @@ pub struct Prover<F: Field, D: Domain<F>, E: PairingEngine> {
     pub domain: D,
     pub coset: D,
     pub program_width: usize,
-    pub enable_range: bool,
-    pub enable_lookup: bool,
-    pub enable_mimc: bool,
-    pub enable_mask_poly: bool,
-    pub enable_pubmatch: bool,
-    pub enable_q0next: bool,
+    
+    pub composer_config: ComposerConfig,
 }
 
 impl<'a, F: Field, D: Domain<F>, E: PairingEngine> Prover<F, D, E> {
@@ -185,12 +182,7 @@ impl<'a, F: Field, D: Domain<F>, E: PairingEngine> Prover<F, D, E> {
             domain: prover_key.domain,
             coset: prover_key.coset,
             program_width: prover_key.program_width,
-            enable_range: prover_key.enable_range,
-            enable_lookup: prover_key.enable_lookup,
-            enable_mimc: prover_key.enable_mimc,
-            enable_mask_poly: prover_key.enable_mask_poly,
-            enable_pubmatch: prover_key.enable_pubmatch,
-            enable_q0next: prover_key.enable_q0next,
+            composer_config: prover_key.composer_config,
         }
     }
 
@@ -198,12 +190,7 @@ impl<'a, F: Field, D: Domain<F>, E: PairingEngine> Prover<F, D, E> {
     pub fn insert_verifier_comms(&mut self, vcomms: &Vec<Commitment<E>>) {
         let labels = gen_verify_comms_labels(
             self.program_width,
-            self.enable_range,
-            self.enable_lookup,
-            self.enable_mimc,
-            self.enable_mask_poly,
-            self.enable_pubmatch,
-            self.enable_q0next,
+            self.composer_config,
         );
 
         for (str, comm) in labels.iter().zip(vcomms) {
@@ -219,12 +206,7 @@ impl<'a, F: Field, D: Domain<F>, E: PairingEngine> Prover<F, D, E> {
         let mut commitments = Map::new();
         let labels = gen_verify_comms_labels(
             self.program_width,
-            self.enable_range,
-            self.enable_lookup,
-            self.enable_mimc,
-            self.enable_mask_poly,
-            self.enable_pubmatch,
-            self.enable_q0next,
+            self.composer_config,
         );
         for str in labels {
             let v = &polys[str.as_str()];
@@ -246,7 +228,7 @@ impl<'a, F: Field, D: Domain<F>, E: PairingEngine> Prover<F, D, E> {
         rng: &mut R,
     ) -> Result<Proof<F, E>, Error> {
         // now we must contain lookup
-        assert!(self.enable_lookup);
+        assert!(self.composer_config.enable_lookup);
         let public_input = cs.compute_public_input();
 
         // P and V must keep the same order
@@ -254,24 +236,24 @@ impl<'a, F: Field, D: Domain<F>, E: PairingEngine> Prover<F, D, E> {
             Box::new(ArithmeticWidget::new(cs.program_width)),
             Box::new(PermutationWidget::new(cs.program_width)),
         ];
-        if self.enable_lookup {
+        if self.composer_config.enable_lookup {
             widgets.push(Box::new(LookupWidget::new(cs.program_width)));
         }
-        if self.enable_range {
+        if self.composer_config.enable_range {
             widgets.push(Box::new(RangeWidget::new(cs.program_width)));
         }
-        if self.enable_mask_poly {
+        if self.composer_config.enable_private_substring {
             widgets.push(Box::new(SubStringWidget::new(cs.program_width)));
         }
-        if self.enable_pubmatch {
+        if self.composer_config.enable_pubmatch {
             widgets.push(Box::new(PubMatchWidget::new(cs.program_width)));
         }
-        if self.enable_mimc {
+        if self.composer_config.enable_mimc {
             widgets.push(Box::new(MiMCWidget::new(cs.program_width)));
         }
 
         let mut z_labels = vec!["z".to_string(), "z_lookup".to_string()];
-        if self.enable_mask_poly {
+        if self.composer_config.enable_private_substring {
             z_labels.push("z_substring".to_string());
         }
 
@@ -292,12 +274,7 @@ impl<'a, F: Field, D: Domain<F>, E: PairingEngine> Prover<F, D, E> {
 
         let verify_comms_labels = gen_verify_comms_labels(
             self.program_width,
-            self.enable_range,
-            self.enable_lookup,
-            self.enable_mimc,
-            self.enable_mask_poly,
-            self.enable_pubmatch,
-            self.enable_q0next,
+            self.composer_config,
         );
         for str in &verify_comms_labels {
             let comm = self.commitments[str];
@@ -368,7 +345,7 @@ impl<'a, F: Field, D: Domain<F>, E: PairingEngine> Prover<F, D, E> {
         for i in 0..self.program_width {
             let label = format!("w_{}", i);
             let open_num =
-                if i == 0 || (self.enable_mask_poly && ((i == 1) || (i == 2) || (i == 3))) {
+                if i == 0 || (self.composer_config.enable_private_substring && ((i == 1) || (i == 2) || (i == 3))) {
                     2
                 } else {
                     1
@@ -565,9 +542,11 @@ impl<'a, F: Field, D: Domain<F>, E: PairingEngine> Prover<F, D, E> {
         log::trace!("forth round done");
 
         let verify_open_zeta_labels =
-            gen_verify_open_zeta_labels(self.program_width, self.enable_lookup);
+            gen_verify_open_zeta_labels(self.program_width, self.composer_config.enable_lookup);
         let verify_open_zeta_omega_labels =
-            gen_verify_open_zeta_omega_labels(self.enable_lookup, self.enable_mask_poly);
+            gen_verify_open_zeta_omega_labels(
+                self.composer_config,
+            );
         for str in &verify_open_zeta_labels {
             let tmp = self.evaluate(str.as_str(), "zeta")?;
             trans.update_with_fr(&tmp);

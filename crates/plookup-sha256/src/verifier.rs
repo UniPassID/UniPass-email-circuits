@@ -1,5 +1,6 @@
 use std::time::Instant;
 
+use crate::composer::ComposerConfig;
 use crate::{
     coset_generator, gen_verify_comms_labels, gen_verify_open_zeta_labels,
     gen_verify_open_zeta_omega_labels,
@@ -36,12 +37,7 @@ fn combine<F: Field>(challenge: F, mut values: Vec<F>) -> F {
 
 pub struct Verifier<F: Field, D: Domain<F>, E: PairingEngine> {
     pub program_width: usize,
-    pub enable_range: bool,
-    pub enable_lookup: bool,
-    pub enable_mimc: bool,
-    pub enable_mask_poly: bool,
-    pub enable_pubmatch: bool,
-    pub enable_q0next: bool,
+    pub composer_config: ComposerConfig,
 
     pub public_input: Vec<F>,
     pub commitments: Map<String, Commitment<E>>,
@@ -61,12 +57,7 @@ impl<F: Field, D: Domain<F>, E: PairingEngine> Verifier<F, D, E> {
         let mut commitments = Map::new();
         let labels = gen_verify_comms_labels(
             prover.program_width,
-            prover.enable_range,
-            prover.enable_lookup,
-            prover.enable_mimc,
-            prover.enable_mask_poly,
-            prover.enable_pubmatch,
-            prover.enable_q0next,
+            prover.composer_config,
         );
         for (str, comm) in labels.iter().zip(v_comms) {
             commitments.insert(str.to_string(), comm.clone());
@@ -77,14 +68,9 @@ impl<F: Field, D: Domain<F>, E: PairingEngine> Verifier<F, D, E> {
             commitments,
             domain: prover.domain,
             domain_generator: prover.domain.generator(),
-            enable_range: prover.enable_range,
-            enable_lookup: prover.enable_lookup,
-            enable_mimc: prover.enable_mimc,
-            enable_mask_poly: prover.enable_mask_poly,
             evaluations: Map::new(),
-            enable_pubmatch: prover.enable_pubmatch,
             public_input: public_input.clone(),
-            enable_q0next: prover.enable_q0next,
+            composer_config: prover.composer_config,
         }
     }
 
@@ -93,13 +79,15 @@ impl<F: Field, D: Domain<F>, E: PairingEngine> Verifier<F, D, E> {
         let start = Instant::now();
 
         let mut z_labels = vec!["z".to_string(), "z_lookup".to_string()];
-        if self.enable_mask_poly {
+        if self.composer_config.enable_private_substring {
             z_labels.push("z_substring".to_string());
         }
         let verify_open_zeta_labels =
-            gen_verify_open_zeta_labels(self.program_width, self.enable_lookup);
+        gen_verify_open_zeta_labels(self.program_width, self.composer_config.enable_lookup);
         let verify_open_zeta_omega_labels =
-            gen_verify_open_zeta_omega_labels(self.enable_lookup, self.enable_mask_poly);
+        gen_verify_open_zeta_omega_labels(
+            self.composer_config,
+        );
 
         let mut trans = TranscriptLibrary::new();
         // sha256 SRS, put into the transcript
@@ -113,12 +101,7 @@ impl<F: Field, D: Domain<F>, E: PairingEngine> Verifier<F, D, E> {
 
         let verify_comms_labels = gen_verify_comms_labels(
             self.program_width,
-            self.enable_range,
-            self.enable_lookup,
-            self.enable_mimc,
-            self.enable_mask_poly,
-            self.enable_pubmatch,
-            self.enable_q0next,
+            self.composer_config,
         );
         for str in &verify_comms_labels {
             let comm = self.commitments[str];
@@ -262,21 +245,21 @@ impl<F: Field, D: Domain<F>, E: PairingEngine> Verifier<F, D, E> {
         alpha_combinator *= alpha_3;
         let mut r_complement = r_permu + r_lookup;
         // range
-        if self.enable_range {
+        if self.composer_config.enable_range {
             alpha_combinator *= alpha;
         }
         // substring
-        if self.enable_mask_poly {
+        if self.composer_config.enable_private_substring {
             r_complement += alpha_combinator * (-self.evaluations["z_substring_zeta_omega"]);
 
             alpha_combinator *= alpha_5 * alpha;
         }
         // pubmatch
-        if self.enable_pubmatch {
+        if self.composer_config.enable_pubmatch {
             alpha_combinator *= alpha;
         }
         // mimc
-        if self.enable_mimc {
+        if self.composer_config.enable_mimc {
             alpha_combinator *= alpha;
         }
 
@@ -333,7 +316,7 @@ impl<F: Field, D: Domain<F>, E: PairingEngine> Verifier<F, D, E> {
                 acc += self.commitments["q_c"]
                     .0
                     .into_projective();
-                if self.enable_q0next {
+                if self.composer_config.enable_q0next {
                     acc += self.commitments["q0next"].0.into_projective().mul(
                         ( self.evaluations["w_0_zeta_omega"])
                             .into_repr(),
@@ -401,7 +384,7 @@ impl<F: Field, D: Domain<F>, E: PairingEngine> Verifier<F, D, E> {
                 alpha_combinator *= alpha_3;
 
                 // q_range
-                if self.enable_range {
+                if self.composer_config.enable_range {
                     let quads = {
                         let mut quads: Vec<_> = (0..self.program_width - 1)
                             .into_iter()
@@ -429,7 +412,7 @@ impl<F: Field, D: Domain<F>, E: PairingEngine> Verifier<F, D, E> {
                 }
 
                 // substring:
-                if self.enable_mask_poly {
+                if self.composer_config.enable_private_substring {
                     // q_substring
                     acc += self.commitments["q_substring"].0.into_projective().mul(
                         (alpha_combinator
@@ -474,7 +457,7 @@ impl<F: Field, D: Domain<F>, E: PairingEngine> Verifier<F, D, E> {
                 }
 
                 // pub match
-                if self.enable_pubmatch {
+                if self.composer_config.enable_pubmatch {
                     // q_q_pubmatch
                     acc += self.commitments["q_pubmatch"].0.into_projective().mul(
                         (alpha_combinator
@@ -488,7 +471,7 @@ impl<F: Field, D: Domain<F>, E: PairingEngine> Verifier<F, D, E> {
                 }
 
                 // q_mimc
-                if self.enable_mimc {
+                if self.composer_config.enable_mimc {
                     let tmp1 = self.evaluations["w_0_zeta"] + self.evaluations["w_2_zeta"];
                     let part1 = self.evaluations["w_3_zeta"] - tmp1.square();
 

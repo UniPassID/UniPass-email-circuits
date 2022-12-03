@@ -238,8 +238,8 @@ impl<F: Field> Composer<F> {
     /// x_l[i+1] = x_l[i]
     /// x_r[i+1] = x_r[i] + (k + x_l[i] + c[i])**5
     pub fn mimc_feistel(&mut self, l_data: Variable, r_data: Variable) -> (Variable, Variable) {
-        if !self.enable_mimc {
-            self.enable_mimc = true;
+        if !self.switches.enable_mimc {
+            self.switches.enable_mimc = true;
         }
         if !self.selectors.contains_key("q_mimc") {
             let current_index = self.size();
@@ -298,8 +298,8 @@ impl<F: Field> Composer<F> {
 
     /// MiMC (follow circomlib's MiMCsponge)
     pub fn MiMC_sponge(&mut self, inputs: &[Variable], n_outputs: usize) -> Vec<Variable> {
-        if !self.enable_mimc {
-            self.enable_mimc = true;
+        if !self.switches.enable_mimc {
+            self.switches.enable_mimc = true;
         }
         if !self.selectors.contains_key("q_mimc") {
             let current_index = self.size();

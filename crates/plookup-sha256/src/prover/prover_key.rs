@@ -3,6 +3,7 @@ use ark_poly::univariate::DensePolynomial;
 
 use ark_std::{string::String, vec::Vec};
 
+use crate::composer::ComposerConfig;
 use crate::utils::interpolate_and_coset_fft;
 use crate::{Domain, Field, Map};
 
@@ -20,12 +21,7 @@ pub struct ProverKey<F: Field, D: Domain<F>> {
     coset_values: Map<String, Vec<F>>,
     polynomials: Map<String, DensePolynomial<F>>,
 
-    pub enable_range: bool,
-    pub enable_lookup: bool,
-    pub enable_mimc: bool,
-    pub enable_mask_poly: bool,
-    pub enable_pubmatch: bool,
-    pub enable_q0next: bool,
+    pub composer_config: ComposerConfig,
 }
 
 impl<F: Field, D: Domain<F>> ProverKey<F, D> {
@@ -33,12 +29,7 @@ impl<F: Field, D: Domain<F>> ProverKey<F, D> {
         circuit_size: usize,
         input_size: usize,
         program_width: usize,
-        enable_range: bool,
-        enable_lookup: bool,
-        enable_mimc: bool,
-        enable_mask_poly: bool,
-        enable_pubmatch: bool,
-        enable_q0next: bool,
+        composer_config: ComposerConfig,
     ) -> Result<Self, Error> {
         let domain = D::new(circuit_size).ok_or(Error::PolynomialDegreeTooLarge)?;
 
@@ -81,12 +72,7 @@ impl<F: Field, D: Domain<F>> ProverKey<F, D> {
             domain_values: Map::new(),
             coset_values,
             polynomials: Map::new(),
-            enable_range,
-            enable_lookup,
-            enable_mimc,
-            enable_mask_poly,
-            enable_pubmatch,
-            enable_q0next,
+            composer_config,
         })
     }
 

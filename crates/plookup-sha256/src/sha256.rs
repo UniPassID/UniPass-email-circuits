@@ -284,6 +284,17 @@ impl Sha256Word {
             + char4value;
 
         let var = cs.alloc(value);
+        cs.poly_gate(
+            vec![
+                (var, -F::one()),
+                (char4, F::one()),
+                (char3, F::from(1u64 << 8)),
+                (char2, F::from(1u64 << 16)),
+                (char1, F::from(1u64 << 24)),
+            ],
+            F::zero(),
+            F::zero(),
+        );
 
         let spread8_index = cs.get_table_index(format!("spread_8bits"));
         assert!(spread8_index != 0);

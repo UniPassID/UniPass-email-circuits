@@ -84,7 +84,10 @@ pub fn gen_verify_open_zeta_omega_labels(
     composer_config: ComposerConfig,
 ) -> Vec<String> {
     let mut labels = vec![];
-    labels.push(format!("w_0"));
+    if composer_config.enable_range||composer_config.enable_mimc||composer_config.enable_private_substring||composer_config.enable_q0next {
+        labels.push(format!("w_0"));
+    }
+    
     labels.push(format!("z"));
     if composer_config.enable_lookup {
         labels.push(format!("s"));
@@ -92,9 +95,7 @@ pub fn gen_verify_open_zeta_omega_labels(
         labels.push(format!("table"));
     }
     if composer_config.enable_private_substring {
-        labels.push(format!("w_1"));
         labels.push(format!("w_2"));
-        labels.push(format!("w_3"));
         labels.push(format!("z_substring"));
     }
 

@@ -217,8 +217,6 @@ impl<F: Field, D: Domain<F>, E: PairingEngine> Verifier<F, D, E> {
             .evaluate_lagrange_polynomial(self.domain.size(), &zeta);
         let alpha_2 = alpha.square();
         let alpha_3 = alpha * alpha_2;
-        let alpha_4 = alpha_2.square();
-        let alpha_5 = alpha * alpha_4;
 
         // cal r_complement
         let mut tmp = F::one();
@@ -252,7 +250,7 @@ impl<F: Field, D: Domain<F>, E: PairingEngine> Verifier<F, D, E> {
         if self.composer_config.enable_private_substring {
             r_complement += alpha_combinator * (-self.evaluations["z_substring_zeta_omega"]);
 
-            alpha_combinator *= alpha_5 * alpha;
+            alpha_combinator *= alpha_2 * alpha;
         }
         // pubmatch
         if self.composer_config.enable_pubmatch {
@@ -425,35 +423,23 @@ impl<F: Field, D: Domain<F>, E: PairingEngine> Verifier<F, D, E> {
                     acc += self.commitments["q_substring_r"].0.into_projective().mul(
                         (alpha_combinator
                             * (alpha
-                                * (self.evaluations["w_1_zeta_omega"]
-                                    * (self.evaluations["w_4_zeta"]
-                                        * self.evaluations["w_0_zeta"]
-                                        + self.evaluations["w_1_zeta_omega"]
-                                        - self.evaluations["w_1_zeta"])
-                                    - self.evaluations["w_0_zeta_omega"])
-                                + alpha_2
-                                    * (self.evaluations["w_3_zeta_omega"]
-                                        * (self.evaluations["w_4_zeta"]
-                                            * self.evaluations["w_2_zeta"]
-                                            + self.evaluations["w_3_zeta_omega"]
-                                            - self.evaluations["w_3_zeta"])
-                                        - self.evaluations["w_2_zeta_omega"])
-                                + alpha_4
-                                    * (self.evaluations["w_1_zeta_omega"]
-                                        * (self.evaluations["w_1_zeta_omega"] - F::one()))
-                                + alpha_5
-                                    * (self.evaluations["w_3_zeta_omega"]
-                                        * (self.evaluations["w_3_zeta_omega"] - F::one()))))
+                                * (self.evaluations["w_0_zeta_omega"]
+                                    * (self.evaluations["w_3_zeta"]
+                                        * self.evaluations["w_2_zeta"]
+                                        + self.evaluations["w_0_zeta_omega"]
+                                        - self.evaluations["w_0_zeta"])
+                                    - self.evaluations["w_2_zeta_omega"])
+                            ))
                         .into_repr(),
                     );
 
                     // z_substring
                     acc += self.commitments["z_substring"].0.into_projective().mul(
-                        (alpha_combinator * (alpha_3 * lagrange_1_zeta - F::one())).into_repr(),
+                        (alpha_combinator * (alpha_2 * lagrange_1_zeta - F::one())).into_repr(),
                     );
 
                     // update alpha_comb
-                    alpha_combinator *= alpha_5 * alpha;
+                    alpha_combinator *= alpha_2 * alpha;
                 }
 
                 // pub match

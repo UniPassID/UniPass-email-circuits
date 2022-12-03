@@ -345,7 +345,12 @@ impl<'a, F: Field, D: Domain<F>, E: PairingEngine> Prover<F, D, E> {
         for i in 0..self.program_width {
             let label = format!("w_{}", i);
             let open_num =
-                if i == 0 || (self.composer_config.enable_private_substring && ((i == 1) || (i == 2) || (i == 3))) {
+            if ((self.composer_config.enable_range
+                    ||self.composer_config.enable_mimc
+                    ||self.composer_config.enable_private_substring
+                    ||self.composer_config.enable_q0next) && (i == 0)
+                ) || (self.composer_config.enable_private_substring && (i == 2))
+            {
                     2
                 } else {
                     1

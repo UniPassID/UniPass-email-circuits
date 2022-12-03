@@ -90,11 +90,10 @@ impl<F: Field> Composer<F> {
         }
 
         // prove ra rb. put 'mask poly' into witnesses.
-        // w0:mask_poly_a. w1:bit_location_a. w2:mask_poly_b. w3:bit_location_b. w4: mask_r
+        // w0:bit_location. w1:bit_location. w2:mask_poly. w3: mask_r
 
         // must have this line at first
         let index = self.insert_gate(vec![
-            Composer::<F>::null(),
             Composer::<F>::null(),
             Composer::<F>::null(),
             Composer::<F>::null(),
@@ -105,10 +104,9 @@ impl<F: Field> Composer<F> {
         let mut current_index = self.size();
         for i in 0..max_lens {
             let wires = vec![
-                mask_poly_a[i],
                 bit_location_a[i],
-                mask_poly_b[i],
-                bit_location_b[i],
+                bit_location_a[i],
+                mask_poly_a[i],
                 mask,
             ];
 
@@ -119,6 +117,43 @@ impl<F: Field> Composer<F> {
             if i == max_lens - 1 {
                 self.selectors.get_mut(&format!("q_substring_r")).unwrap()[index] = F::zero();
             }
+
+            // enforce_bool
+            self.selectors.get_mut("q_m").unwrap()[index] = F::one();
+            self.selectors.get_mut("q_0").unwrap()[index] = -F::one();
+
+            current_index += 1;
+        }
+
+        // must have this line at first
+        let index = self.insert_gate(vec![
+            Composer::<F>::null(),
+            Composer::<F>::null(),
+            Composer::<F>::null(),
+            mask,
+        ]);
+        self.selectors.get_mut(&format!("q_substring_r")).unwrap()[index] = F::one();
+
+        let mut current_index = self.size();
+        for i in 0..b_max_lens {
+            let wires = vec![
+                bit_location_b[i],
+                bit_location_b[i],
+                mask_poly_b[i],
+                mask,
+            ];
+
+            let index = self.insert_gate(wires);
+            assert_eq!(current_index, index);
+
+            self.selectors.get_mut(&format!("q_substring_r")).unwrap()[index] = F::one();
+            if i == b_max_lens - 1 {
+                self.selectors.get_mut(&format!("q_substring_r")).unwrap()[index] = F::zero();
+            }
+
+            // enforce_bool
+            self.selectors.get_mut("q_m").unwrap()[index] = F::one();
+            self.selectors.get_mut("q_0").unwrap()[index] = -F::one();
 
             current_index += 1;
         }
@@ -136,8 +171,6 @@ impl<F: Field> Composer<F> {
 
             current_index += 1;
         }
-
-        // bool constraints are in the custom gate
 
         // output bit_location_a
         let bit_location_a_value = self.get_assignments(&bit_location_a);
@@ -470,11 +503,10 @@ impl<F: Field> Composer<F> {
         }
 
         // prove ra rb.
-        // w0:mask_poly_a. w1:bit_location_a. w2:mask_poly_b. w3:bit_location_b. w4: mask_r
+        // w0:bit_location. w1:bit_location. w2:mask_poly. w3: mask_r
 
         // must have this line at first
         let index = self.insert_gate(vec![
-            Composer::<F>::null(),
             Composer::<F>::null(),
             Composer::<F>::null(),
             Composer::<F>::null(),
@@ -485,10 +517,9 @@ impl<F: Field> Composer<F> {
         let mut current_index = self.size();
         for i in 0..max_lens {
             let wires = vec![
-                mask_poly_a[i],
                 bit_location_a[i],
-                mask_poly_b[i],
-                bit_location_b[i],
+                bit_location_a[i],
+                mask_poly_a[i],
                 mask,
             ];
 
@@ -499,6 +530,43 @@ impl<F: Field> Composer<F> {
             if i == max_lens - 1 {
                 self.selectors.get_mut(&format!("q_substring_r")).unwrap()[index] = F::zero();
             }
+
+            // enforce_bool
+            self.selectors.get_mut("q_m").unwrap()[index] = F::one();
+            self.selectors.get_mut("q_0").unwrap()[index] = -F::one();
+
+            current_index += 1;
+        }
+
+        // must have this line at first
+        let index = self.insert_gate(vec![
+            Composer::<F>::null(),
+            Composer::<F>::null(),
+            Composer::<F>::null(),
+            mask,
+        ]);
+        self.selectors.get_mut(&format!("q_substring_r")).unwrap()[index] = F::one();
+
+        let mut current_index = self.size();
+        for i in 0..b_max_lens {
+            let wires = vec![
+                bit_location_b[i],
+                bit_location_b[i],
+                mask_poly_b[i],
+                mask,
+            ];
+
+            let index = self.insert_gate(wires);
+            assert_eq!(current_index, index);
+
+            self.selectors.get_mut(&format!("q_substring_r")).unwrap()[index] = F::one();
+            if i == b_max_lens - 1 {
+                self.selectors.get_mut(&format!("q_substring_r")).unwrap()[index] = F::zero();
+            }
+
+            // enforce_bool
+            self.selectors.get_mut("q_m").unwrap()[index] = F::one();
+            self.selectors.get_mut("q_0").unwrap()[index] = -F::one();
 
             current_index += 1;
         }

@@ -79,9 +79,6 @@ impl<F: Field, D: Domain<F>, E: PairingEngine, R: RngCore> Widget<F, D, E, R> fo
 
         let ratio = prover.coset_size() / prover.domain_size();
         let alpha_2 = alpha.square();
-        let alpha_3 = alpha * alpha_2;
-        let alpha_4 = alpha_2.square();
-        let alpha_5 = alpha * alpha_4;
 
         quotient.into_par_iter().enumerate().for_each(|(i, quot)| {
             let next_i = if i / ratio == (n / ratio - 1) {
@@ -91,15 +88,9 @@ impl<F: Field, D: Domain<F>, E: PairingEngine, R: RngCore> Widget<F, D, E, R> fo
             };
 
             let ra = values["q_substring_r"][i]
-                * (values["w_1"][next_i]
-                    * (values["w_4"][i] * values["w_0"][i] + values["w_1"][next_i]
-                        - values["w_1"][i])
-                    - values["w_0"][next_i]);
-
-            let rb = values["q_substring_r"][i]
-                * (values["w_3"][next_i]
-                    * (values["w_4"][i] * values["w_2"][i] + values["w_3"][next_i]
-                        - values["w_3"][i])
+                * (values["w_0"][next_i]
+                    * (values["w_3"][i] * values["w_2"][i] + values["w_0"][next_i]
+                        - values["w_0"][i])
                     - values["w_2"][next_i]);
 
             let recur = values["z_substring"][next_i]
@@ -109,23 +100,14 @@ impl<F: Field, D: Domain<F>, E: PairingEngine, R: RngCore> Widget<F, D, E, R> fo
 
             let zl1 = values["z_substring"][i] * values["lagrange_1"][i];
 
-            let enforce_boola = values["q_substring_r"][i]
-                * values["w_1"][next_i]
-                * (values["w_1"][next_i] - F::one());
-            let enforce_boolb = values["q_substring_r"][i]
-                * values["w_3"][next_i]
-                * (values["w_3"][next_i] - F::one());
-
             *quot += *combinator
                 * (recur
                     + ra * alpha
-                    + rb * alpha_2
-                    + zl1 * alpha_3
-                    + enforce_boola * alpha_4
-                    + enforce_boolb * alpha_5);
+                    + zl1 * alpha_2
+                );
         });
 
-        *combinator *= alpha_5 * alpha;
+        *combinator *= alpha_2 * alpha;
 
         //free mem
         prover.remove_coset_values("z_substring");
@@ -144,21 +126,15 @@ impl<F: Field, D: Domain<F>, E: PairingEngine, R: RngCore> Widget<F, D, E, R> fo
         let zeta = prover.get_challenge("zeta")?;
 
         let w0_zeta_omega = prover.evaluate("w_0", "zeta_omega")?;
-        let w1_zeta_omega = prover.evaluate("w_1", "zeta_omega")?;
         let w2_zeta_omega = prover.evaluate("w_2", "zeta_omega")?;
-        let w3_zeta_omega = prover.evaluate("w_3", "zeta_omega")?;
         let w0_zeta = prover.evaluate("w_0", "zeta")?;
         let w1_zeta = prover.evaluate("w_1", "zeta")?;
         let w2_zeta = prover.evaluate("w_2", "zeta")?;
         let w3_zeta = prover.evaluate("w_3", "zeta")?;
-        let w4_zeta = prover.evaluate("w_4", "zeta")?;
 
         let z_substring_zeta_omega = prover.evaluate("z_substring", "zeta_omega")?;
 
         let alpha_2 = alpha.square();
-        let alpha_3 = alpha * alpha_2;
-        let alpha_4 = alpha_2.square();
-        let alpha_5 = alpha * alpha_4;
 
         let lagrange_1_zeta = prover.domain.evaluate_lagrange_polynomial(1, &zeta);
 
@@ -173,17 +149,13 @@ impl<F: Field, D: Domain<F>, E: PairingEngine, R: RngCore> Widget<F, D, E, R> fo
                 (
                     *combinator
                         * (alpha
-                            * (w1_zeta_omega * (w4_zeta * w0_zeta + w1_zeta_omega - w1_zeta)
-                                - w0_zeta_omega)
-                            + alpha_2
-                                * (w3_zeta_omega * (w4_zeta * w2_zeta + w3_zeta_omega - w3_zeta)
-                                    - w2_zeta_omega)
-                            + alpha_4 * w1_zeta_omega * (w1_zeta_omega - F::one())
-                            + alpha_5 * w3_zeta_omega * (w3_zeta_omega - F::one())),
+                            * (w0_zeta_omega * (w3_zeta * w2_zeta + w0_zeta_omega - w0_zeta)
+                                - w2_zeta_omega)
+                        ),
                     "q_substring_r",
                 ),
                 (
-                    *combinator * (alpha_3 * lagrange_1_zeta - F::one()),
+                    *combinator * (alpha_2 * lagrange_1_zeta - F::one()),
                     "z_substring",
                 ),
             ],
@@ -192,7 +164,7 @@ impl<F: Field, D: Domain<F>, E: PairingEngine, R: RngCore> Widget<F, D, E, R> fo
         // constant term
         let complement = *combinator * (-z_substring_zeta_omega);
 
-        *combinator *= alpha_5 * alpha;
+        *combinator *= alpha_2 * alpha;
 
         Ok((lc, complement))
     }

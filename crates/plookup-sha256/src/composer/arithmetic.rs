@@ -12,6 +12,14 @@ impl<F: Field> Composer<F> {
         var_o
     }
 
+    /// o = l - r
+    pub fn sub(&mut self, var_l: Variable, var_r: Variable) -> Variable {
+        let var_o = self.alloc_variable(self.assignments[var_l.0] - self.assignments[var_r.0]);
+        self.add_gate(var_o, var_r, var_l);
+
+        var_o
+    }
+    
     /// o = l + r
     pub fn add_gate(&mut self, var_l: Variable, var_r: Variable, var_o: Variable) {
         self.poly_gate(

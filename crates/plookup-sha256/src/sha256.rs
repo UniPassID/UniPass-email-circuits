@@ -2517,13 +2517,14 @@ pub fn sha256_no_padding_words_var<F: Field>(
     Ok(out_hash)
 }
 
-/// sha256: compress only 1 full 512bits messages.
+/// sha256: compress fixed_length full 512bits messages.
 /// return 8 * 32bits
-pub fn sha256_no_padding_words_var_one<F: Field>(
+pub fn sha256_no_padding_words_var_fixed_length<F: Field>(
     cs: &mut Composer<F>,
     chunk_messages: &[Sha256Word],
+    block_num: usize,
 ) -> Result<Vec<Variable>, Error> {
-    assert_eq!(chunk_messages.len(), 16);
+    assert_eq!(chunk_messages.len() as u64, 16 * block_num as u64);
 
     let _ = cs.add_table(Table::spread_table(2));
     let _ = cs.add_table(Table::spread_table(3));
@@ -2534,21 +2535,28 @@ pub fn sha256_no_padding_words_var_one<F: Field>(
     let _ = cs.add_table(Table::spread_table_2in1(7, 6));
     let _ = cs.add_table(Table::spread_table_2in1(16, 14));
 
+    let mut hashs = vec![];
+
     let mut init_hash = vec![];
     for i in 0..8 {
         let value = F::from(BigUint::parse_bytes(INIT_SHA256HASH[i].as_bytes(), 16).unwrap());
         let var = cs.alloc(value);
         let initword = Sha256Word::new_from_32bits_var(cs, var)?;
-        cs.enforce_constant(initword.var, value);
+        cs.enforce_constant(var, value);
         init_hash.push(initword);
     }
+    hashs.push(init_hash);
 
     // main
-    let reshash = sha256_chunk_words_var(cs, chunk_messages, &init_hash)?;
+    for i in 0..block_num {
+        let reshash =
+            sha256_chunk_words_var(cs, &chunk_messages[(16 * i)..(16 * i + 16)], &hashs[i])?;
+        hashs.push(reshash);
+    }
 
     let mut out_hash = vec![];
-    for v in reshash {
-        out_hash.push(v.var);
+    for i in 0..8 {
+        out_hash.push(hashs[block_num][i].var);
     }
 
     Ok(out_hash)

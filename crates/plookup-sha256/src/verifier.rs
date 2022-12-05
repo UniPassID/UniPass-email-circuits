@@ -424,8 +424,8 @@ impl<F: Field, D: Domain<F>, E: PairingEngine> Verifier<F, D, E> {
                         (alpha_combinator
                             * (alpha
                                 * (self.evaluations["w_0_zeta_omega"]
-                                    * (self.evaluations["w_3_zeta"]
-                                        * self.evaluations["w_2_zeta"]
+                                    * self.evaluations["w_3_zeta"]
+                                        * (self.evaluations["w_2_zeta"]
                                         + self.evaluations["w_0_zeta_omega"]
                                         - self.evaluations["w_0_zeta"])
                                     - self.evaluations["w_2_zeta_omega"])

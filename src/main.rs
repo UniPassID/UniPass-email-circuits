@@ -177,6 +177,7 @@ fn main() -> Result<(), SerializationError> {
             println!("[main] synthesize finish");
 
             let public_input = cs.compute_public_input();
+            println!("cs.size() {}", cs.size());
 
             println!(
                 "[main] public input: {:?}",
@@ -198,6 +199,7 @@ fn main() -> Result<(), SerializationError> {
             let mut prover = Prover::<Fr, GeneralEvaluationDomain<Fr>, Bn254>::new(
                 pk_2048.as_ref().unwrap().clone(),
             );
+            println!("prover.domain_size() {}", prover.domain_size());
 
             println!("[main] init_comms...");
             if verifier_comms_2048.is_none() {

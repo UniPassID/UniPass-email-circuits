@@ -227,7 +227,7 @@ impl<'a, F: Field, D: Domain<F>, E: PairingEngine> Prover<F, D, E> {
         pckey: &PCKey<E>,
         rng: &mut R,
     ) -> Result<Proof<F, E>, Error> {
-        // now we must contain lookup
+        // now we must enable lookup
         assert!(self.composer_config.enable_lookup);
         let public_input = cs.compute_public_input();
 
@@ -262,82 +262,85 @@ impl<'a, F: Field, D: Domain<F>, E: PairingEngine> Prover<F, D, E> {
         let start = Instant::now();
         log::trace!("initializing...");
 
-        // sha256 SRS, put into the transcript
-        let srshash = pckey.sha256_of_srs();
-        trans.update_with_u256(srshash);
-
-        let pi_num = public_input.len() as u64;
-        let v0_domainsize = self.domain_size() as u128;
-        let omega = self.domain.generator();
-        let mut vcomms = vec![];
-        let mut g2xbytes = vec![];
-
-        let verify_comms_labels = gen_verify_comms_labels(
-            self.program_width,
-            self.composer_config,
-        );
-        for str in &verify_comms_labels {
-            let comm = self.commitments[str];
-            let tmp = comm.0;
-            let mut bytes = [0u8; 64];
-            let _ = tmp.write(bytes.as_mut());
-            let mut x = [0u8; 32];
+        // transcript SRS-hash, vkdata-hash, public-inputs
+        {
+            // sha256 SRS, put into the transcript
+            let srshash = pckey.sha256_of_srs();
+            trans.update_with_u256(srshash);
+    
+            let pi_num = public_input.len() as u64;
+            let v0_domainsize = self.domain_size() as u128;
+            let omega = self.domain.generator();
+            let mut vcomms = vec![];
+            let mut g2xbytes = vec![];
+    
+            let verify_comms_labels = gen_verify_comms_labels(
+                self.program_width,
+                self.composer_config,
+            );
+            for str in &verify_comms_labels {
+                let comm = self.commitments[str];
+                let tmp = comm.0;
+                let mut bytes = [0u8; 64];
+                let _ = tmp.write(bytes.as_mut());
+                let mut x = [0u8; 32];
+                for j in 0..32 {
+                    x[32 - j - 1] = bytes[j];
+                }
+                let mut y = [0u8; 32];
+                for j in 32..64 {
+                    y[64 - j - 1] = bytes[j];
+                }
+                if tmp.is_zero() {
+                    vcomms.push(x);
+                    vcomms.push(x);
+                } else {
+                    vcomms.push(x);
+                    vcomms.push(y);
+                }
+            }
+            let g2x = pckey.vk.beta_h;
+            let mut bytes = [0u8; 128];
+            let _ = g2x.write(bytes.as_mut());
+            let mut xc0 = [0u8; 32];
             for j in 0..32 {
-                x[32 - j - 1] = bytes[j];
+                xc0[32 - j - 1] = bytes[j];
             }
-            let mut y = [0u8; 32];
+            let mut xc1 = [0u8; 32];
             for j in 32..64 {
-                y[64 - j - 1] = bytes[j];
+                xc1[64 - j - 1] = bytes[j];
             }
-            if tmp.is_zero() {
-                vcomms.push(x);
-                vcomms.push(x);
-            } else {
-                vcomms.push(x);
-                vcomms.push(y);
+            let mut yc0 = [0u8; 32];
+            for j in 64..96 {
+                yc0[96 - j - 1] = bytes[j];
+            }
+            let mut yc1 = [0u8; 32];
+            for j in 96..128 {
+                yc1[128 - j - 1] = bytes[j];
+            }
+            g2xbytes.push(xc0);
+            g2xbytes.push(xc1);
+            g2xbytes.push(yc0);
+            g2xbytes.push(yc1);
+    
+            let mut prehasher = Sha256::new();
+            prehasher.update(pi_num.to_be_bytes());
+            prehasher.update(v0_domainsize.to_be_bytes());
+            prehasher.update(omega.into_repr().to_bytes_be());
+            for v in vcomms {
+                prehasher.update(v);
+            }
+            for v in g2xbytes {
+                prehasher.update(v);
+            }
+            let result = prehasher.finalize();
+            trans.update_with_u256(result);
+    
+            for pi in &public_input {
+                trans.update_with_fr(pi);
             }
         }
-        let g2x = pckey.vk.beta_h;
-        let mut bytes = [0u8; 128];
-        let _ = g2x.write(bytes.as_mut());
-        let mut xc0 = [0u8; 32];
-        for j in 0..32 {
-            xc0[32 - j - 1] = bytes[j];
-        }
-        let mut xc1 = [0u8; 32];
-        for j in 32..64 {
-            xc1[64 - j - 1] = bytes[j];
-        }
-        let mut yc0 = [0u8; 32];
-        for j in 64..96 {
-            yc0[96 - j - 1] = bytes[j];
-        }
-        let mut yc1 = [0u8; 32];
-        for j in 96..128 {
-            yc1[128 - j - 1] = bytes[j];
-        }
-        g2xbytes.push(xc0);
-        g2xbytes.push(xc1);
-        g2xbytes.push(yc0);
-        g2xbytes.push(yc1);
-
-        let mut prehasher = Sha256::new();
-        prehasher.update(pi_num.to_be_bytes());
-        prehasher.update(v0_domainsize.to_be_bytes());
-        prehasher.update(omega.into_repr().to_bytes_be());
-        for v in vcomms {
-            prehasher.update(v);
-        }
-        for v in g2xbytes {
-            prehasher.update(v);
-        }
-        let result = prehasher.finalize();
-        trans.update_with_u256(result);
-
-        for pi in &public_input {
-            trans.update_with_fr(pi);
-        }
-
+        
         self.insert("pi", public_input.to_vec());
         //witnesses, and s0 s1 s2 s3 s4...
         let (wires, swires) = cs.compute_wire_values()?;
@@ -363,8 +366,7 @@ impl<'a, F: Field, D: Domain<F>, E: PairingEngine> Prover<F, D, E> {
             w.extend(zeros);
             self.domain_values.insert(k, w);
         }
-        log::trace!("initialize done");
-
+        
         let w_poly: Vec<_> = (0..self.program_width)
             .into_iter()
             .map(|i| {
@@ -377,6 +379,7 @@ impl<'a, F: Field, D: Domain<F>, E: PairingEngine> Prover<F, D, E> {
         for wi in &w_comms {
             trans.update_with_g1::<E>(&wi.0);
         }
+        log::trace!("initialize done");
 
         log::trace!("first round..."); //only lookup
         let eta = trans.generate_challenge::<F>();
@@ -384,13 +387,13 @@ impl<'a, F: Field, D: Domain<F>, E: PairingEngine> Prover<F, D, E> {
         for w in widgets.iter() {
             w.compute_oracles(1, self, rng)?;
         }
-        log::trace!("first round done");
-
+        
         let polys = self.polynomials();
         let s_poly = &polys["s"];
         let s_comm = pckey.commit_one(s_poly);
         self.commitments.insert("s".to_string(), s_comm);
         trans.update_with_g1::<E>(&s_comm.0);
+        log::trace!("first round done");
 
         log::trace!("second_round...");
         let beta = trans.generate_challenge::<F>();
@@ -400,14 +403,24 @@ impl<'a, F: Field, D: Domain<F>, E: PairingEngine> Prover<F, D, E> {
         for w in widgets.iter() {
             w.compute_oracles(2, self, rng)?;
         }
-        log::trace!("second_round done");
 
+        if self.composer_config.enable_lookup {
+            let beta_1 = trans.generate_challenge::<F>();
+            let gamma_1 = trans.generate_challenge::<F>();
+            self.add_challenge("beta_1", beta_1);
+            self.add_challenge("gamma_1", gamma_1);
+            for w in widgets.iter() {
+                w.compute_oracles(3, self, rng)?;
+            }
+        }
+        
         for str in &z_labels {
             let z_poly = &self.polynomials()[str];
             let z_comm = pckey.commit_one(z_poly);
             self.commitments.insert(str.to_string(), z_comm);
             trans.update_with_g1::<E>(&z_comm.0);
         }
+        log::trace!("second_round done");
 
         log::trace!("third round...");
         let alpha = trans.generate_challenge::<F>();
@@ -452,8 +465,7 @@ impl<'a, F: Field, D: Domain<F>, E: PairingEngine> Prover<F, D, E> {
         for (i, t) in t_chunks.into_iter().enumerate() {
             self.add_polynomial(&format!("t_{}", i), t);
         }
-        log::trace!("third round done");
-
+        
         let t_poly: Vec<_> = (0..self.program_width)
             .into_iter()
             .map(|i| {
@@ -465,6 +477,7 @@ impl<'a, F: Field, D: Domain<F>, E: PairingEngine> Prover<F, D, E> {
         for ti in &t_comms {
             trans.update_with_g1::<E>(&ti.0);
         }
+        log::trace!("third round done");
 
         log::trace!("forth round...");
         let zeta = trans.generate_challenge::<F>();
@@ -546,6 +559,7 @@ impl<'a, F: Field, D: Domain<F>, E: PairingEngine> Prover<F, D, E> {
         let t_zeta = self.evaluate("t4t", "zeta")?;
         log::trace!("forth round done");
 
+        log::trace!("fifth round...");
         let verify_open_zeta_labels =
             gen_verify_open_zeta_labels(self.program_width, self.composer_config.enable_lookup);
         let verify_open_zeta_omega_labels =
@@ -562,8 +576,6 @@ impl<'a, F: Field, D: Domain<F>, E: PairingEngine> Prover<F, D, E> {
         }
         let v = trans.generate_challenge::<F>();
         self.add_challenge("v", v);
-        // let u = trans.generate_challenge::<F>();
-        // self.add_challenge("u", u);
 
         // NOT the W(X). only numerator.
         // compute_opening_proof_w_poly
@@ -597,6 +609,7 @@ impl<'a, F: Field, D: Domain<F>, E: PairingEngine> Prover<F, D, E> {
         trans.update_with_g1::<E>(&Wzw_pi.0);
         let u = trans.generate_challenge::<F>();
         self.add_challenge("u", u);
+        log::trace!("fifth round done");
 
         log::trace!("check equality...");
         let lhs = {

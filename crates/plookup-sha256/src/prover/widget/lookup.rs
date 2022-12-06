@@ -64,15 +64,14 @@ impl<F: Field, D: Domain<F>, E: PairingEngine, R: RngCore> Widget<F, D, E, R> fo
                 })
                 .collect();
 
-            // prover.insert("s", s);
             prover.insert_with_blind("s", s, 2, rng);
         }
 
         // cal "table" and "z_lookup"
-        if round == 2 {
+        if round == 3 {
             let eta = prover.get_challenge("eta")?;
-            let beta = prover.get_challenge("beta")?;
-            let gamma = prover.get_challenge("gamma")?;
+            let beta = prover.get_challenge("beta_1")?;
+            let gamma = prover.get_challenge("gamma_1")?;
 
             let values = prover.domain_values();
             let n = prover.domain_size();
@@ -135,8 +134,8 @@ impl<F: Field, D: Domain<F>, E: PairingEngine, R: RngCore> Widget<F, D, E, R> fo
         assert_eq!(quotient.len(), prover.coset_size());
 
         let eta = prover.get_challenge("eta")?;
-        let beta = prover.get_challenge("beta")?;
-        let gamma = prover.get_challenge("gamma")?;
+        let beta = prover.get_challenge("beta_1")?;
+        let gamma = prover.get_challenge("gamma_1")?;
         let alpha = prover.get_challenge("alpha")?;
         let values = prover.coset_values();
 
@@ -206,8 +205,8 @@ impl<F: Field, D: Domain<F>, E: PairingEngine, R: RngCore> Widget<F, D, E, R> fo
         combinator: &mut F,
     ) -> Result<(LinearCombination<F>, F), Error> {
         let eta = prover.get_challenge("eta")?;
-        let beta = prover.get_challenge("beta")?;
-        let gamma = prover.get_challenge("gamma")?;
+        let beta = prover.get_challenge("beta_1")?;
+        let gamma = prover.get_challenge("gamma_1")?;
         let alpha = prover.get_challenge("alpha")?;
         let zeta = prover.get_challenge("zeta")?;
 

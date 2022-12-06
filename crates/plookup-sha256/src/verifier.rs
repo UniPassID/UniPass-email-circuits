@@ -90,81 +90,85 @@ impl<F: Field, D: Domain<F>, E: PairingEngine> Verifier<F, D, E> {
         );
 
         let mut trans = TranscriptLibrary::new();
-        // sha256 SRS, put into the transcript
-        trans.update_with_u256(sha256_of_srs);
+        // transcript SRS-hash, vkdata-hash, public-inputs
+        {
+            // sha256 SRS, put into the transcript
+            trans.update_with_u256(sha256_of_srs);
 
-        let pi_num = self.public_input.len() as u64;
-        let v0_domainsize = self.domain.size() as u128;
-        let omega = self.domain.generator();
-        let mut vcomms = vec![];
-        let mut g2xbytes = vec![];
-
-        let verify_comms_labels = gen_verify_comms_labels(
-            self.program_width,
-            self.composer_config,
-        );
-        for str in &verify_comms_labels {
-            let comm = self.commitments[str];
-            let tmp = comm.0;
-            let mut bytes = [0u8; 64];
-            let _ = tmp.write(bytes.as_mut());
-            let mut x = [0u8; 32];
+            let pi_num = self.public_input.len() as u64;
+            let v0_domainsize = self.domain.size() as u128;
+            let omega = self.domain.generator();
+            let mut vcomms = vec![];
+            let mut g2xbytes = vec![];
+    
+            let verify_comms_labels = gen_verify_comms_labels(
+                self.program_width,
+                self.composer_config,
+            );
+            for str in &verify_comms_labels {
+                let comm = self.commitments[str];
+                let tmp = comm.0;
+                let mut bytes = [0u8; 64];
+                let _ = tmp.write(bytes.as_mut());
+                let mut x = [0u8; 32];
+                for j in 0..32 {
+                    x[32 - j - 1] = bytes[j];
+                }
+                let mut y = [0u8; 32];
+                for j in 32..64 {
+                    y[64 - j - 1] = bytes[j];
+                }
+                if tmp.is_zero() {
+                    vcomms.push(x);
+                    vcomms.push(x);
+                } else {
+                    vcomms.push(x);
+                    vcomms.push(y);
+                }
+            }
+            let g2x = pcvk.beta_h;
+            let mut bytes = [0u8; 128];
+            let _ = g2x.write(bytes.as_mut());
+            let mut xc0 = [0u8; 32];
             for j in 0..32 {
-                x[32 - j - 1] = bytes[j];
+                xc0[32 - j - 1] = bytes[j];
             }
-            let mut y = [0u8; 32];
+            let mut xc1 = [0u8; 32];
             for j in 32..64 {
-                y[64 - j - 1] = bytes[j];
+                xc1[64 - j - 1] = bytes[j];
             }
-            if tmp.is_zero() {
-                vcomms.push(x);
-                vcomms.push(x);
-            } else {
-                vcomms.push(x);
-                vcomms.push(y);
+            let mut yc0 = [0u8; 32];
+            for j in 64..96 {
+                yc0[96 - j - 1] = bytes[j];
+            }
+            let mut yc1 = [0u8; 32];
+            for j in 96..128 {
+                yc1[128 - j - 1] = bytes[j];
+            }
+            g2xbytes.push(xc0);
+            g2xbytes.push(xc1);
+            g2xbytes.push(yc0);
+            g2xbytes.push(yc1);
+    
+            let mut prehasher = Sha256::new();
+            prehasher.update(pi_num.to_be_bytes());
+            prehasher.update(v0_domainsize.to_be_bytes());
+            prehasher.update(omega.into_repr().to_bytes_be());
+            for v in vcomms {
+                prehasher.update(v);
+            }
+            for v in g2xbytes {
+                prehasher.update(v);
+            }
+            let result = prehasher.finalize();
+            trans.update_with_u256(result);
+    
+            for pi in &self.public_input {
+                trans.update_with_fr(pi);
             }
         }
-        let g2x = pcvk.beta_h;
-        let mut bytes = [0u8; 128];
-        let _ = g2x.write(bytes.as_mut());
-        let mut xc0 = [0u8; 32];
-        for j in 0..32 {
-            xc0[32 - j - 1] = bytes[j];
-        }
-        let mut xc1 = [0u8; 32];
-        for j in 32..64 {
-            xc1[64 - j - 1] = bytes[j];
-        }
-        let mut yc0 = [0u8; 32];
-        for j in 64..96 {
-            yc0[96 - j - 1] = bytes[j];
-        }
-        let mut yc1 = [0u8; 32];
-        for j in 96..128 {
-            yc1[128 - j - 1] = bytes[j];
-        }
-        g2xbytes.push(xc0);
-        g2xbytes.push(xc1);
-        g2xbytes.push(yc0);
-        g2xbytes.push(yc1);
-
-        let mut prehasher = Sha256::new();
-        prehasher.update(pi_num.to_be_bytes());
-        prehasher.update(v0_domainsize.to_be_bytes());
-        prehasher.update(omega.into_repr().to_bytes_be());
-        for v in vcomms {
-            prehasher.update(v);
-        }
-        for v in g2xbytes {
-            prehasher.update(v);
-        }
-        let result = prehasher.finalize();
-        trans.update_with_u256(result);
-
-        for pi in &self.public_input {
-            trans.update_with_fr(pi);
-        }
-
+        
+        
         // step 1
         for (i, ci) in proof.commitments1.iter().enumerate() {
             trans.update_with_g1::<E>(&ci.0);
@@ -181,9 +185,21 @@ impl<F: Field, D: Domain<F>, E: PairingEngine> Verifier<F, D, E> {
 
         // step 3
         for (ci, str) in proof.commitments3.iter().zip(z_labels) {
+            if str == "z_lookup" {
+                continue;
+            }
             trans.update_with_g1::<E>(&ci.0);
             self.commitments.insert(str, ci.clone());
         }
+        let mut beta_1 = F::zero();
+        let mut gamma_1 = F::zero();
+        if self.composer_config.enable_lookup {
+            beta_1 = trans.generate_challenge::<F>();
+            gamma_1 = trans.generate_challenge::<F>();
+            trans.update_with_g1::<E>(&proof.commitments3[1].0);
+            self.commitments.insert(format!("z_lookup"), proof.commitments3[1].clone());
+        }
+
         let alpha = trans.generate_challenge::<F>();
 
         // step 4
@@ -236,8 +252,8 @@ impl<F: Field, D: Domain<F>, E: PairingEngine> Verifier<F, D, E> {
         // lookup
         let r_lookup = alpha_combinator
             * (self.evaluations["z_lookup_zeta_omega"]
-                * gamma
-                * (beta * self.evaluations["s_zeta_omega"] + (beta + F::one()) * gamma)
+                * gamma_1
+                * (beta_1 * self.evaluations["s_zeta_omega"] + (beta_1 + F::one()) * gamma_1)
                 + alpha * lagrange_1_zeta
                 + alpha_2 * lagrange_n_zeta);
         alpha_combinator *= alpha_3;
@@ -365,17 +381,17 @@ impl<F: Field, D: Domain<F>, E: PairingEngine> Verifier<F, D, E> {
                 let tmp = combine(eta, twi_zeta);
                 acc += self.commitments["z_lookup"].0.into_projective().mul(
                     (alpha_combinator
-                        * ((self.evaluations["q_lookup_zeta"] * (tmp) + gamma)
+                        * ((self.evaluations["q_lookup_zeta"] * (tmp) + gamma_1)
                             * ((self.evaluations["table_zeta"])
-                                + beta * (self.evaluations["table_zeta_omega"])
-                                + (beta + F::one()) * gamma)
+                                + beta_1 * (self.evaluations["table_zeta_omega"])
+                                + (beta_1 + F::one()) * gamma_1)
                             + alpha * lagrange_1_zeta
                             + alpha_2 * lagrange_n_zeta))
                         .into_repr(),
                 );
                 // s
                 acc += self.commitments["s"].0.into_projective().mul(
-                    (-alpha_combinator * (self.evaluations["z_lookup_zeta_omega"] * gamma))
+                    (-alpha_combinator * (self.evaluations["z_lookup_zeta_omega"] * gamma_1))
                         .into_repr(),
                 );
                 // update alpha_comb

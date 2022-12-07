@@ -43,7 +43,7 @@ pub struct Prover<F: Field, D: Domain<F>, E: PairingEngine> {
     pub domain: D,
     pub coset: D,
     pub program_width: usize,
-    
+
     pub composer_config: ComposerConfig,
 }
 
@@ -218,10 +218,7 @@ impl<'a, F: Field, D: Domain<F>, E: PairingEngine> Prover<F, D, E> {
 
     /// if already have, no need "init_comms"
     pub fn insert_verifier_comms(&mut self, vcomms: &Vec<Commitment<E>>) {
-        let labels = gen_verify_comms_labels(
-            self.program_width,
-            self.composer_config,
-        );
+        let labels = gen_verify_comms_labels(self.program_width, self.composer_config);
 
         for (str, comm) in labels.iter().zip(vcomms) {
             self.commitments.insert(str.to_string(), comm.clone());
@@ -234,10 +231,7 @@ impl<'a, F: Field, D: Domain<F>, E: PairingEngine> Prover<F, D, E> {
 
         let polys = self.polynomials();
         let mut commitments = Map::new();
-        let labels = gen_verify_comms_labels(
-            self.program_width,
-            self.composer_config,
-        );
+        let labels = gen_verify_comms_labels(self.program_width, self.composer_config);
         for str in labels {
             let v = &polys[str.as_str()];
             let tmp = pckey.commit_one(v);
@@ -297,17 +291,15 @@ impl<'a, F: Field, D: Domain<F>, E: PairingEngine> Prover<F, D, E> {
             // sha256 SRS, put into the transcript
             let srshash = pckey.sha256_of_srs();
             trans.update_with_u256(srshash);
-    
+
             let pi_num = public_input.len() as u64;
             let v0_domainsize = self.domain_size() as u128;
             let omega = self.domain.generator();
             let mut vcomms = vec![];
             let mut g2xbytes = vec![];
-    
-            let verify_comms_labels = gen_verify_comms_labels(
-                self.program_width,
-                self.composer_config,
-            );
+
+            let verify_comms_labels =
+                gen_verify_comms_labels(self.program_width, self.composer_config);
             for str in &verify_comms_labels {
                 let comm = self.commitments[str];
                 let tmp = comm.0;
@@ -352,7 +344,7 @@ impl<'a, F: Field, D: Domain<F>, E: PairingEngine> Prover<F, D, E> {
             g2xbytes.push(xc1);
             g2xbytes.push(yc0);
             g2xbytes.push(yc1);
-    
+
             let mut prehasher = Sha256::new();
             prehasher.update(pi_num.to_be_bytes());
             prehasher.update(v0_domainsize.to_be_bytes());
@@ -365,29 +357,29 @@ impl<'a, F: Field, D: Domain<F>, E: PairingEngine> Prover<F, D, E> {
             }
             let result = prehasher.finalize();
             trans.update_with_u256(result);
-    
+
             for pi in &public_input {
                 trans.update_with_fr(pi);
             }
         }
-        
+
         self.insert("pi", public_input.to_vec());
         //witnesses, and s0 s1 s2 s3 s4...
         let (wires, swires) = cs.compute_wire_values()?;
 
         for i in 0..self.program_width {
             let label = format!("w_{}", i);
-            let open_num =
-            if ((self.composer_config.enable_range
-                    ||self.composer_config.enable_mimc
-                    ||self.composer_config.enable_private_substring
-                    ||self.composer_config.enable_q0next) && (i == 0)
-                ) || (self.composer_config.enable_private_substring && (i == 2))
+            let open_num = if ((self.composer_config.enable_range
+                || self.composer_config.enable_mimc
+                || self.composer_config.enable_private_substring
+                || self.composer_config.enable_q0next)
+                && (i == 0))
+                || (self.composer_config.enable_private_substring && (i == 2))
             {
-                    2
-                } else {
-                    1
-                };
+                2
+            } else {
+                1
+            };
             self.insert_with_blind(&label, wires[&label].clone(), open_num, rng);
         }
 
@@ -396,7 +388,7 @@ impl<'a, F: Field, D: Domain<F>, E: PairingEngine> Prover<F, D, E> {
             w.extend(zeros);
             self.domain_values.insert(k, w);
         }
-        
+
         let w_poly: Vec<_> = (0..self.program_width)
             .into_iter()
             .map(|i| {
@@ -417,7 +409,7 @@ impl<'a, F: Field, D: Domain<F>, E: PairingEngine> Prover<F, D, E> {
         for w in widgets.iter() {
             w.compute_oracles(1, self, rng)?;
         }
-        
+
         let polys = self.polynomials();
         let s_poly = &polys["s"];
         let s_comm = pckey.commit_one(s_poly);
@@ -443,7 +435,7 @@ impl<'a, F: Field, D: Domain<F>, E: PairingEngine> Prover<F, D, E> {
                 w.compute_oracles(3, self, rng)?;
             }
         }
-        
+
         for str in &z_labels {
             let z_poly = &self.polynomials()[str];
             let z_comm = pckey.commit_one(z_poly);
@@ -497,7 +489,7 @@ impl<'a, F: Field, D: Domain<F>, E: PairingEngine> Prover<F, D, E> {
         for (i, t) in t_chunks.into_iter().enumerate() {
             self.add_polynomial(&format!("t_{}", i), t);
         }
-        
+
         let t_poly: Vec<_> = (0..self.program_width)
             .into_iter()
             .map(|i| {
@@ -594,10 +586,7 @@ impl<'a, F: Field, D: Domain<F>, E: PairingEngine> Prover<F, D, E> {
         log::trace!("fifth round...");
         let verify_open_zeta_labels =
             gen_verify_open_zeta_labels(self.program_width, self.composer_config.enable_lookup);
-        let verify_open_zeta_omega_labels =
-            gen_verify_open_zeta_omega_labels(
-                self.composer_config,
-            );
+        let verify_open_zeta_omega_labels = gen_verify_open_zeta_omega_labels(self.composer_config);
         for str in &verify_open_zeta_labels {
             let tmp = self.evaluate(str.as_str(), "zeta")?;
             trans.update_with_fr(&tmp);

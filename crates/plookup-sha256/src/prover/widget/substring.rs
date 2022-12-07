@@ -88,7 +88,8 @@ impl<F: Field, D: Domain<F>, E: PairingEngine, R: RngCore> Widget<F, D, E, R> fo
             };
 
             let ra = values["q_substring_r"][i]
-                * (values["w_0"][next_i] * values["w_3"][i]
+                * (values["w_0"][next_i]
+                    * values["w_3"][i]
                     * (values["w_2"][i] + values["w_0"][next_i] - values["w_0"][i])
                     - values["w_2"][next_i]);
 
@@ -99,11 +100,7 @@ impl<F: Field, D: Domain<F>, E: PairingEngine, R: RngCore> Widget<F, D, E, R> fo
 
             let zl1 = values["z_substring"][i] * values["lagrange_1"][i];
 
-            *quot += *combinator
-                * (recur
-                    + ra * alpha
-                    + zl1 * alpha_2
-                );
+            *quot += *combinator * (recur + ra * alpha + zl1 * alpha_2);
         });
 
         *combinator *= alpha_2 * alpha;
@@ -149,8 +146,7 @@ impl<F: Field, D: Domain<F>, E: PairingEngine, R: RngCore> Widget<F, D, E, R> fo
                     *combinator
                         * (alpha
                             * (w0_zeta_omega * w3_zeta * (w2_zeta + w0_zeta_omega - w0_zeta)
-                                - w2_zeta_omega)
-                        ),
+                                - w2_zeta_omega)),
                     "q_substring_r",
                 ),
                 (

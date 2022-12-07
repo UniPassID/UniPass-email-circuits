@@ -19,7 +19,7 @@ impl<F: Field> Composer<F> {
 
         var_o
     }
-    
+
     /// o = l + r
     pub fn add_gate(&mut self, var_l: Variable, var_r: Variable, var_o: Variable) {
         self.poly_gate(

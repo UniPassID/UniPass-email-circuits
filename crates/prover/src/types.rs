@@ -74,7 +74,6 @@ impl ContractInput {
     }
 }
 
-
 #[derive(Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ContractTripleInput {

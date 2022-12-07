@@ -294,7 +294,8 @@ fn main() -> Result<(), SerializationError> {
         println!("----------------------------------------------------------------");
         println!("Test circuit 2048triple");
 
-        let circuit = Email2048TripleCircuitInput::new(all_email_private_inputs[0..3].to_vec()).unwrap();
+        let circuit =
+            Email2048TripleCircuitInput::new(all_email_private_inputs[0..3].to_vec()).unwrap();
         println!("[main] circuit construct finish");
         let mut cs = circuit.synthesize();
         println!("[main] synthesize finish");
@@ -398,9 +399,7 @@ fn main() -> Result<(), SerializationError> {
         file.write(&serde_json::to_vec_pretty(&contract_inputs).unwrap())
             .unwrap();
         file.flush().unwrap();
-    
     }
-
 
     Ok(())
 }

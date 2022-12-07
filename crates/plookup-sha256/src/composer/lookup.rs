@@ -105,7 +105,7 @@ impl<F: Field> Composer<F> {
             table_values[self.program_width].extend(vec![F::from((i + 1) as u64); table.size])
         }
 
-        // add a 'special table' to tail. 
+        // add a 'special table' to tail.
         // only 1 row, and the values are 0, value in extra column (q_table) is also 0.
         for column in &mut table_values {
             column.push(F::zero());
@@ -137,7 +137,7 @@ impl<F: Field> Composer<F> {
             sorted_values[self.program_width].extend(vec![F::from((i + 1) as u64); lookups.len()])
         }
 
-        // add a 'special table' to tail. 
+        // add a 'special table' to tail.
         // only 1 row, and the values are 0, value in extra column (q_table) is also 0.
         for column in &mut sorted_values {
             column.push(F::zero());

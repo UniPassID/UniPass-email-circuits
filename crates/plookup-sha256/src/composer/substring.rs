@@ -36,11 +36,11 @@ impl<F: Field> Composer<F> {
                 .insert("q_substring".to_string(), vec![F::zero(); current_index]);
         }
         assert!(!self.is_finalized);
-        
+
         assert_eq!(a.len(), max_lens);
         assert!(b.len() >= b_max_lens);
         let mut b = b.clone()[0..b_max_lens].to_vec();
-        
+
         let l_value = self.get_assignment(l);
         let l_uint: Vec<u64> = l_value.into_repr().as_ref().into();
         assert_eq!(l_uint[1], 0);
@@ -106,12 +106,7 @@ impl<F: Field> Composer<F> {
 
         let mut current_index = self.size();
         for i in 0..max_lens {
-            let wires = vec![
-                bit_location_a[i],
-                bit_location_a[i],
-                mask_poly_a[i],
-                mask,
-            ];
+            let wires = vec![bit_location_a[i], bit_location_a[i], mask_poly_a[i], mask];
 
             let index = self.insert_gate(wires);
             assert_eq!(current_index, index);
@@ -139,12 +134,7 @@ impl<F: Field> Composer<F> {
 
         let mut current_index = self.size();
         for i in 0..b_max_lens {
-            let wires = vec![
-                bit_location_b[i],
-                bit_location_b[i],
-                mask_poly_b[i],
-                mask,
-            ];
+            let wires = vec![bit_location_b[i], bit_location_b[i], mask_poly_b[i], mask];
 
             let index = self.insert_gate(wires);
             assert_eq!(current_index, index);
@@ -219,12 +209,11 @@ impl<F: Field> Composer<F> {
                     F::zero(),
                 );
             }
-            
+
             // 2 16bits
             let tmp2_vars_value = self.get_assignments(&tmp2_vars);
-            
-            let tmp = tmp2_vars_value[0] * F::from(1u64 << 16)
-                + tmp2_vars_value[1];
+
+            let tmp = tmp2_vars_value[0] * F::from(1u64 << 16) + tmp2_vars_value[1];
             output_words_a.push(self.alloc(tmp));
             self.poly_gate(
                 vec![
@@ -281,12 +270,11 @@ impl<F: Field> Composer<F> {
                     F::zero(),
                 );
             }
-            
+
             // 2 16bits
             let tmp2_vars_value = self.get_assignments(&tmp2_vars);
-            
-            let tmp = tmp2_vars_value[0] * F::from(1u64 << 16)
-                + tmp2_vars_value[1];
+
+            let tmp = tmp2_vars_value[0] * F::from(1u64 << 16) + tmp2_vars_value[1];
             output_words_b.push(self.alloc(tmp));
             self.poly_gate(
                 vec![
@@ -301,7 +289,7 @@ impl<F: Field> Composer<F> {
 
         Ok((output_words_a, output_words_b))
     }
-    
+
     /// Deprecated.
     /// "b" is substring of "a". should be padding to the max len.
     /// a_max_lens == 2048, b_max_lens == 192.
@@ -403,12 +391,7 @@ impl<F: Field> Composer<F> {
 
         let mut current_index = self.size();
         for i in 0..max_lens {
-            let wires = vec![
-                bit_location_a[i],
-                bit_location_a[i],
-                mask_poly_a[i],
-                mask,
-            ];
+            let wires = vec![bit_location_a[i], bit_location_a[i], mask_poly_a[i], mask];
 
             let index = self.insert_gate(wires);
             assert_eq!(current_index, index);
@@ -436,12 +419,7 @@ impl<F: Field> Composer<F> {
 
         let mut current_index = self.size();
         for i in 0..b_max_lens {
-            let wires = vec![
-                bit_location_b[i],
-                bit_location_b[i],
-                mask_poly_b[i],
-                mask,
-            ];
+            let wires = vec![bit_location_b[i], bit_location_b[i], mask_poly_b[i], mask];
 
             let index = self.insert_gate(wires);
             assert_eq!(current_index, index);
@@ -817,12 +795,7 @@ impl<F: Field> Composer<F> {
 
         let mut current_index = self.size();
         for i in 0..max_lens {
-            let wires = vec![
-                bit_location_a[i],
-                bit_location_a[i],
-                mask_poly_a[i],
-                mask,
-            ];
+            let wires = vec![bit_location_a[i], bit_location_a[i], mask_poly_a[i], mask];
 
             let index = self.insert_gate(wires);
             assert_eq!(current_index, index);
@@ -850,12 +823,7 @@ impl<F: Field> Composer<F> {
 
         let mut current_index = self.size();
         for i in 0..b_max_lens {
-            let wires = vec![
-                bit_location_b[i],
-                bit_location_b[i],
-                mask_poly_b[i],
-                mask,
-            ];
+            let wires = vec![bit_location_b[i], bit_location_b[i], mask_poly_b[i], mask];
 
             let index = self.insert_gate(wires);
             assert_eq!(current_index, index);
@@ -1130,12 +1098,12 @@ impl<F: Field> Composer<F> {
         assert_eq!(b.len(), max_lens);
 
         // prove public_match
-        // b * (a - b) === 0 
+        // b * (a - b) === 0
         for i in 0..max_lens {
             let ci = self.sub(a[i], b[i]);
             self.mul_gate(ci, b[i], Composer::<F>::null());
         }
-        
+
         // recommend hash "b" to compress public_input
     }
 
@@ -1179,5 +1147,4 @@ impl<F: Field> Composer<F> {
 
         Ok(())
     }
-
 }

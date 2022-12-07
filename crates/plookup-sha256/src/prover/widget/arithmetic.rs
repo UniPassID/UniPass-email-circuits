@@ -66,9 +66,9 @@ impl<F: Field, D: Domain<F>, E: PairingEngine, R: RngCore> Widget<F, D, E, R> fo
                 .sum::<F>();
 
             let mut arith_part = -values["pi"][i]
-                    + values["q_m"][i] * values["w_0"][i] * values["w_1"][i]
-                    + values["q_c"][i]
-                    + sum;
+                + values["q_m"][i] * values["w_0"][i] * values["w_1"][i]
+                + values["q_c"][i]
+                + sum;
             if q0next_enabled {
                 arith_part += values["q0next"][i] * values["w_0"][next_i];
             }
@@ -93,10 +93,7 @@ impl<F: Field, D: Domain<F>, E: PairingEngine, R: RngCore> Widget<F, D, E, R> fo
         let w_0_zeta = prover.evaluate("w_0", "zeta")?;
         let w_1_zeta = prover.evaluate("w_1", "zeta")?;
 
-        let mut terms = vec![
-            (w_0_zeta * w_1_zeta, "q_m"),
-            (F::one(), "q_c"),
-        ];
+        let mut terms = vec![(w_0_zeta * w_1_zeta, "q_m"), (F::one(), "q_c")];
         if prover.composer_config.enable_q0next {
             let w0_zeta_omega = prover.evaluate("w_0", "zeta_omega")?;
             terms.push((w0_zeta_omega, "q0next"));

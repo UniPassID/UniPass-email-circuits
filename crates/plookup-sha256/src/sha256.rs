@@ -2641,7 +2641,7 @@ pub fn sha256_collect_8_outputs_to_field<F: Field>(
 mod tests {
     #![allow(non_snake_case)]
     use ark_bn254::Fr;
-    use ark_ff::{One};
+    use ark_ff::One;
     use ark_std::test_rng;
 
     use crate::composer::{Composer, Table};
@@ -2973,5 +2973,4 @@ mod tests {
 
         Ok(())
     }
-
 }

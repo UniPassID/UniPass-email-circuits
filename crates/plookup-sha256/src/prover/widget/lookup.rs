@@ -117,10 +117,13 @@ impl<F: Field, D: Domain<F>, E: PairingEngine, R: RngCore> Widget<F, D, E, R> fo
                 z.push(acc);
             });
             // assert_eq!(z[n - 1], F::one());
-            let numerator = (v[n-1] + gamma) * (t[n-1] + beta * t[0] + beta_gamma_factor);
+            let numerator = (v[n - 1] + gamma) * (t[n - 1] + beta * t[0] + beta_gamma_factor);
             let denominator =
-                gamma * (values["s"][n-1] + beta * values["s"][0] + beta_gamma_factor);
-            assert_eq!(z[n - 1] * numerator * denominator.inverse().unwrap(), F::one());
+                gamma * (values["s"][n - 1] + beta * values["s"][0] + beta_gamma_factor);
+            assert_eq!(
+                z[n - 1] * numerator * denominator.inverse().unwrap(),
+                F::one()
+            );
 
             prover.insert("table", t);
             prover.insert_with_blind("z_lookup", z, 2, rng);
@@ -188,8 +191,9 @@ impl<F: Field, D: Domain<F>, E: PairingEngine, R: RngCore> Widget<F, D, E, R> fo
                 * (values["s"][i] + beta * values["s"][next_i] + beta_gamma_factor);
 
             *quot += *combinator
-                * (numerator - denominator
-                    + (values["z_lookup"][i] - F::one()) * values["lagrange_1"][i] * alpha
+                * (
+                    numerator - denominator
+                        + (values["z_lookup"][i] - F::one()) * values["lagrange_1"][i] * alpha
                     // + (values["z_lookup"][i] - F::one()) * values["lagrange_n"][i] * alpha_2
                 )
         });
@@ -265,8 +269,10 @@ impl<F: Field, D: Domain<F>, E: PairingEngine, R: RngCore> Widget<F, D, E, R> fo
             "lookup",
             vec![
                 (
-                    *combinator * (numerator + alpha * lagrange_1_zeta
-                        //  + alpha_2 * lagrange_n_zeta
+                    *combinator
+                        * (
+                            numerator + alpha * lagrange_1_zeta
+                            //  + alpha_2 * lagrange_n_zeta
                         ),
                     "z_lookup",
                 ),
@@ -276,8 +282,9 @@ impl<F: Field, D: Domain<F>, E: PairingEngine, R: RngCore> Widget<F, D, E, R> fo
 
         // constant term
         let complement = *combinator
-            * (z_lookup_zeta_omega * gamma * (beta * s_zeta_omega + beta_gamma_factor)
-                + alpha * lagrange_1_zeta
+            * (
+                z_lookup_zeta_omega * gamma * (beta * s_zeta_omega + beta_gamma_factor)
+                    + alpha * lagrange_1_zeta
                 // + alpha_2 * lagrange_n_zeta
             );
 

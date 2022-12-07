@@ -55,10 +55,7 @@ impl<F: Field, D: Domain<F>, E: PairingEngine> Verifier<F, D, E> {
         v_comms: &Vec<Commitment<E>>,
     ) -> Self {
         let mut commitments = Map::new();
-        let labels = gen_verify_comms_labels(
-            prover.program_width,
-            prover.composer_config,
-        );
+        let labels = gen_verify_comms_labels(prover.program_width, prover.composer_config);
         for (str, comm) in labels.iter().zip(v_comms) {
             commitments.insert(str.to_string(), comm.clone());
         }
@@ -83,11 +80,8 @@ impl<F: Field, D: Domain<F>, E: PairingEngine> Verifier<F, D, E> {
             z_labels.push("z_substring".to_string());
         }
         let verify_open_zeta_labels =
-        gen_verify_open_zeta_labels(self.program_width, self.composer_config.enable_lookup);
-        let verify_open_zeta_omega_labels =
-        gen_verify_open_zeta_omega_labels(
-            self.composer_config,
-        );
+            gen_verify_open_zeta_labels(self.program_width, self.composer_config.enable_lookup);
+        let verify_open_zeta_omega_labels = gen_verify_open_zeta_omega_labels(self.composer_config);
 
         let mut trans = TranscriptLibrary::new();
         // transcript SRS-hash, vkdata-hash, public-inputs
@@ -100,11 +94,9 @@ impl<F: Field, D: Domain<F>, E: PairingEngine> Verifier<F, D, E> {
             let omega = self.domain.generator();
             let mut vcomms = vec![];
             let mut g2xbytes = vec![];
-    
-            let verify_comms_labels = gen_verify_comms_labels(
-                self.program_width,
-                self.composer_config,
-            );
+
+            let verify_comms_labels =
+                gen_verify_comms_labels(self.program_width, self.composer_config);
             for str in &verify_comms_labels {
                 let comm = self.commitments[str];
                 let tmp = comm.0;
@@ -149,7 +141,7 @@ impl<F: Field, D: Domain<F>, E: PairingEngine> Verifier<F, D, E> {
             g2xbytes.push(xc1);
             g2xbytes.push(yc0);
             g2xbytes.push(yc1);
-    
+
             let mut prehasher = Sha256::new();
             prehasher.update(pi_num.to_be_bytes());
             prehasher.update(v0_domainsize.to_be_bytes());
@@ -162,13 +154,12 @@ impl<F: Field, D: Domain<F>, E: PairingEngine> Verifier<F, D, E> {
             }
             let result = prehasher.finalize();
             trans.update_with_u256(result);
-    
+
             for pi in &self.public_input {
                 trans.update_with_fr(pi);
             }
         }
-        
-        
+
         // step 1
         for (i, ci) in proof.commitments1.iter().enumerate() {
             trans.update_with_g1::<E>(&ci.0);
@@ -197,7 +188,8 @@ impl<F: Field, D: Domain<F>, E: PairingEngine> Verifier<F, D, E> {
             beta_1 = trans.generate_challenge::<F>();
             gamma_1 = trans.generate_challenge::<F>();
             trans.update_with_g1::<E>(&proof.commitments3[1].0);
-            self.commitments.insert(format!("z_lookup"), proof.commitments3[1].clone());
+            self.commitments
+                .insert(format!("z_lookup"), proof.commitments3[1].clone());
         }
 
         let alpha = trans.generate_challenge::<F>();
@@ -251,10 +243,11 @@ impl<F: Field, D: Domain<F>, E: PairingEngine> Verifier<F, D, E> {
         alpha_combinator *= alpha_2;
         // lookup
         let r_lookup = alpha_combinator
-            * (self.evaluations["z_lookup_zeta_omega"]
-                * gamma_1
-                * (beta_1 * self.evaluations["s_zeta_omega"] + (beta_1 + F::one()) * gamma_1)
-                + alpha * lagrange_1_zeta
+            * (
+                self.evaluations["z_lookup_zeta_omega"]
+                    * gamma_1
+                    * (beta_1 * self.evaluations["s_zeta_omega"] + (beta_1 + F::one()) * gamma_1)
+                    + alpha * lagrange_1_zeta
                 // + alpha_2 * lagrange_n_zeta
             );
         alpha_combinator *= alpha_2;
@@ -323,29 +316,23 @@ impl<F: Field, D: Domain<F>, E: PairingEngine> Verifier<F, D, E> {
                 let mut acc = E::G1Projective::zero();
                 let mut alpha_combinator = alpha;
 
-                acc += self.commitments["q_m"].0.into_projective().mul(
-                    (self.evaluations["w_0_zeta"]
-                        * self.evaluations["w_1_zeta"])
-                        .into_repr(),
-                );
-                acc += self.commitments["q_c"]
+                acc += self.commitments["q_m"]
                     .0
-                    .into_projective();
+                    .into_projective()
+                    .mul((self.evaluations["w_0_zeta"] * self.evaluations["w_1_zeta"]).into_repr());
+                acc += self.commitments["q_c"].0.into_projective();
                 if self.composer_config.enable_q0next {
-                    acc += self.commitments["q0next"].0.into_projective().mul(
-                        ( self.evaluations["w_0_zeta_omega"])
-                            .into_repr(),
-                    );
+                    acc += self.commitments["q0next"]
+                        .0
+                        .into_projective()
+                        .mul((self.evaluations["w_0_zeta_omega"]).into_repr());
                 }
 
                 for i in 0..self.program_width {
                     acc += self.commitments[&format!("q_{}", i)]
                         .0
                         .into_projective()
-                        .mul(
-                            self.evaluations[&format!("w_{}_zeta", i)]
-                                .into_repr(),
-                        );
+                        .mul(self.evaluations[&format!("w_{}_zeta", i)].into_repr());
                 }
 
                 // z
@@ -382,11 +369,12 @@ impl<F: Field, D: Domain<F>, E: PairingEngine> Verifier<F, D, E> {
                 let tmp = combine(eta, twi_zeta);
                 acc += self.commitments["z_lookup"].0.into_projective().mul(
                     (alpha_combinator
-                        * ((self.evaluations["q_lookup_zeta"] * (tmp) + gamma_1)
-                            * ((self.evaluations["table_zeta"])
-                                + beta_1 * (self.evaluations["table_zeta_omega"])
-                                + (beta_1 + F::one()) * gamma_1)
-                            + alpha * lagrange_1_zeta
+                        * (
+                            (self.evaluations["q_lookup_zeta"] * (tmp) + gamma_1)
+                                * ((self.evaluations["table_zeta"])
+                                    + beta_1 * (self.evaluations["table_zeta_omega"])
+                                    + (beta_1 + F::one()) * gamma_1)
+                                + alpha * lagrange_1_zeta
                             // + alpha_2 * lagrange_n_zeta
                         ))
                         .into_repr(),
@@ -443,12 +431,11 @@ impl<F: Field, D: Domain<F>, E: PairingEngine> Verifier<F, D, E> {
                             * (alpha
                                 * (self.evaluations["w_0_zeta_omega"]
                                     * self.evaluations["w_3_zeta"]
-                                        * (self.evaluations["w_2_zeta"]
+                                    * (self.evaluations["w_2_zeta"]
                                         + self.evaluations["w_0_zeta_omega"]
                                         - self.evaluations["w_0_zeta"])
-                                    - self.evaluations["w_2_zeta_omega"])
-                            ))
-                        .into_repr(),
+                                    - self.evaluations["w_2_zeta_omega"])))
+                            .into_repr(),
                     );
 
                     // z_substring

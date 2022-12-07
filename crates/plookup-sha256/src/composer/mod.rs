@@ -189,8 +189,6 @@ impl<F: Field> Composer<F> {
         self.finalize();
 
         let size = max(self.size(), self.sorted_size());
-        println!("self.size() {}", self.size());
-        println!("self.sorted_size() {}", self.sorted_size());
 
         let mut prover_key = ProverKey::new(
             size,

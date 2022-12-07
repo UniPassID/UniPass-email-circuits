@@ -276,7 +276,7 @@ pub fn convert_to_bigints<F: PrimeField>(p: &[F]) -> Vec<F::BigInt> {
     coeffs
 }
 
-// #[cfg(test)]
+#[cfg(test)]
 mod tests {
     // use ark_bls12_381::{Bls12_381, Fr};
     use ark_bn254::Fr;

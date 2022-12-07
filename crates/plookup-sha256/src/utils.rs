@@ -102,6 +102,14 @@ pub fn gen_verify_open_zeta_omega_labels(
     labels
 }
 
+/// Returns coset generator k(i), i \in {1, 2, 3, 4}. 
+/// Coset generators are factors, k1, k2, ..., by which the generator of the
+/// largest multiplicative subgroup (denoted by H) is multiplied such that 
+/// we can have cosets H1, H2 ... and so on. These factors should be non-conflicting,
+/// saying that $Hi \cup Hj \neq \emptyset$. 
+/// The condition can be checked by a simple algorithm, i.e. ki/kj ?= \omega^a for 
+/// some a, where \omega is the generator of H.
+/// See more here: https://hackmd.io/CfFCbA0TTJ6X08vHg0-9_g
 pub fn coset_generator<F: Field>(index: usize) -> F {
     match index {
         1 => F::from(7_u64),
@@ -268,7 +276,7 @@ pub fn convert_to_bigints<F: PrimeField>(p: &[F]) -> Vec<F::BigInt> {
     coeffs
 }
 
-#[cfg(test)]
+// #[cfg(test)]
 mod tests {
     // use ark_bls12_381::{Bls12_381, Fr};
     use ark_bn254::Fr;
@@ -276,6 +284,7 @@ mod tests {
     use ark_poly::Polynomial;
     use ark_std::{rand::Rng, test_rng, UniformRand};
     use num_bigint::BigUint;
+    use ark_ff::FftField;
 
     use super::*;
 
@@ -323,5 +332,42 @@ mod tests {
                 domain.evaluate_lagrange_polynomial(j, &point)
             )
         });
+    }
+
+    fn check_coset_factor_two<F: FftField, D: EvaluationDomain<F>>(
+        k1: F, 
+        k2: F, 
+        domain: &D,
+    ) -> bool {
+        let k2_inv = k2.inverse().unwrap();
+        !domain.evaluate_vanishing_polynomial(k1 * k2_inv).is_zero()
+    }
+
+    fn check_coset_factor_set<F: FftField> (
+        k: &[F], 
+        domain_size: u64
+    ) -> (bool, F, F) {
+        let domain = GeneralEvaluationDomain::new(domain_size as usize).unwrap();
+        let mut k_vec = vec![F::one()];
+        k_vec.extend(k);
+        for i in 0..k_vec.len() {
+            for j in 0..i {
+                if !check_coset_factor_two(k_vec[i], k_vec[j], &domain) {
+                    return (false, k_vec[i], k_vec[j])
+                }
+            }
+        }
+        return (true, F::zero(), F::zero())
+    }
+
+    /// Check if the coset generators chosen are valid.
+    #[test]
+    fn test_check_coset_generators() {
+        let MAX_DEGREE = 28;
+        let factors: Vec<Fr> = (0..4).map(|i| {
+            super::coset_generator(i+1)
+        }).collect();
+
+        assert!(check_coset_factor_set::<Fr>(&factors, 2u64.pow(MAX_DEGREE)).0);
     }
 }

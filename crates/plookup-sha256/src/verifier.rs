@@ -228,11 +228,11 @@ impl<F: Field, D: Domain<F>, E: PairingEngine> Verifier<F, D, E> {
         let u = trans.generate_challenge::<F>();
 
         let lagrange_1_zeta = self.domain.evaluate_lagrange_polynomial(1, &zeta);
-        let lagrange_n_zeta = self
-            .domain
-            .evaluate_lagrange_polynomial(self.domain.size(), &zeta);
+        // let lagrange_n_zeta = self
+        //     .domain
+        //     .evaluate_lagrange_polynomial(self.domain.size(), &zeta);
         let alpha_2 = alpha.square();
-        let alpha_3 = alpha * alpha_2;
+        // let alpha_3 = alpha * alpha_2;
 
         // cal r_complement
         let mut tmp = F::one();
@@ -255,8 +255,9 @@ impl<F: Field, D: Domain<F>, E: PairingEngine> Verifier<F, D, E> {
                 * gamma_1
                 * (beta_1 * self.evaluations["s_zeta_omega"] + (beta_1 + F::one()) * gamma_1)
                 + alpha * lagrange_1_zeta
-                + alpha_2 * lagrange_n_zeta);
-        alpha_combinator *= alpha_3;
+                // + alpha_2 * lagrange_n_zeta
+            );
+        alpha_combinator *= alpha_2;
         let mut r_complement = r_permu + r_lookup;
         // range
         if self.composer_config.enable_range {
@@ -386,7 +387,8 @@ impl<F: Field, D: Domain<F>, E: PairingEngine> Verifier<F, D, E> {
                                 + beta_1 * (self.evaluations["table_zeta_omega"])
                                 + (beta_1 + F::one()) * gamma_1)
                             + alpha * lagrange_1_zeta
-                            + alpha_2 * lagrange_n_zeta))
+                            // + alpha_2 * lagrange_n_zeta
+                        ))
                         .into_repr(),
                 );
                 // s
@@ -395,7 +397,7 @@ impl<F: Field, D: Domain<F>, E: PairingEngine> Verifier<F, D, E> {
                         .into_repr(),
                 );
                 // update alpha_comb
-                alpha_combinator *= alpha_3;
+                alpha_combinator *= alpha_2;
 
                 // q_range
                 if self.composer_config.enable_range {

@@ -89,8 +89,9 @@ impl<F: Field> Table<F> {
 }
 
 impl<F: Field> Composer<F> {
-    //add all tables into a 'single big table'. will use an extra column, distinguish different tables
-    pub(super) fn compute_table_values(&self) -> Vec<Vec<F>> {
+    //add all tables into a 'single big table'. will use an extra column, distinguish different tables.
+    //add a 'special table' to tail. for cover 'padding 0'.
+    pub(super) fn compute_table_values(&mut self) -> Vec<Vec<F>> {
         // one column
         let mut table_values = vec![Vec::with_capacity(self.table_size()); self.program_width + 1];
         for (i, table) in self.tables.iter().enumerate() {
@@ -102,6 +103,12 @@ impl<F: Field> Composer<F> {
             }
             //i is the index of different tables.
             table_values[self.program_width].extend(vec![F::from((i + 1) as u64); table.size])
+        }
+
+        // add a 'special table' to tail. 
+        // only 1 row, and the values are 0, value in extra column (q_table) is also 0.
+        for column in &mut table_values {
+            column.push(F::zero());
         }
 
         table_values
@@ -130,10 +137,16 @@ impl<F: Field> Composer<F> {
             sorted_values[self.program_width].extend(vec![F::from((i + 1) as u64); lookups.len()])
         }
 
+        // add a 'special table' to tail. 
+        // only 1 row, and the values are 0, value in extra column (q_table) is also 0.
+        for column in &mut sorted_values {
+            column.push(F::zero());
+        }
+
         sorted_values
     }
 
-    pub(super) fn table_size(&self) -> usize {
+    pub fn table_size(&self) -> usize {
         let mut size = 0;
         for table in self.tables.iter() {
             size += table.size;
@@ -142,8 +155,8 @@ impl<F: Field> Composer<F> {
         size
     }
 
-    pub(super) fn sorted_size(&self) -> usize {
-        let mut size = 0;
+    pub fn sorted_size(&self) -> usize {
+        let mut size = 1;
         for table in self.tables.iter() {
             size += table.size + table.lookups.len();
         }
@@ -193,7 +206,7 @@ impl<F: Field> Composer<F> {
         Ok(&self.tables[index - 1])
     }
 
-    pub fn get_table_mut(&mut self, index: usize) -> Result<&mut Table<F>, Error> {
+    fn get_table_mut(&mut self, index: usize) -> Result<&mut Table<F>, Error> {
         if (index == 0) || (index - 1 >= self.tables.len()) {
             return Err(Error::NoSuchTable);
         }

@@ -168,6 +168,36 @@ impl<'a, F: Field, D: Domain<F>, E: PairingEngine> Prover<F, D, E> {
             }
         }
     }
+
+    pub fn show_domain_values(&self) {
+        println!("prover.domain_values:");
+        for (k, v) in &self.domain_values {
+            println!("{}", k);
+            for e in v {
+                println!("{}", e);
+            }
+        }
+    }
+
+    pub fn show_coset_values(&self) {
+        println!("prover.coset_values:");
+        for (k, v) in &self.coset_values {
+            println!("{}", k);
+            for e in v {
+                println!("{}", e);
+            }
+        }
+    }
+
+    pub fn show_polynomials(&self) {
+        println!("prover.polynomials:");
+        for (k, v) in &self.polynomials {
+            println!("coeffs {}", k);
+            for e in &v.coeffs {
+                println!("{}", e);
+            }
+        }
+    }
 }
 
 impl<'a, F: Field, D: Domain<F>, E: PairingEngine> Prover<F, D, E> {

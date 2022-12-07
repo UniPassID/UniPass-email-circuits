@@ -189,10 +189,11 @@ impl<F: Field> Composer<F> {
         self.finalize();
 
         let size = max(self.size(), self.sorted_size());
+        println!("self.size() {}", self.size());
+        println!("self.sorted_size() {}", self.sorted_size());
 
-        // circuit_size must strictly > size. otherwise lookup constraint may fail
         let mut prover_key = ProverKey::new(
-            size + 1,
+            size,
             self.input_size(),
             self.program_width,
             self.switches,
@@ -347,4 +348,45 @@ mod tests {
 
         Ok(())
     }
+
+    #[test]
+    fn composer_test_lookup() -> Result<(), Error> {
+        let mut cs = {
+            let mut cs = Composer::new(4, false);
+
+            let table_index = cs.add_table(Table::xor_table(1));
+            let xtt = cs.alloc(Fr::from(1));
+            let ytt = cs.alloc(Fr::from(0));
+            let ztt = cs.read_from_table(table_index, vec![xtt, ytt])?;
+            cs.enforce_constant(ztt[0], Fr::from(1));
+
+            let x = cs.alloc(Fr::from(3));
+            let y = cs.mul(x, x);
+            let z = cs.mul(x, y);
+            let _u = cs.add(x, z);
+            let _ = cs.read_from_table(table_index, vec![xtt, ytt])?;
+            let _ = cs.read_from_table(table_index, vec![xtt, ytt])?;
+
+            cs
+        };
+        let public_input = cs.compute_public_input();
+
+        let rng = &mut test_rng();
+
+        let pk = cs.compute_prover_key::<GeneralEvaluationDomain<Fr>>()?;
+        let pckey = PCKey::<ark_bn254::Bn254>::setup(pk.domain_size() + pk.program_width + 6, rng);
+        let mut prover =
+            prover::Prover::<Fr, GeneralEvaluationDomain<Fr>, ark_bn254::Bn254>::new(pk);
+        let verifier_comms = prover.init_comms(&pckey);
+        println!("init_comms...done");
+
+        let mut verifier = Verifier::new(&prover, &public_input, &verifier_comms);
+        let proof = prover.prove(&mut cs, &pckey, rng)?;
+        
+        let sha256_of_srs = pckey.sha256_of_srs();
+        verifier.verify(&pckey.vk, &proof, &sha256_of_srs);
+
+        Ok(())
+    }
+
 }

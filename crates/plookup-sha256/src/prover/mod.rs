@@ -482,11 +482,13 @@ impl<'a, F: Field, D: Domain<F>, E: PairingEngine> Prover<F, D, E> {
         // high probability because of blind
         if t_chunks.len() > self.program_width {
             //put the extra in the last
-            let mut extra = t_chunks.pop().unwrap();
-            log::trace!("t extra n {}", extra.coeffs.len());
-            let mut last = t_chunks.pop().unwrap().coeffs.clone();
-            last.append(&mut extra.coeffs);
-            t_chunks.push(DensePolynomial::from_coefficients_vec(last));
+            while t_chunks.len() > self.program_width {
+                let mut extra = t_chunks.pop().unwrap();
+                log::trace!("t extra n {}", extra.coeffs.len());
+                let mut last = t_chunks.pop().unwrap().coeffs.clone();
+                last.append(&mut extra.coeffs);
+                t_chunks.push(DensePolynomial::from_coefficients_vec(last));
+            }
         }
 
         // blind t

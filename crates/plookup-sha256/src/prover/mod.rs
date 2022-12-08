@@ -426,6 +426,16 @@ impl<'a, F: Field, D: Domain<F>, E: PairingEngine> Prover<F, D, E> {
             w.compute_oracles(2, self, rng)?;
         }
 
+        for str in &z_labels {
+            if str == "z_lookup" {
+                continue;
+            }
+            let z_poly = &self.polynomials()[str];
+            let z_comm = pckey.commit_one(z_poly);
+            self.commitments.insert(str.to_string(), z_comm);
+            trans.update_with_g1::<E>(&z_comm.0);
+        }
+
         if self.composer_config.enable_lookup {
             let beta_1 = trans.generate_challenge::<F>();
             let gamma_1 = trans.generate_challenge::<F>();
@@ -436,10 +446,10 @@ impl<'a, F: Field, D: Domain<F>, E: PairingEngine> Prover<F, D, E> {
             }
         }
 
-        for str in &z_labels {
-            let z_poly = &self.polynomials()[str];
+        if self.composer_config.enable_lookup {
+            let z_poly = &self.polynomials()["z_lookup"];
             let z_comm = pckey.commit_one(z_poly);
-            self.commitments.insert(str.to_string(), z_comm);
+            self.commitments.insert("z_lookup".to_string(), z_comm);
             trans.update_with_g1::<E>(&z_comm.0);
         }
         log::trace!("second_round done");
@@ -752,14 +762,13 @@ mod tests {
             let v = cs.add(pi, u);
             cs.enforce_constant(v, Fr::from(35));
 
-            // cs.enforce_range(v, 16)?;
+            cs.enforce_range(v, 16)?;
 
-            // let x1 = cs.alloc(Fr::from(1));
-            // let x2 = cs.alloc(Fr::from(2));
-            // let x3 = cs.alloc(Fr::from(3));
-            // let x4 = cs.alloc(Fr::from(4));
-            // let hash = cs.MiMC_sponge(&[x1, x2, x3, x4], 1);
-            // println!("hash {}", cs.get_assignment(hash[0]));
+            let x1 = cs.alloc(Fr::from(1));
+            let x2 = cs.alloc(Fr::from(2));
+            let x3 = cs.alloc(Fr::from(3));
+            let x4 = cs.alloc(Fr::from(4));
+            let _hash = cs.MiMC_sponge(&[x1, x2, x3, x4], 1);
 
             let x4x = cs.alloc(Fr::from(12));
             cs.poly_gate_with_next(

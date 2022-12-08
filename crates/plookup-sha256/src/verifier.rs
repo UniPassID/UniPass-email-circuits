@@ -175,12 +175,12 @@ impl<F: Field, D: Domain<F>, E: PairingEngine> Verifier<F, D, E> {
         let gamma = trans.generate_challenge::<F>();
 
         // step 3
-        for (ci, str) in proof.commitments3.iter().zip(z_labels) {
+        for (ci, str) in proof.commitments3.iter().zip(&z_labels) {
             if str == "z_lookup" {
                 continue;
             }
             trans.update_with_g1::<E>(&ci.0);
-            self.commitments.insert(str, ci.clone());
+            self.commitments.insert(str.to_string(), ci.clone());
         }
         let mut beta_1 = F::zero();
         let mut gamma_1 = F::zero();

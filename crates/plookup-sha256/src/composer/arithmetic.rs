@@ -138,12 +138,8 @@ impl<F: Field> Composer<F> {
         );
     }
 
-    /// var0 == var1 (todo: use permutation)
+    /// var0 == var1
     pub fn enforce_eq(&mut self, var_0: Variable, var_1: Variable) {
-        self.poly_gate(
-            vec![(var_0, -F::one()), (var_1, F::one())],
-            F::zero(),
-            F::zero(),
-        );
+        self.eq_constraints.union(var_0.0, var_1.0);
     }
 }

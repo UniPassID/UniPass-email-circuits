@@ -147,7 +147,7 @@ impl<F: Field> Composer<F> {
     }
 
     pub fn table_size(&self) -> usize {
-        let mut size = 0;
+        let mut size = 1;
         for table in self.tables.iter() {
             size += table.size;
         }

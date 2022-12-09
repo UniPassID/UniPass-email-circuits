@@ -2674,8 +2674,17 @@ mod tests {
             cs
         };
 
+        test_prove_verify(&mut cs)?;
+
+        Ok(())
+    }
+
+    fn test_prove_verify(cs: &mut Composer<Fr>,) -> Result<(), Error> {
+        println!();
         let public_input = cs.compute_public_input();
-        println!("circuit construct complete");
+        println!("cs.size() {}", cs.size());
+        println!("cs.table_size() {}", cs.table_size());
+        println!("cs.sorted_size() {}", cs.sorted_size());
 
         let rng = &mut test_rng();
 
@@ -2684,21 +2693,27 @@ mod tests {
         println!("compute_prover_key...");
         let pk = cs.compute_prover_key::<GeneralEvaluationDomain<Fr>>()?;
         println!("compute_prover_key...done");
-
         let pckey = PCKey::<ark_bn254::Bn254>::setup(pk.domain_size() + pk.program_width + 6, rng);
+        let mut prover =
+            Prover::<Fr, GeneralEvaluationDomain<Fr>, ark_bn254::Bn254>::new(pk);
 
-        let mut prover = Prover::<Fr, GeneralEvaluationDomain<Fr>, ark_bn254::Bn254>::new(pk);
         println!("init_comms...");
         let verifier_comms = prover.init_comms(&pckey);
         println!("init_comms...done");
         println!("time cost: {:?} ms", start.elapsed().as_millis()); // ms
-
         let mut verifier = Verifier::new(&prover, &public_input, &verifier_comms);
 
-        let proof = prover.prove(&mut cs, &pckey, rng)?;
+        println!("prove start:");
+        let start = Instant::now();
+        let proof = prover.prove(cs, &pckey, rng)?;
+        println!("prove time cost: {:?} ms", start.elapsed().as_millis()); // ms
 
         let sha256_of_srs = pckey.sha256_of_srs();
-        verifier.verify(&pckey.vk, &proof, &sha256_of_srs);
+        println!("verify start:");
+        let start = Instant::now();
+        let res = verifier.verify(&pckey.vk, &proof, &sha256_of_srs);
+        println!("verify result: {}", res);
+        println!("verify time cost: {:?} ms", start.elapsed().as_millis()); // ms
 
         Ok(())
     }
@@ -2756,31 +2771,7 @@ mod tests {
             cs
         };
 
-        let public_input = cs.compute_public_input();
-        println!("circuit construct complete");
-
-        let rng = &mut test_rng();
-
-        println!("time start:");
-        let start = Instant::now();
-        println!("compute_prover_key...");
-        let pk = cs.compute_prover_key::<GeneralEvaluationDomain<Fr>>()?;
-        println!("compute_prover_key...done");
-
-        let pckey = PCKey::<ark_bn254::Bn254>::setup(pk.domain_size() + pk.program_width + 6, rng);
-
-        let mut prover = Prover::<Fr, GeneralEvaluationDomain<Fr>, ark_bn254::Bn254>::new(pk);
-        println!("init_comms...");
-        let verifier_comms = prover.init_comms(&pckey);
-        println!("init_comms...done");
-        println!("time cost: {:?} ms", start.elapsed().as_millis()); // ms
-
-        let mut verifier = Verifier::new(&prover, &public_input, &verifier_comms);
-
-        let proof = prover.prove(&mut cs, &pckey, rng)?;
-
-        let sha256_of_srs = pckey.sha256_of_srs();
-        verifier.verify(&pckey.vk, &proof, &sha256_of_srs);
+        test_prove_verify(&mut cs)?;
 
         Ok(())
     }
@@ -2842,32 +2833,8 @@ mod tests {
 
             cs
         };
-        println!("circuit rows {}", cs.size());
-        let public_input = cs.compute_public_input();
-        println!("circuit construct complete");
-
-        let rng = &mut test_rng();
-
-        println!("time start:");
-        let start = Instant::now();
-        println!("compute_prover_key...");
-        let pk = cs.compute_prover_key::<GeneralEvaluationDomain<Fr>>()?;
-        println!("compute_prover_key...done");
-
-        let pckey = PCKey::<ark_bn254::Bn254>::setup(pk.domain_size() + pk.program_width + 6, rng);
-
-        let mut prover = Prover::<Fr, GeneralEvaluationDomain<Fr>, ark_bn254::Bn254>::new(pk);
-        println!("init_comms...");
-        let verifier_comms = prover.init_comms(&pckey);
-        println!("init_comms...done");
-        println!("time cost: {:?} ms", start.elapsed().as_millis()); // ms
-
-        let mut verifier = Verifier::new(&prover, &public_input, &verifier_comms);
-
-        let proof = prover.prove(&mut cs, &pckey, rng)?;
-
-        let sha256_of_srs = pckey.sha256_of_srs();
-        verifier.verify(&pckey.vk, &proof, &sha256_of_srs);
+        
+        test_prove_verify(&mut cs)?;
 
         Ok(())
     }
@@ -2940,37 +2907,9 @@ mod tests {
 
             cs
         };
-        let public_input = cs.compute_public_input();
-        println!("circuit construct complete");
-        println!("circuit rows {}", cs.size());
-        println!("circuit table_size {}", cs.table_size());
-        println!("circuit sorted_size {}", cs.sorted_size());
 
-        let rng = &mut test_rng();
-
-        println!("time start:");
-        let start = Instant::now();
-        println!("compute_prover_key...");
-        let pk = cs.compute_prover_key::<GeneralEvaluationDomain<Fr>>()?;
-        println!("compute_prover_key...done");
-        println!("domain_size {}", pk.domain_size());
-        println!("coset_size {}", pk.coset_size());
-
-        let pckey = PCKey::<ark_bn254::Bn254>::setup(pk.domain_size() + pk.program_width + 6, rng);
-
-        let mut prover = Prover::<Fr, GeneralEvaluationDomain<Fr>, ark_bn254::Bn254>::new(pk);
-        println!("init_comms...");
-        let verifier_comms = prover.init_comms(&pckey);
-        println!("init_comms...done");
-        println!("time cost: {:?} ms", start.elapsed().as_millis()); // ms
-
-        let mut verifier = Verifier::new(&prover, &public_input, &verifier_comms);
-
-        let proof = prover.prove(&mut cs, &pckey, rng)?;
-
-        let sha256_of_srs = pckey.sha256_of_srs();
-        verifier.verify(&pckey.vk, &proof, &sha256_of_srs);
-
+        test_prove_verify(&mut cs)?;
+        
         Ok(())
     }
 }

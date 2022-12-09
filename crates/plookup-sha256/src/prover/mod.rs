@@ -836,7 +836,8 @@ mod tests {
         let proof = prover.prove(&mut cs, &pckey, rng)?;
 
         let sha256_of_srs = pckey.sha256_of_srs();
-        verifier.verify(&pckey.vk, &proof, &sha256_of_srs);
+        let res = verifier.verify(&pckey.vk, &proof, &sha256_of_srs);
+        println!("verify result: {}", res);
 
         Ok(())
     }

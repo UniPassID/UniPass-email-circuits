@@ -18,7 +18,7 @@ pub(crate) struct ArithmeticWidget {
 
 impl<'a> ArithmeticWidget {
     pub fn new(program_width: usize) -> Self {
-        assert!(program_width >= 2);
+        assert!(program_width >= 3);
         Self {
             wire_labels: (0..program_width)
                 .into_iter()

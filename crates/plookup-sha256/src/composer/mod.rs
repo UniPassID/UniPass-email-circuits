@@ -42,14 +42,77 @@ pub struct ComposerConfig {
 }
 
 #[derive(Debug, Default)]
+pub struct SimpleUnionFind {
+    // store parent
+    disjoint: Vec<usize>,
+    // height of tree
+    rank: Vec<usize>,
+}
+
+impl SimpleUnionFind {
+    pub fn new(initsize: usize) -> Self {
+        let mut disjoint = vec![0usize; initsize];
+        let rank = vec![1usize; initsize];
+
+        for i in 0..disjoint.len() {
+            disjoint[i] = i;
+        }
+
+        SimpleUnionFind { disjoint, rank, }
+    }
+
+    pub fn size(&self) -> usize {
+        self.disjoint.len()
+    }
+
+    pub fn append(&mut self) {
+        let size = self.disjoint.len();
+        self.disjoint.push(size);
+
+        self.rank.push(1);
+    }
+
+    pub fn find(&mut self, x: usize) -> usize {
+        if x == self.disjoint[x] {
+            return x;
+        } else {
+            self.disjoint[x] = self.find(self.disjoint[x]);
+            return self.disjoint[x];
+        }
+        
+    }
+
+    pub fn is_connected(&mut self, x: usize, y: usize) -> bool {
+        let root_x = self.find(x);
+        let root_y = self.find(y);
+        root_x == root_y
+    }
+
+    pub fn union(&mut self, x: usize, y: usize) {
+        let root_x = self.find(x);
+        let root_y = self.find(y);
+        if root_x != root_y {
+            if self.rank[root_x] < self.rank[root_y] {
+                self.disjoint[root_x] = root_y;
+            } else {
+                self.disjoint[root_y] = root_x;
+                if self.rank[root_x] == self.rank[root_y] {
+                    self.rank[root_y] += 1;
+                }
+            }
+        }
+    }
+}
+
+#[derive(Debug, Default)]
 pub struct Composer<F: Field> {
     // number of witness columns of the circuit
     pub program_width: usize,
-
+    // rows of the circuit
     size: usize,
     is_finalized: bool,
 
-    // witness
+    // witness columns
     wires: Map<String, Vec<Variable>>,
     selectors: Map<String, Vec<F>>,
     public_input: Vec<Variable>,
@@ -58,6 +121,10 @@ pub struct Composer<F: Field> {
     assignments: Vec<F>,
     // permutation info
     epicycles: Vec<Vec<Wire>>,
+    // eq constraints between Variables
+    eq_constraints: SimpleUnionFind,
+
+    // tables for lookup
     tables: Vec<Table<F>>,
 
     // custom gates
@@ -141,6 +208,8 @@ impl<F: Field> Composer<F> {
         //each variable have an epicycles (copy constraint)
         self.epicycles.push(Vec::new());
         self.assignments.push(value);
+
+        self.eq_constraints.append();
 
         var
     }
@@ -246,6 +315,9 @@ impl<F: Field> Composer<F> {
             return;
         };
 
+        // handle eq constraints
+        self.handle_eq_constraints();
+
         let input_size = self.input_size();
         self.size += input_size;
 
@@ -304,9 +376,8 @@ mod tests {
     use ark_std::test_rng;
     use num_bigint::BigUint;
 
-    fn composer_basic() -> Composer<Fr> {
+    fn composer_basic(cs: &mut Composer<Fr>,) {
         // x^3 + x + pi = 35
-        let mut cs = Composer::new(4, false);
         let pi = cs.alloc_input(Fr::from(5 as u64));
         let x = cs.alloc(Fr::from(3));
         let y = cs.mul(x, x);
@@ -314,26 +385,48 @@ mod tests {
         let u = cs.add(x, z);
         let v = cs.add(pi, u);
         cs.enforce_constant(v, Fr::from(BigUint::parse_bytes(b"23", 16).unwrap()));
-
-        let _table_index = cs.add_table(Table::xor_table(2));
-
-        cs
     }
 
-    fn composer_q0next() -> Composer<Fr> {
-        // x^3 + x + pi = 35
-        let mut cs = Composer::new(4, true);
-        let pi = cs.alloc_input(Fr::from(5 as u64));
+    fn composer_arithmetic(cs: &mut Composer<Fr>,) {
+        let x = cs.alloc(Fr::from(7));
+        let y = cs.alloc(Fr::from(5));
+        let z = cs.add(x, y);
+        cs.enforce_constant(z, Fr::from(12));
+
+        let u = cs.mul(x, y);
+        cs.enforce_constant(u, Fr::from(35));
+
+        let v = cs.sub(u, z);
+        cs.enforce_constant(v, Fr::from(23));
+        
+        let one = cs.alloc(Fr::one());
+        let zero = cs.alloc(Fr::zero());
+        // 1*5*3 +2*1 -5 + 7 -19 = 0
+        cs.poly_gate(
+            vec![
+                (one, Fr::from(2)),
+                (y, -Fr::one()),
+                (x, Fr::one()),
+            ], 
+            Fr::from(3), 
+            -Fr::from(19),
+        );
+
+        cs.enforce_bool(one);
+        cs.enforce_bool(zero);
+
+        cs.enforce_eq(zero, Composer::<Fr>::null());
+
+        let xx = cs.alloc(Fr::from(7));
+        let x2 = cs.mul(x, xx);
+        cs.enforce_constant(x2, Fr::from(49));
+        cs.enforce_eq(x, xx);
+    }
+
+    fn composer_q0next(cs: &mut Composer<Fr>,) {
         let x = cs.alloc(Fr::from(3));
-        let y = cs.mul(x, x);
-        let z = cs.mul(x, y);
-        let u = cs.add(x, z);
-        let v = cs.add(pi, u);
-        cs.enforce_constant(v, Fr::from(BigUint::parse_bytes(b"23", 16).unwrap()));
-
-        let _table_index = cs.add_table(Table::xor_table(2));
-
         let x4x = cs.alloc(Fr::from(12));
+
         cs.poly_gate_with_next(
             vec![
                 (x, Fr::one()),
@@ -366,13 +459,9 @@ mod tests {
             vec![Fr::zero(), Fr::zero(), Fr::zero()],
             vec![-Fr::one(), Fr::one(), Fr::zero()],
         );
-
-        cs
     }
 
-    fn composer_lookup() -> Composer<Fr> {
-        let mut cs = Composer::new(4, false);
-
+    fn composer_lookup(cs: &mut Composer<Fr>,) {
         let table_index = cs.add_table(Table::xor_table(1));
         let xtt = cs.alloc(Fr::from(1));
         let ytt = cs.alloc(Fr::from(0));
@@ -385,33 +474,38 @@ mod tests {
         let _u = cs.add(x, z);
         let _ = cs.read_from_table(table_index, vec![xtt, ytt]).unwrap();
         let _ = cs.read_from_table(table_index, vec![xtt, ytt]).unwrap();
-
-        cs
     }
 
-    fn composer_range() -> Composer<Fr> {
-        let mut cs = Composer::new(4, false);
+    fn composer_lookup2(cs: &mut Composer<Fr>,) {
+        let table_index = cs.add_table(Table::xor_table(3));
+        let x = cs.alloc(Fr::from(1));
+        let y = cs.alloc(Fr::from(2));
+        let z = cs.alloc(Fr::from(5));
+        let t = cs.read_from_table(table_index, vec![x, y]).unwrap();
+        cs.enforce_constant(t[0], Fr::from(3));
 
-        let _table_index = cs.add_table(Table::xor_table(2));
+        let t2 = cs.read_from_table(table_index, vec![y, x]).unwrap();
+        cs.enforce_constant(t2[0], Fr::from(3));
 
-        let x = cs.alloc(Fr::from(3));
-        let y = cs.mul(x, x);
-        let z = cs.mul(x, y);
-        let u = cs.add(x, z);
+        let t3 = cs.read_from_table(table_index, vec![t[0], x]).unwrap();
+        cs.enforce_constant(t3[0], Fr::from(2));
+
+        let t4 = cs.read_from_table(table_index, vec![z, y]).unwrap();
+        cs.enforce_constant(t4[0], Fr::from(7));
+    }
+
+    fn composer_range(cs: &mut Composer<Fr>,) {
+        let u = cs.alloc(Fr::from(33));
         
         cs.enforce_range(u, 6).unwrap();
 
         let v = cs.alloc(Fr::from(65535));
         cs.enforce_range(v, 16).unwrap();
 
-        cs
+        // cs
     }
 
-    fn composer_mimc() -> Composer<Fr> {
-        let mut cs = Composer::new(4, false);
-
-        let _table_index = cs.add_table(Table::xor_table(2));
-        
+    fn composer_mimc(cs: &mut Composer<Fr>,) {
         let x1 = cs.alloc(Fr::from(1));
         let x2 = cs.alloc(Fr::from(2));
         let x3 = cs.alloc(Fr::from(3));
@@ -425,14 +519,10 @@ mod tests {
         let res2 = Fr::from(BigUint::parse_bytes(b"03E86BDC4EAC70BD601473C53D8233B145FE8FD8BF6EF25F0B217A1DA305665C", 16).unwrap());
         assert_eq!(res2, cs.get_assignment(hash1234[0]));
 
-        cs
+        // cs
     }
 
-    fn composer_substring() -> Composer<Fr> {
-        let mut cs = Composer::new(5, false);
-        
-        let _table_index = cs.add_table(Table::xor_table(2));
-
+    fn composer_substring(cs: &mut Composer<Fr>,) {
         // 608 bytes (4864 bits = 9*512 + 256)
         let sample_a = "66726f6d3a3d3f6762323331323f423f304c73677571504439773d3d3f3d203c6465657078686d406f75746c6f6f6b2e636f6d3e0d0a646174653a5475652c2032312044656320323032312031313a35363a3232202b303030300d0a7375626a6563743a55503078653633333139616239313563356539383638663133303761656463396131333733666561633465306261636633656333653161393961353134363834366537320d0a6d6573736167652d69643a3c535934503238324d42333734383043414546413237314643444337304532313632423537433940535934503238324d42333734382e415553503238322e50524f442e4f55544c4f4f4b2e434f4d3e0d0a636f6e74656e742d747970653a6d756c7469706172742f616c7465726e61746976653b20626f756e646172793d225f3030305f535934503238324d423337343830434145464132373146434443373045323136324235374339535934503238324d4233373438415553505f220d0a6d696d652d76657273696f6e3a312e300d0a646b696d2d7369676e61747572653a763d313b20613d7273612d7368613235363b20633d72656c617865642f72656c617865643b20643d6f75746c6f6f6b2e636f6d3b20733d73656c6563746f72313b20683d46726f6d3a446174653a5375626a6563743a4d6573736167652d49443a436f6e74656e742d547970653a4d494d452d56657273696f6e3a582d4d532d45786368616e67652d53656e6465724144436865636b3b2062683d6530753870745966706b432b336334486d6845595358336b43306c6d386a753372436a387678475a776d413d3b20623d";
         let sample_a_bytes = hex::decode(sample_a).unwrap();
@@ -530,7 +620,7 @@ mod tests {
             1024
         );
 
-        cs
+        // cs
     }
 
     fn test_prove_verify(cs: &mut Composer<Fr>,) -> Result<(), Error> {
@@ -546,8 +636,10 @@ mod tests {
         let start = Instant::now();
         println!("compute_prover_key...");
         let pk = cs.compute_prover_key::<GeneralEvaluationDomain<Fr>>()?;
+        println!("pk.domain_size() {}", pk.domain_size());
         println!("compute_prover_key...done");
         let pckey = PCKey::<ark_bn254::Bn254>::setup(pk.domain_size() + pk.program_width + 6, rng);
+        println!("pckey.max_degree() {}", pckey.max_degree());
         let mut prover =
             prover::Prover::<Fr, GeneralEvaluationDomain<Fr>, ark_bn254::Bn254>::new(pk);
 
@@ -573,13 +665,60 @@ mod tests {
     }
 
     #[test]
-    fn composer_test_prove_verify() -> Result<(), Error> {
-        test_prove_verify(&mut composer_basic())?;
-        test_prove_verify(&mut composer_q0next())?;
-        test_prove_verify(&mut composer_lookup())?;
-        test_prove_verify(&mut composer_range())?;
-        test_prove_verify(&mut composer_mimc())?;
-        test_prove_verify(&mut composer_substring())?;
+    fn test_lookup_size_no_padding() -> Result<(), Error> {
+        let mut cs = Composer::new(4, true);
+
+        composer_lookup(&mut cs);
+
+        test_prove_verify(&mut cs)?;
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_lookup_no_v() -> Result<(), Error> {
+        let mut cs = Composer::new(4, true);
+
+        let _table_index = cs.add_table(Table::xor_table(2));
+        composer_basic(&mut cs);
+
+        test_prove_verify(&mut cs)?;
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_4column_enable_q0next() -> Result<(), Error> {
+        let mut cs = Composer::new(4, true);
+        // let _table_index = cs.add_table(Table::xor_table(2));
+
+        composer_basic(&mut cs);
+        composer_arithmetic(&mut cs);
+        composer_q0next(&mut cs);
+        composer_lookup2(&mut cs);
+        composer_range(&mut cs);
+        composer_mimc(&mut cs);
+        // composer_substring(&mut cs);
+
+        test_prove_verify(&mut cs)?;
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_5column() -> Result<(), Error> {
+        let mut cs = Composer::new(5, false);
+        // let _table_index = cs.add_table(Table::xor_table(2));
+
+        composer_basic(&mut cs);
+        composer_arithmetic(&mut cs);
+        // composer_q0next(&mut cs);
+        composer_lookup2(&mut cs);
+        composer_range(&mut cs);
+        composer_mimc(&mut cs);
+        composer_substring(&mut cs);
+
+        test_prove_verify(&mut cs)?;
 
         Ok(())
     }

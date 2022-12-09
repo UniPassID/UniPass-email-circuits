@@ -3,6 +3,20 @@ use crate::{coset_generator, Field};
 use ark_std::vec::Vec;
 
 impl<F: Field> Composer<F> {
+    pub(super) fn handle_eq_constraints(&mut self, ) {
+        let size = self.eq_constraints.size();
+        assert_eq!(size, self.epicycles.len());
+        
+        for i in 0..size {
+            let root = self.eq_constraints.find(i);
+            if root != i {
+                let mut tmp = self.epicycles[i].clone();
+                self.epicycles[root].append(&mut tmp);
+                self.epicycles[i].clear();
+            }
+        }
+    }
+
     pub(super) fn compute_sigmas(&self, domain: impl Domain<F>) -> Vec<Vec<F>> {
         let length = domain.size();
         let sigmas = {

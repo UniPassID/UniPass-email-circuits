@@ -372,3 +372,139 @@ impl<E: PairingEngine> VKey<E> {
         self.max_degree
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use ark_poly::Polynomial;
+    // use rand_core::OsRng;
+    // use ark_std::rand::thread_rng;
+    use ark_std::test_rng;
+    use ark_bn254::Fr;
+
+    use crate::Error;
+
+    use super::*;
+
+    #[test]
+    fn test_setup() -> Result<(), Error> {
+        // let rng = &mut thread_rng();
+        let rng = &mut test_rng();
+        let pckey = PCKey::<ark_bn254::Bn254>::setup(16, rng);
+
+        pckey.check();
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_structure_check() -> Result<(), Error> {
+        // let rng = &mut thread_rng();
+        let n = 16;
+        let rng = &mut test_rng();
+        let pckey = PCKey::<ark_bn254::Bn254>::setup(n, rng);
+
+        let x = Fr::rand(&mut test_rng());
+        let mut challenges = vec![];
+        challenges.push(x);
+        for i in 0..n - 1 {
+            challenges.push(challenges[i] * x);
+        }
+
+        let left = pckey.powers[0..(n - 1)].to_vec();
+        let right = pckey.powers[1..n].to_vec();
+        let scalars: Vec<_> = challenges.iter().map(|scalar| scalar.into_repr()).collect();
+        
+        let L_comm = VariableBaseMSM::multi_scalar_mul(
+            &left,
+            &scalars,
+        );
+        let R_comm = VariableBaseMSM::multi_scalar_mul(
+            &right,
+            &scalars,
+        );
+        let p1 = ark_bn254::Bn254::pairing(L_comm, pckey.vk.beta_h);
+        let p2 = ark_bn254::Bn254::pairing(R_comm, pckey.vk.h);
+
+        assert_eq!(p1, p2);
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_verify() -> Result<(), Error> {
+        let n = 16;
+        let rng = &mut test_rng();
+        let pckey = PCKey::<ark_bn254::Bn254>::setup(n, rng);
+
+        let test_poly = DensePolynomial::from_coefficients_vec(vec![Fr::one(); n]);
+
+        let c = pckey.commit_one(&test_poly);
+
+        let point = Fr::rand(&mut test_rng());
+        let point_eval = test_poly.evaluate(&point);
+        let pi = pckey.open_one(&test_poly, point);
+
+        let res = pckey.vk.verify_pc(&c, point, point_eval, &pi);
+        assert!(res);
+        Ok(())
+    }
+
+    #[test]
+    fn test_batch_verify() -> Result<(), Error> {
+        let n = 16;
+        let rng = &mut test_rng();
+        let pckey = PCKey::<ark_bn254::Bn254>::setup(n, rng);
+
+        let x = Fr::rand(&mut test_rng());
+        let num = 3;
+        let mut polys = vec![];
+        for _ in 0..num {
+            let mut coeffs = vec![];
+            for _ in 0..n {
+                coeffs.push(Fr::rand(&mut test_rng()));
+            }
+            let test_poly = DensePolynomial::from_coefficients_vec(coeffs);
+            polys.push(test_poly);
+        }
+        
+        let c = pckey.commit_vec(&polys);
+
+        let point = Fr::rand(&mut test_rng());
+        let point_evals: Vec<_> = polys.iter().map(|p| {p.evaluate(&point)}).collect();
+        let pis: Vec<_> = polys.iter().map(|p| {pckey.open_one(&p, point)}).collect();
+        let batched_pi = pckey.compute_batched_proof_pi(&pis, x);
+
+        let res = pckey.vk.verify_batched_pc(&c, point, &point_evals, &batched_pi, x);
+        assert!(res);
+        Ok(())
+    }
+
+    #[test]
+    fn test_multi_point_verify() -> Result<(), Error> {
+        let n = 16;
+        let rng = &mut test_rng();
+        let pckey = PCKey::<ark_bn254::Bn254>::setup(n, rng);
+
+        let x = Fr::rand(&mut test_rng());
+        let num = 3;
+        let mut polys = vec![];
+        for _ in 0..num {
+            let mut coeffs = vec![];
+            for _ in 0..n {
+                coeffs.push(Fr::rand(&mut test_rng()));
+            }
+            let test_poly = DensePolynomial::from_coefficients_vec(coeffs);
+            polys.push(test_poly);
+        }
+        
+        let c = pckey.commit_vec(&polys);
+
+        let points: Vec<_> = (0..num).map(|_i| {Fr::rand(&mut test_rng())}).collect();
+        let point_evals: Vec<_> = polys.iter().zip(&points).map(|(p, point)| {p.evaluate(&point)}).collect();
+        let pis: Vec<_> = polys.iter().zip(&points).map(|(p, point)| {pckey.open_one(&p, *point)}).collect();
+
+        let res = pckey.vk.batch_verify_multi_point_open_pc(&c, &points, &point_evals, &pis, x);
+        assert!(res);
+        Ok(())
+    }
+}

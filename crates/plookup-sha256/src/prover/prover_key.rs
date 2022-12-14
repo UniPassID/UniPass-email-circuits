@@ -47,10 +47,10 @@ impl<F: Field, D: Domain<F>> ProverKey<F, D> {
                 "lagrange_1".to_string(),
                 coset.coset_fft(&domain.lagrange_polynomial(1)),
             );
-            coset_values.insert(
-                "lagrange_n".to_string(),
-                coset.coset_fft(&domain.lagrange_polynomial(domain.size())),
-            );
+            // coset_values.insert(
+            //     "lagrange_n".to_string(),
+            //     coset.coset_fft(&domain.lagrange_polynomial(domain.size())),
+            // );
             coset_values.insert(
                 "linear".to_string(),
                 coset.coset_fft(&[F::zero(), F::one()]),

@@ -10,6 +10,7 @@ impl<F: Field> Composer<F> {
         for i in 0..size {
             let root = self.eq_constraints.find(i);
             if root != i {
+                assert_eq!(self.assignments[i], self.assignments[root]);
                 let mut tmp = self.epicycles[i].clone();
                 self.epicycles[root].append(&mut tmp);
                 self.epicycles[i].clear();

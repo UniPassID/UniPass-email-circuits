@@ -33,7 +33,6 @@ pub struct Variable(usize);
 #[derive(Debug, Default, Copy, Clone, CanonicalSerialize, CanonicalDeserialize)]
 pub struct ComposerConfig {
     pub enable_q0next: bool,
-
     pub enable_range: bool,
     pub enable_lookup: bool,
     pub enable_mimc: bool,
@@ -659,6 +658,7 @@ mod tests {
         let start = Instant::now();
         let res = verifier.verify(&pckey.vk, &proof, &sha256_of_srs);
         println!("verify result: {}", res);
+        assert!(res);
         println!("verify time cost: {:?} ms", start.elapsed().as_millis()); // ms
 
         Ok(())
@@ -722,4 +722,96 @@ mod tests {
 
         Ok(())
     }
+
+    #[test]
+    #[should_panic]
+    fn test_wrong_arith() {
+        let mut cs = Composer::new(4, true);
+
+        composer_lookup2(&mut cs);
+        let x = cs.alloc(Fr::from(3));
+        let y = cs.alloc(Fr::from(5));
+        let z = cs.add(x, y);
+        cs.enforce_constant(z, Fr::from(9));
+
+        test_prove_verify(&mut cs).unwrap();
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_wrong_arith2() {
+        let mut cs = Composer::new(4, true);
+
+        let _table_index = cs.add_table(Table::xor_table(1));
+
+        let x = cs.alloc(Fr::from(3));
+        let y = cs.alloc(Fr::from(5));
+        let z = cs.add(x, y);
+        cs.poly_gate(
+            vec![
+                (z, -Fr::from(337845818)),
+                (x, Fr::one()),
+                (y, Fr::one()),
+            ], 
+            Fr::from(337845818), 
+            -Fr::from(3),
+        );
+        
+        test_prove_verify(&mut cs).unwrap();
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_wrong_arith3() {
+        let mut cs = Composer::new(4, true);
+
+        let _table_index = cs.add_table(Table::xor_table(1));
+
+        let x = cs.alloc(Fr::from(3));
+        let y = cs.alloc(Fr::from(5));
+        cs.enforce_eq(x, y);
+        
+        test_prove_verify(&mut cs).unwrap();
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_wrong_lookup() {
+        let mut cs = Composer::new(4, false);
+
+        let table_index = cs.add_table(Table::xor_table(2));
+        let x = cs.alloc(Fr::from(1));
+        let z = cs.alloc(Fr::from(5));
+        let t = cs.read_from_table(table_index, vec![x, z]).unwrap();
+        cs.enforce_constant(t[0], Fr::from(4));
+
+        test_prove_verify(&mut cs).unwrap();
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_wrong_range() {
+        let mut cs = Composer::new(4, false);
+
+        let _table_index = cs.add_table(Table::xor_table(1));
+
+        let u = cs.alloc(Fr::from(33));
+        cs.enforce_range(u, 7).unwrap();
+
+        test_prove_verify(&mut cs).unwrap();
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_wrong_range2() {
+        let mut cs = Composer::new(4, false);
+
+        let _table_index = cs.add_table(Table::xor_table(1));
+
+        let u = cs.alloc(Fr::from(16));
+        cs.enforce_range(u, 4).unwrap();
+
+        test_prove_verify(&mut cs).unwrap();
+    }
+
 }

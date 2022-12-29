@@ -53,7 +53,7 @@ impl<F: Field> Composer<F> {
 
         let r_value = self.get_assignment(mask);
 
-        let mut comb = F::one();
+        let mut comb = r_value;
         let mut mask_poly_b = vec![];
         let mut bit_location_b = vec![];
 
@@ -433,7 +433,7 @@ impl<F: Field> Composer<F> {
 
         let r_value = self.get_assignment(mask);
 
-        let mut comb = F::one();
+        let mut comb = r_value;
         let mut mask_poly_b = vec![];
         let mut bit_location_b = vec![];
 

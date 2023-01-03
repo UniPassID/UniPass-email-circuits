@@ -2,9 +2,10 @@ use plonk::ark_bn254::Fr;
 use plonk::ark_ff::{One, Zero};
 
 use email_parser::types::PrivateInputs;
+use plonk::sha256::sha256_no_padding_words_var_fixed_length;
 use plonk::{
     sha256::{
-        sha256_collect_8_outputs_to_2_128bits, sha256_collect_8_outputs_to_field,
+        sha256_collect_8_outputs_to_field,
         sha256_no_padding_words_var, Sha256Word,
     },
     Composer,
@@ -178,18 +179,31 @@ impl Email1024CircuitInput {
         }
         let mut concat_hash_data = vec![];
         for v in concat_hash {
-            concat_hash_data.push(Sha256Word::new_from_32bits_var(&mut cs, v).unwrap());
+            let word = Sha256Word {
+                var: v,
+                hvar: Composer::<Fr>::null(),
+                lvar: Composer::<Fr>::null(),
+                hvar_spread: Composer::<Fr>::null(),
+                lvar_spread: Composer::<Fr>::null(),
+            };
+            concat_hash_data.push(word);
         }
-        // should be public, we will handle it later in the hash.
-        let mask_hash_len = cs.alloc(Fr::from(2));
         let mask_hashs =
-            sha256_no_padding_words_var(&mut cs, &concat_hash_data, mask_hash_len, 2).unwrap();
+            sha256_no_padding_words_var_fixed_length(&mut cs, &concat_hash_data, 2).unwrap();
 
         let mask_r = sha256_collect_8_outputs_to_field(&mut cs, &mask_hashs).unwrap();
 
         // private substring check. use sha256(a_hash|b_hash) as mask_r
-        let (output_bits_a, output_bits_b) = cs
-            .add_substring_mask_poly_1024(&email_header_vars, &email_addr_pepper_vars, mask_r, l, m)
+        let (output_words_a, output_words_b) = cs
+            .add_substring_mask_poly_return_words(
+                &email_header_vars,
+                &email_addr_pepper_vars,
+                mask_r,
+                l,
+                m,
+                email_header_max_lens,
+                email_addr_max_lens,
+            )
             .unwrap();
 
         // pub match "a"
@@ -205,102 +219,145 @@ impl Email1024CircuitInput {
         }
 
         // public string match.
-        cs.add_public_match(
+        cs.add_public_match_no_custom_gate(
             &email_header_vars,
             &email_header_pubmatch_vars,
             email_header_max_lens,
-        )
-        .unwrap();
-
-        // should make 'match string' public. here we use sha256 to make public_inputs smaller
-        let mut sha256_pubmatch_data = vec![];
-        for vs in email_header_pubmatch_vars.chunks(4) {
-            sha256_pubmatch_data
-                .push(Sha256Word::new_from_8bits(&mut cs, vs[0], vs[1], vs[2], vs[3]).unwrap());
-        }
-        let pubmatch_hash = sha256_no_padding_words_var(
-            &mut cs,
-            &sha256_pubmatch_data,
-            email_header_data_len,
-            email_header_max_lens * 8 / 512,
-        )
-        .unwrap();
-
-        let email_header_hash128 =
-            sha256_collect_8_outputs_to_2_128bits(&mut cs, &email_header_hash).unwrap();
-        let email_addr_pepper_hash128 =
-            sha256_collect_8_outputs_to_2_128bits(&mut cs, &email_addr_pepper_hash).unwrap();
-        let pubmatch_hash128 =
-            sha256_collect_8_outputs_to_2_128bits(&mut cs, &pubmatch_hash).unwrap();
+        );
 
         // gen pub_inputs
-        let pub_out01 = cs.get_assignment(email_header_data_len)
-            * Fr::from(1u128 << 64)
-            * Fr::from(1u128 << 64)
-            + cs.get_assignment(email_header_hash128[0]);
-        let pub_out01_var = cs.alloc_input(pub_out01);
-        cs.poly_gate(
-            vec![
-                (pub_out01_var, -Fr::one()),
-                (
-                    email_header_data_len,
-                    Fr::from(1u128 << 64) * Fr::from(1u128 << 64),
-                ),
-                (email_header_hash128[0], Fr::one()),
-            ],
-            Fr::zero(),
-            Fr::zero(),
-        );
-        let pub_out02 =
-            cs.get_assignment(mask_hash_len) * Fr::from(1u128 << 64) * Fr::from(1u128 << 64)
-                + cs.get_assignment(email_header_hash128[1]);
-        let pub_out02_var = cs.alloc_input(pub_out02);
-        cs.poly_gate(
-            vec![
-                (pub_out02_var, -Fr::one()),
-                (mask_hash_len, Fr::from(1u128 << 64) * Fr::from(1u128 << 64)),
-                (email_header_hash128[1], Fr::one()),
-            ],
-            Fr::zero(),
-            Fr::zero(),
-        );
-        let pub_out03 = cs.get_assignment(email_addr_pepper_data_len)
-            * Fr::from(1u128 << 64)
-            * Fr::from(1u128 << 64)
-            + cs.get_assignment(email_addr_pepper_hash128[0]);
-        let pub_out03_var = cs.alloc_input(pub_out03);
-        cs.poly_gate(
-            vec![
-                (pub_out03_var, -Fr::one()),
-                (
-                    email_addr_pepper_data_len,
-                    Fr::from(1u128 << 64) * Fr::from(1u128 << 64),
-                ),
-                (email_addr_pepper_hash128[0], Fr::one()),
-            ],
-            Fr::zero(),
-            Fr::zero(),
-        );
-        cs.set_variable_public_input(email_addr_pepper_hash128[1]);
-        for v in output_bits_a {
-            cs.set_variable_public_input(v);
+        // hash all public. 9952bits (256|256|1024|192|1024*8|16|16)
+        // cal sha256(a_hash|b_hash|a_bits_location|b_bits_location|pub_string|header_len|addr_len)
+        let mut sha256_all_public_data = vec![];
+        for wd in email_header_hash {
+            let word = Sha256Word {
+                var: wd,
+                hvar: Composer::<Fr>::null(),
+                lvar: Composer::<Fr>::null(),
+                hvar_spread: Composer::<Fr>::null(),
+                lvar_spread: Composer::<Fr>::null(),
+            };
+            sha256_all_public_data.push(word);
         }
-        cs.set_variable_public_input(output_bits_b);
-        cs.set_variable_public_input(pubmatch_hash128[0]);
-        cs.set_variable_public_input(pubmatch_hash128[1]);
+        for wd in email_addr_pepper_hash {
+            let word = Sha256Word {
+                var: wd,
+                hvar: Composer::<Fr>::null(),
+                lvar: Composer::<Fr>::null(),
+                hvar_spread: Composer::<Fr>::null(),
+                lvar_spread: Composer::<Fr>::null(),
+            };
+            sha256_all_public_data.push(word);
+        }
+        for wd in output_words_a {
+            let word = Sha256Word {
+                var: wd,
+                hvar: Composer::<Fr>::null(),
+                lvar: Composer::<Fr>::null(),
+                hvar_spread: Composer::<Fr>::null(),
+                lvar_spread: Composer::<Fr>::null(),
+            };
+            sha256_all_public_data.push(word);
+        }
+        for wd in output_words_b {
+            let word = Sha256Word {
+                var: wd,
+                hvar: Composer::<Fr>::null(),
+                lvar: Composer::<Fr>::null(),
+                hvar_spread: Composer::<Fr>::null(),
+                lvar_spread: Composer::<Fr>::null(),
+            };
+            sha256_all_public_data.push(word);
+        }
+        for vs in email_header_pubmatch_vars.chunks(4) {
+            sha256_all_public_data
+                .push(Sha256Word::new_from_8bits(&mut cs, vs[0], vs[1], vs[2], vs[3]).unwrap());
+        }
+        // (header_len|addr_len) as a 32bits word
+        let word_var = {
+            let spread8_index = cs.get_table_index(format!("spread_8bits"));
+            assert!(spread8_index != 0);
+            let _ = cs
+                .read_from_table(spread8_index, vec![email_header_data_len])
+                .unwrap();
+            let _ = cs
+                .read_from_table(spread8_index, vec![email_addr_pepper_data_len])
+                .unwrap();
 
-        // for elem in &email_header_hash128 {
-        //     let value = cs.get_assignment(*elem);
-        //     log::trace!("a{}", value);
-        // }
-        // for elem in &email_addr_pepper_hash128 {
-        //     let value = cs.get_assignment(*elem);
-        //     log::trace!("b{}", value);
-        // }
-        // for elem in &pubmatch_hash128 {
-        //     let value = cs.get_assignment(*elem);
-        //     log::trace!("pubmatch{}", value);
-        // }
+            let word_var = cs.alloc(
+                Fr::from(header_padding_len as u64) * Fr::from(1u64 << 16)
+                    + Fr::from(from_padding_len as u64),
+            );
+
+            cs.poly_gate(
+                vec![
+                    (word_var, -Fr::one()),
+                    (email_header_data_len, Fr::from(1u64 << 16)),
+                    (email_addr_pepper_data_len, Fr::one()),
+                ],
+                Fr::zero(),
+                Fr::zero(),
+            );
+
+            word_var
+        };
+        let word = Sha256Word {
+            var: word_var,
+            hvar: Composer::<Fr>::null(),
+            lvar: Composer::<Fr>::null(),
+            hvar_spread: Composer::<Fr>::null(),
+            lvar_spread: Composer::<Fr>::null(),
+        };
+        sha256_all_public_data.push(word);
+        // padding (224bits + 64bits)
+        {
+            let pad_value = Fr::from(1u64 << 31);
+            let tmp_var = cs.alloc(pad_value);
+            cs.enforce_constant(tmp_var, pad_value);
+            let word = Sha256Word {
+                var: tmp_var,
+                hvar: Composer::<Fr>::null(),
+                lvar: Composer::<Fr>::null(),
+                hvar_spread: Composer::<Fr>::null(),
+                lvar_spread: Composer::<Fr>::null(),
+            };
+            sha256_all_public_data.push(word);
+            for _ in 0..7 {
+                let word = Sha256Word {
+                    var: Composer::<Fr>::null(),
+                    hvar: Composer::<Fr>::null(),
+                    lvar: Composer::<Fr>::null(),
+                    hvar_spread: Composer::<Fr>::null(),
+                    lvar_spread: Composer::<Fr>::null(),
+                };
+                sha256_all_public_data.push(word);
+            }
+            let pad_value = Fr::from(19168u64);
+            let tmp_var = cs.alloc(pad_value);
+            cs.enforce_constant(tmp_var, pad_value);
+            let word = Sha256Word {
+                var: tmp_var,
+                hvar: Composer::<Fr>::null(),
+                lvar: Composer::<Fr>::null(),
+                hvar_spread: Composer::<Fr>::null(),
+                lvar_spread: Composer::<Fr>::null(),
+            };
+            sha256_all_public_data.push(word);
+        }
+
+        let all_public_hash =
+            sha256_no_padding_words_var_fixed_length(&mut cs, &sha256_all_public_data, 20).unwrap();
+
+        let public_inputs_hash =
+            sha256_collect_8_outputs_to_field(&mut cs, &all_public_hash).unwrap();
+
+        cs.set_variable_public_input(public_inputs_hash);
+
+
+
+
+
+
 
         cs
     }

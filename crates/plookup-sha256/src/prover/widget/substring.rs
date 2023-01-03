@@ -92,13 +92,13 @@ impl<F: Field, D: Domain<F>, E: PairingEngine, R: RngCore> Widget<F, D, E, R> fo
 
             let ra = values["q_substring_r"][i]
                 * (values["w_1"][next_i]
-                    * (values["w_4"][i] * values["w_0"][i] + values["w_1"][next_i]
+                    * values["w_4"][i] * (values["w_0"][i] + values["w_1"][next_i]
                         - values["w_1"][i])
                     - values["w_0"][next_i]);
 
             let rb = values["q_substring_r"][i]
                 * (values["w_3"][next_i]
-                    * (values["w_4"][i] * values["w_2"][i] + values["w_3"][next_i]
+                    * values["w_4"][i] * (values["w_2"][i] + values["w_3"][next_i]
                         - values["w_3"][i])
                     - values["w_2"][next_i]);
 
@@ -173,10 +173,10 @@ impl<F: Field, D: Domain<F>, E: PairingEngine, R: RngCore> Widget<F, D, E, R> fo
                 (
                     *combinator
                         * (alpha
-                            * (w1_zeta_omega * (w4_zeta * w0_zeta + w1_zeta_omega - w1_zeta)
+                            * (w1_zeta_omega * w4_zeta * (w0_zeta + w1_zeta_omega - w1_zeta)
                                 - w0_zeta_omega)
                             + alpha_2
-                                * (w3_zeta_omega * (w4_zeta * w2_zeta + w3_zeta_omega - w3_zeta)
+                                * (w3_zeta_omega * w4_zeta * (w2_zeta + w3_zeta_omega - w3_zeta)
                                     - w2_zeta_omega)
                             + alpha_4 * w1_zeta_omega * (w1_zeta_omega - F::one())
                             + alpha_5 * w3_zeta_omega * (w3_zeta_omega - F::one())),

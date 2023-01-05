@@ -4,10 +4,7 @@ use plonk::ark_ff::{One, Zero};
 use email_parser::types::PrivateInputs;
 use plonk::sha256::sha256_no_padding_words_var_fixed_length;
 use plonk::{
-    sha256::{
-        sha256_collect_8_outputs_to_field,
-        sha256_no_padding_words_var, Sha256Word,
-    },
+    sha256::{sha256_collect_8_outputs_to_field, sha256_no_padding_words_var, Sha256Word},
     Composer,
 };
 
@@ -352,12 +349,6 @@ impl Email1024CircuitInput {
             sha256_collect_8_outputs_to_field(&mut cs, &all_public_hash).unwrap();
 
         cs.set_variable_public_input(public_inputs_hash);
-
-
-
-
-
-
 
         cs
     }

@@ -57,7 +57,7 @@ impl SimpleUnionFind {
             disjoint[i] = i;
         }
 
-        SimpleUnionFind { disjoint, rank, }
+        SimpleUnionFind { disjoint, rank }
     }
 
     pub fn size(&self) -> usize {
@@ -78,7 +78,6 @@ impl SimpleUnionFind {
             self.disjoint[x] = self.find(self.disjoint[x]);
             return self.disjoint[x];
         }
-        
     }
 
     pub fn is_connected(&mut self, x: usize, y: usize) -> bool {
@@ -371,11 +370,11 @@ mod tests {
     use super::*;
     use crate::{kzg10::PCKey, verifier::Verifier, *};
     use ark_bn254::Fr;
-    use ark_ff::{Zero, One};
+    use ark_ff::{One, Zero};
     use ark_std::test_rng;
     use num_bigint::BigUint;
 
-    fn composer_basic(cs: &mut Composer<Fr>,) {
+    fn composer_basic(cs: &mut Composer<Fr>) {
         // x^3 + x + pi = 35
         let pi = cs.alloc_input(Fr::from(5 as u64));
         let x = cs.alloc(Fr::from(3));
@@ -386,7 +385,7 @@ mod tests {
         cs.enforce_constant(v, Fr::from(BigUint::parse_bytes(b"23", 16).unwrap()));
     }
 
-    fn composer_arithmetic(cs: &mut Composer<Fr>,) {
+    fn composer_arithmetic(cs: &mut Composer<Fr>) {
         let x = cs.alloc(Fr::from(7));
         let y = cs.alloc(Fr::from(5));
         let z = cs.add(x, y);
@@ -397,17 +396,13 @@ mod tests {
 
         let v = cs.sub(u, z);
         cs.enforce_constant(v, Fr::from(23));
-        
+
         let one = cs.alloc(Fr::one());
         let zero = cs.alloc(Fr::zero());
         // 1*5*3 +2*1 -5 + 7 -19 = 0
         cs.poly_gate(
-            vec![
-                (one, Fr::from(2)),
-                (y, -Fr::one()),
-                (x, Fr::one()),
-            ], 
-            Fr::from(3), 
+            vec![(one, Fr::from(2)), (y, -Fr::one()), (x, Fr::one())],
+            Fr::from(3),
             -Fr::from(19),
         );
 
@@ -422,7 +417,7 @@ mod tests {
         cs.enforce_eq(x, xx);
     }
 
-    fn composer_q0next(cs: &mut Composer<Fr>,) {
+    fn composer_q0next(cs: &mut Composer<Fr>) {
         let x = cs.alloc(Fr::from(3));
         let x4x = cs.alloc(Fr::from(12));
 
@@ -460,7 +455,7 @@ mod tests {
         );
     }
 
-    fn composer_lookup(cs: &mut Composer<Fr>,) {
+    fn composer_lookup(cs: &mut Composer<Fr>) {
         let table_index = cs.add_table(Table::xor_table(1));
         let xtt = cs.alloc(Fr::from(1));
         let ytt = cs.alloc(Fr::from(0));
@@ -475,7 +470,7 @@ mod tests {
         let _ = cs.read_from_table(table_index, vec![xtt, ytt]).unwrap();
     }
 
-    fn composer_lookup2(cs: &mut Composer<Fr>,) {
+    fn composer_lookup2(cs: &mut Composer<Fr>) {
         let table_index = cs.add_table(Table::xor_table(3));
         let x = cs.alloc(Fr::from(1));
         let y = cs.alloc(Fr::from(2));
@@ -493,9 +488,9 @@ mod tests {
         cs.enforce_constant(t4[0], Fr::from(7));
     }
 
-    fn composer_range(cs: &mut Composer<Fr>,) {
+    fn composer_range(cs: &mut Composer<Fr>) {
         let u = cs.alloc(Fr::from(33));
-        
+
         cs.enforce_range(u, 6).unwrap();
 
         let v = cs.alloc(Fr::from(65535));
@@ -504,24 +499,36 @@ mod tests {
         // cs
     }
 
-    fn composer_mimc(cs: &mut Composer<Fr>,) {
+    fn composer_mimc(cs: &mut Composer<Fr>) {
         let x1 = cs.alloc(Fr::from(1));
         let x2 = cs.alloc(Fr::from(2));
         let x3 = cs.alloc(Fr::from(3));
         let x4 = cs.alloc(Fr::from(4));
 
         let hash = cs.MiMC_sponge(&[x1, x2], 1);
-        let res1 = Fr::from(BigUint::parse_bytes(b"2BCEA035A1251603F1CEAF73CD4AE89427C47075BB8E3A944039FF1E3D6D2A6F", 16).unwrap());
+        let res1 = Fr::from(
+            BigUint::parse_bytes(
+                b"2BCEA035A1251603F1CEAF73CD4AE89427C47075BB8E3A944039FF1E3D6D2A6F",
+                16,
+            )
+            .unwrap(),
+        );
         assert_eq!(res1, cs.get_assignment(hash[0]));
 
         let hash1234 = cs.MiMC_sponge(&[x1, x2, x3, x4], 1);
-        let res2 = Fr::from(BigUint::parse_bytes(b"03E86BDC4EAC70BD601473C53D8233B145FE8FD8BF6EF25F0B217A1DA305665C", 16).unwrap());
+        let res2 = Fr::from(
+            BigUint::parse_bytes(
+                b"03E86BDC4EAC70BD601473C53D8233B145FE8FD8BF6EF25F0B217A1DA305665C",
+                16,
+            )
+            .unwrap(),
+        );
         assert_eq!(res2, cs.get_assignment(hash1234[0]));
 
         // cs
     }
 
-    fn composer_substring(cs: &mut Composer<Fr>,) {
+    fn composer_substring(cs: &mut Composer<Fr>) {
         // 608 bytes (4864 bits = 9*512 + 256)
         let sample_a = "66726f6d3a3d3f6762323331323f423f304c73677571504439773d3d3f3d203c6465657078686d406f75746c6f6f6b2e636f6d3e0d0a646174653a5475652c2032312044656320323032312031313a35363a3232202b303030300d0a7375626a6563743a55503078653633333139616239313563356539383638663133303761656463396131333733666561633465306261636633656333653161393961353134363834366537320d0a6d6573736167652d69643a3c535934503238324d42333734383043414546413237314643444337304532313632423537433940535934503238324d42333734382e415553503238322e50524f442e4f55544c4f4f4b2e434f4d3e0d0a636f6e74656e742d747970653a6d756c7469706172742f616c7465726e61746976653b20626f756e646172793d225f3030305f535934503238324d423337343830434145464132373146434443373045323136324235374339535934503238324d4233373438415553505f220d0a6d696d652d76657273696f6e3a312e300d0a646b696d2d7369676e61747572653a763d313b20613d7273612d7368613235363b20633d72656c617865642f72656c617865643b20643d6f75746c6f6f6b2e636f6d3b20733d73656c6563746f72313b20683d46726f6d3a446174653a5375626a6563743a4d6573736167652d49443a436f6e74656e742d547970653a4d494d452d56657273696f6e3a582d4d532d45786368616e67652d53656e6465724144436865636b3b2062683d6530753870745966706b432b336334486d6845595358336b43306c6d386a753372436a387678475a776d413d3b20623d";
         let sample_a_bytes = hex::decode(sample_a).unwrap();
@@ -603,26 +610,15 @@ mod tests {
 
         // private substring check.
         let (_output_words_a, _output_words_b) = cs
-        .add_substring_mask_poly_return_words(
-            &a_vars, 
-            &b_vars, 
-            mask_r, 
-            l, 
-            m,
-            1024,
-            128,
-        ).unwrap();
+            .add_substring_mask_poly_return_words(&a_vars, &b_vars, mask_r, l, m, 1024, 128)
+            .unwrap();
 
-        cs.add_public_match_no_custom_gate(
-            &a_vars, 
-            &email_header_pubmatch_vars, 
-            1024
-        );
+        cs.add_public_match_no_custom_gate(&a_vars, &email_header_pubmatch_vars, 1024);
 
         // cs
     }
 
-    fn test_prove_verify(cs: &mut Composer<Fr>,) -> Result<(), Error> {
+    fn test_prove_verify(cs: &mut Composer<Fr>) -> Result<(), Error> {
         println!();
         let public_input = cs.compute_public_input();
         println!("cs.size() {}", cs.size());
@@ -748,15 +744,11 @@ mod tests {
         let y = cs.alloc(Fr::from(5));
         let z = cs.add(x, y);
         cs.poly_gate(
-            vec![
-                (z, -Fr::from(337845818)),
-                (x, Fr::one()),
-                (y, Fr::one()),
-            ], 
-            Fr::from(337845818), 
+            vec![(z, -Fr::from(337845818)), (x, Fr::one()), (y, Fr::one())],
+            Fr::from(337845818),
             -Fr::from(3),
         );
-        
+
         test_prove_verify(&mut cs).unwrap();
     }
 
@@ -770,7 +762,7 @@ mod tests {
         let x = cs.alloc(Fr::from(3));
         let y = cs.alloc(Fr::from(5));
         cs.enforce_eq(x, y);
-        
+
         test_prove_verify(&mut cs).unwrap();
     }
 
@@ -813,5 +805,4 @@ mod tests {
 
         test_prove_verify(&mut cs).unwrap();
     }
-
 }

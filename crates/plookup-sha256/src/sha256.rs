@@ -2679,7 +2679,7 @@ mod tests {
         Ok(())
     }
 
-    fn test_prove_verify(cs: &mut Composer<Fr>,) -> Result<(), Error> {
+    fn test_prove_verify(cs: &mut Composer<Fr>) -> Result<(), Error> {
         println!();
         let public_input = cs.compute_public_input();
         println!("cs.size() {}", cs.size());
@@ -2694,8 +2694,7 @@ mod tests {
         let pk = cs.compute_prover_key::<GeneralEvaluationDomain<Fr>>()?;
         println!("compute_prover_key...done");
         let pckey = PCKey::<ark_bn254::Bn254>::setup(pk.domain_size() + pk.program_width + 6, rng);
-        let mut prover =
-            Prover::<Fr, GeneralEvaluationDomain<Fr>, ark_bn254::Bn254>::new(pk);
+        let mut prover = Prover::<Fr, GeneralEvaluationDomain<Fr>, ark_bn254::Bn254>::new(pk);
 
         println!("init_comms...");
         let verifier_comms = prover.init_comms(&pckey);
@@ -2833,7 +2832,7 @@ mod tests {
 
             cs
         };
-        
+
         test_prove_verify(&mut cs)?;
 
         Ok(())
@@ -2909,7 +2908,7 @@ mod tests {
         };
 
         test_prove_verify(&mut cs)?;
-        
+
         Ok(())
     }
 }

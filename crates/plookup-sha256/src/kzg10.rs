@@ -378,8 +378,8 @@ mod tests {
     use ark_poly::Polynomial;
     // use rand_core::OsRng;
     // use ark_std::rand::thread_rng;
-    use ark_std::test_rng;
     use ark_bn254::Fr;
+    use ark_std::test_rng;
 
     use crate::Error;
 
@@ -413,15 +413,9 @@ mod tests {
         let left = pckey.powers[0..(n - 1)].to_vec();
         let right = pckey.powers[1..n].to_vec();
         let scalars: Vec<_> = challenges.iter().map(|scalar| scalar.into_repr()).collect();
-        
-        let L_comm = VariableBaseMSM::multi_scalar_mul(
-            &left,
-            &scalars,
-        );
-        let R_comm = VariableBaseMSM::multi_scalar_mul(
-            &right,
-            &scalars,
-        );
+
+        let L_comm = VariableBaseMSM::multi_scalar_mul(&left, &scalars);
+        let R_comm = VariableBaseMSM::multi_scalar_mul(&right, &scalars);
         let p1 = ark_bn254::Bn254::pairing(L_comm, pckey.vk.beta_h);
         let p2 = ark_bn254::Bn254::pairing(R_comm, pckey.vk.h);
 
@@ -466,15 +460,17 @@ mod tests {
             let test_poly = DensePolynomial::from_coefficients_vec(coeffs);
             polys.push(test_poly);
         }
-        
+
         let c = pckey.commit_vec(&polys);
 
         let point = Fr::rand(&mut test_rng());
-        let point_evals: Vec<_> = polys.iter().map(|p| {p.evaluate(&point)}).collect();
-        let pis: Vec<_> = polys.iter().map(|p| {pckey.open_one(&p, point)}).collect();
+        let point_evals: Vec<_> = polys.iter().map(|p| p.evaluate(&point)).collect();
+        let pis: Vec<_> = polys.iter().map(|p| pckey.open_one(&p, point)).collect();
         let batched_pi = pckey.compute_batched_proof_pi(&pis, x);
 
-        let res = pckey.vk.verify_batched_pc(&c, point, &point_evals, &batched_pi, x);
+        let res = pckey
+            .vk
+            .verify_batched_pc(&c, point, &point_evals, &batched_pi, x);
         assert!(res);
         Ok(())
     }
@@ -496,14 +492,24 @@ mod tests {
             let test_poly = DensePolynomial::from_coefficients_vec(coeffs);
             polys.push(test_poly);
         }
-        
+
         let c = pckey.commit_vec(&polys);
 
-        let points: Vec<_> = (0..num).map(|_i| {Fr::rand(&mut test_rng())}).collect();
-        let point_evals: Vec<_> = polys.iter().zip(&points).map(|(p, point)| {p.evaluate(&point)}).collect();
-        let pis: Vec<_> = polys.iter().zip(&points).map(|(p, point)| {pckey.open_one(&p, *point)}).collect();
+        let points: Vec<_> = (0..num).map(|_i| Fr::rand(&mut test_rng())).collect();
+        let point_evals: Vec<_> = polys
+            .iter()
+            .zip(&points)
+            .map(|(p, point)| p.evaluate(&point))
+            .collect();
+        let pis: Vec<_> = polys
+            .iter()
+            .zip(&points)
+            .map(|(p, point)| pckey.open_one(&p, *point))
+            .collect();
 
-        let res = pckey.vk.batch_verify_multi_point_open_pc(&c, &points, &point_evals, &pis, x);
+        let res = pckey
+            .vk
+            .batch_verify_multi_point_open_pc(&c, &points, &point_evals, &pis, x);
         assert!(res);
         Ok(())
     }

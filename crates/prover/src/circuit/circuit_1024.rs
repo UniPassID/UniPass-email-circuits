@@ -332,7 +332,7 @@ impl Email1024CircuitInput {
                 };
                 sha256_all_public_data.push(word);
             }
-            let pad_value = Fr::from(19168u64);
+            let pad_value = Fr::from(9952u64);
             let tmp_var = cs.alloc(pad_value);
             cs.enforce_constant(tmp_var, pad_value);
             let word = Sha256Word {

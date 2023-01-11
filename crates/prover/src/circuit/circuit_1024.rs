@@ -353,12 +353,6 @@ impl Email1024CircuitInput {
 
         cs.set_variable_public_input(public_inputs_hash);
 
-
-
-
-
-
-
         cs
     }
 }

@@ -2580,10 +2580,18 @@ pub fn sha256_collect_8_outputs_to_field<F: Field>(
 
     let out_hash_values = cs.get_assignments(&sha256_hash);
 
-    let top_value = out_hash_values[0] / F::from(8u64);
+    //convert to u64
+    let out_hash_0_uint: Vec<u64> = out_hash_values[0].into_repr().as_ref().into();
+    let out_hash_0_u64 = out_hash_0_uint[0];
+    let top_value_u64 = out_hash_0_u64 % (1u64 << 29);
+    let top_remainder_u64 = out_hash_0_u64 / (1u64 << 29);
+    let top_value = F::from(top_value_u64);
+    let top_remainder = F::from(top_remainder_u64);
+
     let top_var = cs.alloc(top_value);
+    let remainder_var = cs.alloc(top_remainder);
     cs.poly_gate(
-        vec![(sha256_hash[0], -F::one()), (top_var, F::from(8u64))],
+        vec![(sha256_hash[0], -F::one()), (top_var, F::one()), (remainder_var, F::from(1u64 << 29))],
         F::zero(),
         F::zero(),
     );

@@ -225,8 +225,26 @@ impl Email2048CircuitInput {
         );
 
         // gen pub_inputs
-        // hash all public. 19168bits (256|256|2048|192|2048*8|16|16)
-        // cal sha256(a_hash|b_hash|a_bits_location|b_bits_location|pub_string|header_len|addr_len)
+        // hash all public. 3040 bits (256|256|2048|192|256|16|16)
+        // sha256(a_hash|b_hash|a_bits_location|b_bits_location|sha256(pub_string)|header_len|addr_len)
+
+        // cal sha256(pub_string)
+        let mut sha256_pubstr_data = vec![];
+        for vs in email_header_pubmatch_vars.chunks(4) {
+            // "Sha256Word" is the type we need in the sha256, each contain 32bits
+            sha256_pubstr_data
+                .push(Sha256Word::new_from_8bits(&mut cs, vs[0], vs[1], vs[2], vs[3]).unwrap());
+        }
+        // get the hash
+        let pubstr_hash = sha256_no_padding_words_var(
+            &mut cs,
+            &sha256_pubstr_data,
+            email_header_data_len,
+            email_header_max_lens * 8 / 512,
+        )
+        .unwrap();
+
+        // cal sha256(a_hash|b_hash|a_bits_location|b_bits_location|sha256(pub_string)|header_len|addr_len)
         let mut sha256_all_public_data = vec![];
         for wd in email_header_hash {
             let word = Sha256Word {
@@ -268,10 +286,18 @@ impl Email2048CircuitInput {
             };
             sha256_all_public_data.push(word);
         }
-        for vs in email_header_pubmatch_vars.chunks(4) {
-            sha256_all_public_data
-                .push(Sha256Word::new_from_8bits(&mut cs, vs[0], vs[1], vs[2], vs[3]).unwrap());
+        
+        for wd in pubstr_hash {
+            let word = Sha256Word {
+                var: wd,
+                hvar: Composer::<Fr>::null(),
+                lvar: Composer::<Fr>::null(),
+                hvar_spread: Composer::<Fr>::null(),
+                lvar_spread: Composer::<Fr>::null(),
+            };
+            sha256_all_public_data.push(word);
         }
+
         // (header_len|addr_len) as a 32bits word
         let word_var = {
             let spread8_index = cs.get_table_index(format!("spread_8bits"));
@@ -308,7 +334,7 @@ impl Email2048CircuitInput {
             lvar_spread: Composer::<Fr>::null(),
         };
         sha256_all_public_data.push(word);
-        // padding (224bits + 64bits)
+        // padding (480bits + 64bits)
         {
             let pad_value = Fr::from(1u64 << 31);
             let tmp_var = cs.alloc(pad_value);
@@ -321,7 +347,7 @@ impl Email2048CircuitInput {
                 lvar_spread: Composer::<Fr>::null(),
             };
             sha256_all_public_data.push(word);
-            for _ in 0..7 {
+            for _ in 0..15 {
                 let word = Sha256Word {
                     var: Composer::<Fr>::null(),
                     hvar: Composer::<Fr>::null(),
@@ -331,7 +357,7 @@ impl Email2048CircuitInput {
                 };
                 sha256_all_public_data.push(word);
             }
-            let pad_value = Fr::from(19168u64);
+            let pad_value = Fr::from(3040u64);
             let tmp_var = cs.alloc(pad_value);
             cs.enforce_constant(tmp_var, pad_value);
             let word = Sha256Word {
@@ -345,7 +371,7 @@ impl Email2048CircuitInput {
         }
 
         let all_public_hash =
-            sha256_no_padding_words_var_fixed_length(&mut cs, &sha256_all_public_data, 38).unwrap();
+            sha256_no_padding_words_var_fixed_length(&mut cs, &sha256_all_public_data, 7).unwrap();
 
         let public_inputs_hash =
             sha256_collect_8_outputs_to_field(&mut cs, &all_public_hash).unwrap();

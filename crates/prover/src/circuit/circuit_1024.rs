@@ -156,54 +156,15 @@ impl Email1024CircuitInput {
         )
         .unwrap();
 
-        // cal sha256(a_hash|b_hash)
-        let mut concat_hash = email_header_hash.clone();
-        let mut tmp_email_addr_pepper_hash = email_addr_pepper_hash.clone();
-        concat_hash.append(&mut tmp_email_addr_pepper_hash);
-        // padding
-        {
-            let pad_value = Fr::from(1u64 << 31);
-            let tmp_var = cs.alloc(pad_value);
-            cs.enforce_constant(tmp_var, pad_value);
-            concat_hash.push(tmp_var);
-            for _ in 0..14 {
-                concat_hash.push(Composer::<Fr>::null());
-            }
-            let pad_value = Fr::from(512);
-            let tmp_var = cs.alloc(pad_value);
-            cs.enforce_constant(tmp_var, pad_value);
-            concat_hash.push(tmp_var);
-        }
-        let mut concat_hash_data = vec![];
-        for v in concat_hash {
-            let word = Sha256Word {
-                var: v,
-                hvar: Composer::<Fr>::null(),
-                lvar: Composer::<Fr>::null(),
-                hvar_spread: Composer::<Fr>::null(),
-                lvar_spread: Composer::<Fr>::null(),
-            };
-            concat_hash_data.push(word);
-        }
-        let mask_hashs =
-            sha256_no_padding_words_var_fixed_length(&mut cs, &concat_hash_data, 2).unwrap();
+        let (bit_location_a, bit_location_b) = cs.gen_bit_location_for_substr(
+            l, m,
+            email_header_max_lens,
+            email_addr_max_lens,
+        ).unwrap();
 
-        let mask_r = sha256_collect_8_outputs_to_field(&mut cs, &mask_hashs).unwrap();
+        let output_words_a = cs.collect_bit_location_for_sha256(email_header_max_lens, &bit_location_a).unwrap();
+        let output_words_b = cs.collect_bit_location_for_sha256(email_addr_max_lens, &bit_location_b).unwrap();
 
-        // private substring check. use sha256(a_hash|b_hash) as mask_r
-        let (output_words_a, output_words_b) = cs
-            .add_substring_mask_poly_return_words(
-                &email_header_vars,
-                &email_addr_pepper_vars,
-                mask_r,
-                l,
-                m,
-                email_header_max_lens,
-                email_addr_max_lens,
-            )
-            .unwrap();
-
-        // pub match "a"
         // public string to be matched
         let mut email_header_pubmatch_vars = vec![];
         for e in &email_header_pub_match_padding {
@@ -214,13 +175,6 @@ impl Email1024CircuitInput {
         for _ in n..email_header_max_lens {
             email_header_pubmatch_vars.push(cs.alloc(Fr::zero()));
         }
-
-        // public string match.
-        cs.add_public_match_no_custom_gate(
-            &email_header_vars,
-            &email_header_pubmatch_vars,
-            email_header_max_lens,
-        );
 
         // gen pub_inputs
         // hash all public. 2016 bits (256|256|1024|192|256|16|16)
@@ -284,7 +238,6 @@ impl Email1024CircuitInput {
             };
             sha256_all_public_data.push(word);
         }
-
         for wd in pubstr_hash {
             let word = Sha256Word {
                 var: wd,
@@ -375,6 +328,30 @@ impl Email1024CircuitInput {
             sha256_collect_8_outputs_to_field(&mut cs, &all_public_hash).unwrap();
 
         cs.set_variable_public_input(public_inputs_hash);
+
+        // use 'public inputs' as mask_r
+        let mask_r = public_inputs_hash;
+
+        // private substring check. 
+        cs.add_substring_mask_poly_return_words(
+                &email_header_vars,
+                &email_addr_pepper_vars,
+                &bit_location_a,
+                &bit_location_b,
+                mask_r,
+                l,
+                m,
+                email_header_max_lens,
+                email_addr_max_lens,
+            ).unwrap();
+
+        // pub match "a"
+        // public string match.
+        cs.add_public_match_no_custom_gate(
+            &email_header_vars,
+            &email_header_pubmatch_vars,
+            email_header_max_lens,
+        );
 
         cs
     }

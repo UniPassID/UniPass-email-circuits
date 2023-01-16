@@ -128,9 +128,11 @@ impl Email2048TripleCircuitInput {
         let mut cs = Composer::new(5, false);
         let (email_header_max_lens, email_addr_max_lens) = Self::parameters();
 
+        // r = sha256(a_hash|b_hash|a_bits_location|b_bits_location)
+        
         // collect pub_inputs
-        // hash all public. 57504bits (256|256|2048|192|2048*8|16|16)*3
-        // cal sha256( (a_hash|b_hash|a_bits_location|b_bits_location|pub_string|header_len|addr_len) * 3 )
+        // hash all public. 1632bits (256|256|16|16)*3
+        // cal sha256( (r|sha256(pub_string)|header_len|addr_len) * 3 )
         let mut sha256_all_public_data = vec![];
 
         // first email
@@ -206,20 +208,31 @@ impl Email2048TripleCircuitInput {
             )
             .unwrap();
 
-            // cal sha256(a_hash|b_hash)
+            let (bit_location_a, bit_location_b) = cs.gen_bit_location_for_substr(
+                l, m,
+                email_header_max_lens,
+                email_addr_max_lens,
+            ).unwrap();
+    
+            let output_words_a = cs.collect_bit_location_for_sha256(email_header_max_lens, &bit_location_a).unwrap();
+            let output_words_b = cs.collect_bit_location_for_sha256(email_addr_max_lens, &bit_location_b).unwrap();
+    
+            // 2752 bits (256|256|2048|192)
+            // cal sha256(a_hash|b_hash|a_bits_location|b_bits_location)
             let mut concat_hash = email_header_hash.clone();
-            let mut tmp_email_addr_pepper_hash = email_addr_pepper_hash.clone();
-            concat_hash.append(&mut tmp_email_addr_pepper_hash);
-            // padding
+            concat_hash.append(&mut email_addr_pepper_hash.clone());
+            concat_hash.append(&mut output_words_a.clone());
+            concat_hash.append(&mut output_words_b.clone());
+            // padding (256 + 64)
             {
                 let pad_value = Fr::from(1u64 << 31);
                 let tmp_var = cs.alloc(pad_value);
                 cs.enforce_constant(tmp_var, pad_value);
                 concat_hash.push(tmp_var);
-                for _ in 0..14 {
+                for _ in 0..8 {
                     concat_hash.push(Composer::<Fr>::null());
                 }
-                let pad_value = Fr::from(512);
+                let pad_value = Fr::from(2752u64);
                 let tmp_var = cs.alloc(pad_value);
                 cs.enforce_constant(tmp_var, pad_value);
                 concat_hash.push(tmp_var);
@@ -235,23 +248,23 @@ impl Email2048TripleCircuitInput {
                 };
                 concat_hash_data.push(word);
             }
-            let mask_hashs =
-                sha256_no_padding_words_var_fixed_length(&mut cs, &concat_hash_data, 2).unwrap();
+            let mask_hash =
+                sha256_no_padding_words_var_fixed_length(&mut cs, &concat_hash_data, 6).unwrap();
 
-            let mask_r = sha256_collect_8_outputs_to_field(&mut cs, &mask_hashs).unwrap();
+            let mask_r = sha256_collect_8_outputs_to_field(&mut cs, &mask_hash).unwrap();
 
             // private substring check. use sha256(a_hash|b_hash) as mask_r
-            let (output_words_a, output_words_b) = cs
-                .add_substring_mask_poly_return_words(
-                    &email_header_vars,
-                    &email_addr_pepper_vars,
-                    mask_r,
-                    l,
-                    m,
-                    email_header_max_lens,
-                    email_addr_max_lens,
-                )
-                .unwrap();
+            cs.add_substring_mask_poly_return_words(
+                &email_header_vars,
+                &email_addr_pepper_vars,
+                &bit_location_a,
+                &bit_location_b,
+                mask_r,
+                l,
+                m,
+                email_header_max_lens,
+                email_addr_max_lens,
+            ).unwrap();
 
             // pub match "a"
             // public string to be matched
@@ -272,50 +285,42 @@ impl Email2048TripleCircuitInput {
                 email_header_max_lens,
             );
 
-            // collect public-inputs
-            for wd in email_header_hash {
-                let word = Sha256Word {
-                    var: wd,
-                    hvar: Composer::<Fr>::null(),
-                    lvar: Composer::<Fr>::null(),
-                    hvar_spread: Composer::<Fr>::null(),
-                    lvar_spread: Composer::<Fr>::null(),
-                };
-                sha256_all_public_data.push(word);
-            }
-            for wd in email_addr_pepper_hash {
-                let word = Sha256Word {
-                    var: wd,
-                    hvar: Composer::<Fr>::null(),
-                    lvar: Composer::<Fr>::null(),
-                    hvar_spread: Composer::<Fr>::null(),
-                    lvar_spread: Composer::<Fr>::null(),
-                };
-                sha256_all_public_data.push(word);
-            }
-            for wd in output_words_a {
-                let word = Sha256Word {
-                    var: wd,
-                    hvar: Composer::<Fr>::null(),
-                    lvar: Composer::<Fr>::null(),
-                    hvar_spread: Composer::<Fr>::null(),
-                    lvar_spread: Composer::<Fr>::null(),
-                };
-                sha256_all_public_data.push(word);
-            }
-            for wd in output_words_b {
-                let word = Sha256Word {
-                    var: wd,
-                    hvar: Composer::<Fr>::null(),
-                    lvar: Composer::<Fr>::null(),
-                    hvar_spread: Composer::<Fr>::null(),
-                    lvar_spread: Composer::<Fr>::null(),
-                };
-                sha256_all_public_data.push(word);
-            }
+            // cal sha256(pub_string)
+            let mut sha256_pubstr_data = vec![];
             for vs in email_header_pubmatch_vars.chunks(4) {
-                sha256_all_public_data
+                // "Sha256Word" is the type we need in the sha256, each contain 32bits
+                sha256_pubstr_data
                     .push(Sha256Word::new_from_8bits(&mut cs, vs[0], vs[1], vs[2], vs[3]).unwrap());
+            }
+            // get the hash
+            let pubstr_hash = sha256_no_padding_words_var(
+                &mut cs,
+                &sha256_pubstr_data,
+                email_header_data_len,
+                email_header_max_lens * 8 / 512,
+            )
+            .unwrap();
+
+            // collect public-inputs
+            for wd in &mask_hash {
+                let word = Sha256Word {
+                    var: wd.clone(),
+                    hvar: Composer::<Fr>::null(),
+                    lvar: Composer::<Fr>::null(),
+                    hvar_spread: Composer::<Fr>::null(),
+                    lvar_spread: Composer::<Fr>::null(),
+                };
+                sha256_all_public_data.push(word);
+            }
+            for wd in &pubstr_hash {
+                let word = Sha256Word {
+                    var: wd.clone(),
+                    hvar: Composer::<Fr>::null(),
+                    lvar: Composer::<Fr>::null(),
+                    hvar_spread: Composer::<Fr>::null(),
+                    lvar_spread: Composer::<Fr>::null(),
+                };
+                sha256_all_public_data.push(word);
             }
             // (header_len|addr_len) as a 32bits word
             let word_var = {
@@ -428,20 +433,31 @@ impl Email2048TripleCircuitInput {
             )
             .unwrap();
 
-            // cal sha256(a_hash|b_hash)
+            let (bit_location_a, bit_location_b) = cs.gen_bit_location_for_substr(
+                l, m,
+                email_header_max_lens,
+                email_addr_max_lens,
+            ).unwrap();
+    
+            let output_words_a = cs.collect_bit_location_for_sha256(email_header_max_lens, &bit_location_a).unwrap();
+            let output_words_b = cs.collect_bit_location_for_sha256(email_addr_max_lens, &bit_location_b).unwrap();
+    
+            // 2752 bits (256|256|2048|192)
+            // cal sha256(a_hash|b_hash|a_bits_location|b_bits_location)
             let mut concat_hash = email_header_hash.clone();
-            let mut tmp_email_addr_pepper_hash = email_addr_pepper_hash.clone();
-            concat_hash.append(&mut tmp_email_addr_pepper_hash);
-            // padding
+            concat_hash.append(&mut email_addr_pepper_hash.clone());
+            concat_hash.append(&mut output_words_a.clone());
+            concat_hash.append(&mut output_words_b.clone());
+            // padding (256 + 64)
             {
                 let pad_value = Fr::from(1u64 << 31);
                 let tmp_var = cs.alloc(pad_value);
                 cs.enforce_constant(tmp_var, pad_value);
                 concat_hash.push(tmp_var);
-                for _ in 0..14 {
+                for _ in 0..8 {
                     concat_hash.push(Composer::<Fr>::null());
                 }
-                let pad_value = Fr::from(512);
+                let pad_value = Fr::from(2752u64);
                 let tmp_var = cs.alloc(pad_value);
                 cs.enforce_constant(tmp_var, pad_value);
                 concat_hash.push(tmp_var);
@@ -457,23 +473,23 @@ impl Email2048TripleCircuitInput {
                 };
                 concat_hash_data.push(word);
             }
-            let mask_hashs =
-                sha256_no_padding_words_var_fixed_length(&mut cs, &concat_hash_data, 2).unwrap();
+            let mask_hash =
+                sha256_no_padding_words_var_fixed_length(&mut cs, &concat_hash_data, 6).unwrap();
 
-            let mask_r = sha256_collect_8_outputs_to_field(&mut cs, &mask_hashs).unwrap();
+            let mask_r = sha256_collect_8_outputs_to_field(&mut cs, &mask_hash).unwrap();
 
             // private substring check. use sha256(a_hash|b_hash) as mask_r
-            let (output_words_a, output_words_b) = cs
-                .add_substring_mask_poly_return_words(
-                    &email_header_vars,
-                    &email_addr_pepper_vars,
-                    mask_r,
-                    l,
-                    m,
-                    email_header_max_lens,
-                    email_addr_max_lens,
-                )
-                .unwrap();
+            cs.add_substring_mask_poly_return_words(
+                &email_header_vars,
+                &email_addr_pepper_vars,
+                &bit_location_a,
+                &bit_location_b,
+                mask_r,
+                l,
+                m,
+                email_header_max_lens,
+                email_addr_max_lens,
+            ).unwrap();
 
             // pub match "a"
             // public string to be matched
@@ -494,50 +510,42 @@ impl Email2048TripleCircuitInput {
                 email_header_max_lens,
             );
 
-            // collect public-inputs
-            for wd in email_header_hash {
-                let word = Sha256Word {
-                    var: wd,
-                    hvar: Composer::<Fr>::null(),
-                    lvar: Composer::<Fr>::null(),
-                    hvar_spread: Composer::<Fr>::null(),
-                    lvar_spread: Composer::<Fr>::null(),
-                };
-                sha256_all_public_data.push(word);
-            }
-            for wd in email_addr_pepper_hash {
-                let word = Sha256Word {
-                    var: wd,
-                    hvar: Composer::<Fr>::null(),
-                    lvar: Composer::<Fr>::null(),
-                    hvar_spread: Composer::<Fr>::null(),
-                    lvar_spread: Composer::<Fr>::null(),
-                };
-                sha256_all_public_data.push(word);
-            }
-            for wd in output_words_a {
-                let word = Sha256Word {
-                    var: wd,
-                    hvar: Composer::<Fr>::null(),
-                    lvar: Composer::<Fr>::null(),
-                    hvar_spread: Composer::<Fr>::null(),
-                    lvar_spread: Composer::<Fr>::null(),
-                };
-                sha256_all_public_data.push(word);
-            }
-            for wd in output_words_b {
-                let word = Sha256Word {
-                    var: wd,
-                    hvar: Composer::<Fr>::null(),
-                    lvar: Composer::<Fr>::null(),
-                    hvar_spread: Composer::<Fr>::null(),
-                    lvar_spread: Composer::<Fr>::null(),
-                };
-                sha256_all_public_data.push(word);
-            }
+            // cal sha256(pub_string)
+            let mut sha256_pubstr_data = vec![];
             for vs in email_header_pubmatch_vars.chunks(4) {
-                sha256_all_public_data
+                // "Sha256Word" is the type we need in the sha256, each contain 32bits
+                sha256_pubstr_data
                     .push(Sha256Word::new_from_8bits(&mut cs, vs[0], vs[1], vs[2], vs[3]).unwrap());
+            }
+            // get the hash
+            let pubstr_hash = sha256_no_padding_words_var(
+                &mut cs,
+                &sha256_pubstr_data,
+                email_header_data_len,
+                email_header_max_lens * 8 / 512,
+            )
+            .unwrap();
+
+            // collect public-inputs
+            for wd in &mask_hash {
+                let word = Sha256Word {
+                    var: wd.clone(),
+                    hvar: Composer::<Fr>::null(),
+                    lvar: Composer::<Fr>::null(),
+                    hvar_spread: Composer::<Fr>::null(),
+                    lvar_spread: Composer::<Fr>::null(),
+                };
+                sha256_all_public_data.push(word);
+            }
+            for wd in &pubstr_hash {
+                let word = Sha256Word {
+                    var: wd.clone(),
+                    hvar: Composer::<Fr>::null(),
+                    lvar: Composer::<Fr>::null(),
+                    hvar_spread: Composer::<Fr>::null(),
+                    lvar_spread: Composer::<Fr>::null(),
+                };
+                sha256_all_public_data.push(word);
             }
             // (header_len|addr_len) as a 32bits word
             let word_var = {
@@ -650,20 +658,31 @@ impl Email2048TripleCircuitInput {
             )
             .unwrap();
 
-            // cal sha256(a_hash|b_hash)
+            let (bit_location_a, bit_location_b) = cs.gen_bit_location_for_substr(
+                l, m,
+                email_header_max_lens,
+                email_addr_max_lens,
+            ).unwrap();
+    
+            let output_words_a = cs.collect_bit_location_for_sha256(email_header_max_lens, &bit_location_a).unwrap();
+            let output_words_b = cs.collect_bit_location_for_sha256(email_addr_max_lens, &bit_location_b).unwrap();
+    
+            // 2752 bits (256|256|2048|192)
+            // cal sha256(a_hash|b_hash|a_bits_location|b_bits_location)
             let mut concat_hash = email_header_hash.clone();
-            let mut tmp_email_addr_pepper_hash = email_addr_pepper_hash.clone();
-            concat_hash.append(&mut tmp_email_addr_pepper_hash);
-            // padding
+            concat_hash.append(&mut email_addr_pepper_hash.clone());
+            concat_hash.append(&mut output_words_a.clone());
+            concat_hash.append(&mut output_words_b.clone());
+            // padding (256 + 64)
             {
                 let pad_value = Fr::from(1u64 << 31);
                 let tmp_var = cs.alloc(pad_value);
                 cs.enforce_constant(tmp_var, pad_value);
                 concat_hash.push(tmp_var);
-                for _ in 0..14 {
+                for _ in 0..8 {
                     concat_hash.push(Composer::<Fr>::null());
                 }
-                let pad_value = Fr::from(512);
+                let pad_value = Fr::from(2752u64);
                 let tmp_var = cs.alloc(pad_value);
                 cs.enforce_constant(tmp_var, pad_value);
                 concat_hash.push(tmp_var);
@@ -679,23 +698,23 @@ impl Email2048TripleCircuitInput {
                 };
                 concat_hash_data.push(word);
             }
-            let mask_hashs =
-                sha256_no_padding_words_var_fixed_length(&mut cs, &concat_hash_data, 2).unwrap();
+            let mask_hash =
+                sha256_no_padding_words_var_fixed_length(&mut cs, &concat_hash_data, 6).unwrap();
 
-            let mask_r = sha256_collect_8_outputs_to_field(&mut cs, &mask_hashs).unwrap();
+            let mask_r = sha256_collect_8_outputs_to_field(&mut cs, &mask_hash).unwrap();
 
             // private substring check. use sha256(a_hash|b_hash) as mask_r
-            let (output_words_a, output_words_b) = cs
-                .add_substring_mask_poly_return_words(
-                    &email_header_vars,
-                    &email_addr_pepper_vars,
-                    mask_r,
-                    l,
-                    m,
-                    email_header_max_lens,
-                    email_addr_max_lens,
-                )
-                .unwrap();
+            cs.add_substring_mask_poly_return_words(
+                &email_header_vars,
+                &email_addr_pepper_vars,
+                &bit_location_a,
+                &bit_location_b,
+                mask_r,
+                l,
+                m,
+                email_header_max_lens,
+                email_addr_max_lens,
+            ).unwrap();
 
             // pub match "a"
             // public string to be matched
@@ -716,50 +735,42 @@ impl Email2048TripleCircuitInput {
                 email_header_max_lens,
             );
 
-            // collect public-inputs
-            for wd in email_header_hash {
-                let word = Sha256Word {
-                    var: wd,
-                    hvar: Composer::<Fr>::null(),
-                    lvar: Composer::<Fr>::null(),
-                    hvar_spread: Composer::<Fr>::null(),
-                    lvar_spread: Composer::<Fr>::null(),
-                };
-                sha256_all_public_data.push(word);
-            }
-            for wd in email_addr_pepper_hash {
-                let word = Sha256Word {
-                    var: wd,
-                    hvar: Composer::<Fr>::null(),
-                    lvar: Composer::<Fr>::null(),
-                    hvar_spread: Composer::<Fr>::null(),
-                    lvar_spread: Composer::<Fr>::null(),
-                };
-                sha256_all_public_data.push(word);
-            }
-            for wd in output_words_a {
-                let word = Sha256Word {
-                    var: wd,
-                    hvar: Composer::<Fr>::null(),
-                    lvar: Composer::<Fr>::null(),
-                    hvar_spread: Composer::<Fr>::null(),
-                    lvar_spread: Composer::<Fr>::null(),
-                };
-                sha256_all_public_data.push(word);
-            }
-            for wd in output_words_b {
-                let word = Sha256Word {
-                    var: wd,
-                    hvar: Composer::<Fr>::null(),
-                    lvar: Composer::<Fr>::null(),
-                    hvar_spread: Composer::<Fr>::null(),
-                    lvar_spread: Composer::<Fr>::null(),
-                };
-                sha256_all_public_data.push(word);
-            }
+            // cal sha256(pub_string)
+            let mut sha256_pubstr_data = vec![];
             for vs in email_header_pubmatch_vars.chunks(4) {
-                sha256_all_public_data
+                // "Sha256Word" is the type we need in the sha256, each contain 32bits
+                sha256_pubstr_data
                     .push(Sha256Word::new_from_8bits(&mut cs, vs[0], vs[1], vs[2], vs[3]).unwrap());
+            }
+            // get the hash
+            let pubstr_hash = sha256_no_padding_words_var(
+                &mut cs,
+                &sha256_pubstr_data,
+                email_header_data_len,
+                email_header_max_lens * 8 / 512,
+            )
+            .unwrap();
+
+            // collect public-inputs
+            for wd in &mask_hash {
+                let word = Sha256Word {
+                    var: wd.clone(),
+                    hvar: Composer::<Fr>::null(),
+                    lvar: Composer::<Fr>::null(),
+                    hvar_spread: Composer::<Fr>::null(),
+                    lvar_spread: Composer::<Fr>::null(),
+                };
+                sha256_all_public_data.push(word);
+            }
+            for wd in &pubstr_hash {
+                let word = Sha256Word {
+                    var: wd.clone(),
+                    hvar: Composer::<Fr>::null(),
+                    lvar: Composer::<Fr>::null(),
+                    hvar_spread: Composer::<Fr>::null(),
+                    lvar_spread: Composer::<Fr>::null(),
+                };
+                sha256_all_public_data.push(word);
             }
             // (header_len|addr_len) as a 32bits word
             let word_var = {
@@ -799,7 +810,7 @@ impl Email2048TripleCircuitInput {
             sha256_all_public_data.push(word);
         }
 
-        // padding (288bits + 64bits)
+        // padding 'all public' (352bits + 64bits)
         {
             let pad_value = Fr::from(1u64 << 31);
             let tmp_var = cs.alloc(pad_value);
@@ -812,7 +823,7 @@ impl Email2048TripleCircuitInput {
                 lvar_spread: Composer::<Fr>::null(),
             };
             sha256_all_public_data.push(word);
-            for _ in 0..9 {
+            for _ in 0..11 {
                 let word = Sha256Word {
                     var: Composer::<Fr>::null(),
                     hvar: Composer::<Fr>::null(),
@@ -822,7 +833,7 @@ impl Email2048TripleCircuitInput {
                 };
                 sha256_all_public_data.push(word);
             }
-            let pad_value = Fr::from(57504u64);
+            let pad_value = Fr::from(1632u64);
             let tmp_var = cs.alloc(pad_value);
             cs.enforce_constant(tmp_var, pad_value);
             let word = Sha256Word {
@@ -836,7 +847,7 @@ impl Email2048TripleCircuitInput {
         }
 
         let all_public_hash =
-            sha256_no_padding_words_var_fixed_length(&mut cs, &sha256_all_public_data, 113)
+            sha256_no_padding_words_var_fixed_length(&mut cs, &sha256_all_public_data, 4)
                 .unwrap();
 
         let public_inputs_hash =

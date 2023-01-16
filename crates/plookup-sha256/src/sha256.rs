@@ -2596,6 +2596,35 @@ pub fn sha256_collect_8_outputs_to_field<F: Field>(
         F::zero(),
     );
 
+    // range constraint
+    let top_low_u64 = top_value_u64 % (1u64 << 16);
+    let top_hi_u64 = top_value_u64 / (1u64 << 16); // 13 bits
+    let top_hvar = cs.alloc(F::from(top_hi_u64));
+    let top_lvar = cs.alloc(F::from(top_low_u64));
+
+    let spread16_index = cs.get_table_index(format!("spread_16bits_14bits"));
+    assert!(spread16_index != 0);
+    let spread14_index = spread16_index;
+
+    let top_low_sign = if top_low_u64 < (1u64 << 14) {
+        cs.alloc(F::zero())
+    } else {
+        cs.alloc(F::one())
+    };
+
+    let _ = cs.read_from_table(spread14_index, vec![top_hvar, Composer::<F>::null()])?;
+    let _ = cs.read_from_table(spread16_index, vec![top_lvar, top_low_sign])?;
+
+    let spread3_index = cs.get_table_index(format!("spread_3bits"));
+    assert!(spread3_index != 0);
+    let _ = cs.read_from_table(spread3_index, vec![remainder_var])?;
+
+    cs.poly_gate(
+        vec![(top_var, -F::one()), (top_lvar, F::one()), (top_hvar, F::from(1u64 << 16))],
+        F::zero(),
+        F::zero(),
+    );
+
     let tmp0 = top_value * F::from(1u128 << 96)
         + out_hash_values[1] * F::from(1u128 << 64)
         + out_hash_values[2] * F::from(1u128 << 32)

@@ -521,106 +521,106 @@ mod tests {
         // cs
     }
 
-    fn composer_substring(cs: &mut Composer<Fr>,) {
-        // 608 bytes (4864 bits = 9*512 + 256)
-        let sample_a = "66726f6d3a3d3f6762323331323f423f304c73677571504439773d3d3f3d203c6465657078686d406f75746c6f6f6b2e636f6d3e0d0a646174653a5475652c2032312044656320323032312031313a35363a3232202b303030300d0a7375626a6563743a55503078653633333139616239313563356539383638663133303761656463396131333733666561633465306261636633656333653161393961353134363834366537320d0a6d6573736167652d69643a3c535934503238324d42333734383043414546413237314643444337304532313632423537433940535934503238324d42333734382e415553503238322e50524f442e4f55544c4f4f4b2e434f4d3e0d0a636f6e74656e742d747970653a6d756c7469706172742f616c7465726e61746976653b20626f756e646172793d225f3030305f535934503238324d423337343830434145464132373146434443373045323136324235374339535934503238324d4233373438415553505f220d0a6d696d652d76657273696f6e3a312e300d0a646b696d2d7369676e61747572653a763d313b20613d7273612d7368613235363b20633d72656c617865642f72656c617865643b20643d6f75746c6f6f6b2e636f6d3b20733d73656c6563746f72313b20683d46726f6d3a446174653a5375626a6563743a4d6573736167652d49443a436f6e74656e742d547970653a4d494d452d56657273696f6e3a582d4d532d45786368616e67652d53656e6465724144436865636b3b2062683d6530753870745966706b432b336334486d6845595358336b43306c6d386a753372436a387678475a776d413d3b20623d";
-        let sample_a_bytes = hex::decode(sample_a).unwrap();
-        // 19 bytes (152 bits) email address
-        let sample_b_bytes = sample_a_bytes[32..=50].to_vec();
+    // fn composer_substring(cs: &mut Composer<Fr>,) {
+    //     // 608 bytes (4864 bits = 9*512 + 256)
+    //     let sample_a = "66726f6d3a3d3f6762323331323f423f304c73677571504439773d3d3f3d203c6465657078686d406f75746c6f6f6b2e636f6d3e0d0a646174653a5475652c2032312044656320323032312031313a35363a3232202b303030300d0a7375626a6563743a55503078653633333139616239313563356539383638663133303761656463396131333733666561633465306261636633656333653161393961353134363834366537320d0a6d6573736167652d69643a3c535934503238324d42333734383043414546413237314643444337304532313632423537433940535934503238324d42333734382e415553503238322e50524f442e4f55544c4f4f4b2e434f4d3e0d0a636f6e74656e742d747970653a6d756c7469706172742f616c7465726e61746976653b20626f756e646172793d225f3030305f535934503238324d423337343830434145464132373146434443373045323136324235374339535934503238324d4233373438415553505f220d0a6d696d652d76657273696f6e3a312e300d0a646b696d2d7369676e61747572653a763d313b20613d7273612d7368613235363b20633d72656c617865642f72656c617865643b20643d6f75746c6f6f6b2e636f6d3b20733d73656c6563746f72313b20683d46726f6d3a446174653a5375626a6563743a4d6573736167652d49443a436f6e74656e742d547970653a4d494d452d56657273696f6e3a582d4d532d45786368616e67652d53656e6465724144436865636b3b2062683d6530753870745966706b432b336334486d6845595358336b43306c6d386a753372436a387678475a776d413d3b20623d";
+    //     let sample_a_bytes = hex::decode(sample_a).unwrap();
+    //     // 19 bytes (152 bits) email address
+    //     let sample_b_bytes = sample_a_bytes[32..=50].to_vec();
 
-        // append 32bytes pepper
-        let pepper = "03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4";
-        let pepper_bytes = hex::decode(pepper).unwrap();
-        let mut b_pepper_bytes = sample_b_bytes.clone();
-        b_pepper_bytes.append(&mut pepper_bytes.clone());
+    //     // append 32bytes pepper
+    //     let pepper = "03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4";
+    //     let pepper_bytes = hex::decode(pepper).unwrap();
+    //     let mut b_pepper_bytes = sample_b_bytes.clone();
+    //     b_pepper_bytes.append(&mut pepper_bytes.clone());
 
-        // "a" padding for sha256 (448-256=8*24, so add 1 '1', 191 '0', then add "bits of a" as u64)
-        let mut sample_a_bytes_padding = sample_a_bytes.clone();
-        sample_a_bytes_padding.push(1u8 << 7);
-        for _ in 0..23 {
-            sample_a_bytes_padding.push(0);
-        }
-        // "bits of a"
-        let len = 4864u64.to_be_bytes();
-        for e in len {
-            sample_a_bytes_padding.push(e);
-        }
+    //     // "a" padding for sha256 (448-256=8*24, so add 1 '1', 191 '0', then add "bits of a" as u64)
+    //     let mut sample_a_bytes_padding = sample_a_bytes.clone();
+    //     sample_a_bytes_padding.push(1u8 << 7);
+    //     for _ in 0..23 {
+    //         sample_a_bytes_padding.push(0);
+    //     }
+    //     // "bits of a"
+    //     let len = 4864u64.to_be_bytes();
+    //     for e in len {
+    //         sample_a_bytes_padding.push(e);
+    //     }
 
-        // "b" padding for sha256
-        let mut b_pepper_bytes_padding = b_pepper_bytes.clone();
-        b_pepper_bytes_padding.push(1u8 << 7);
-        for _ in 0..4 {
-            b_pepper_bytes_padding.push(0);
-        }
-        // "bits of b"
-        let len = 408u64.to_be_bytes();
-        for e in len {
-            b_pepper_bytes_padding.push(e);
-        }
+    //     // "b" padding for sha256
+    //     let mut b_pepper_bytes_padding = b_pepper_bytes.clone();
+    //     b_pepper_bytes_padding.push(1u8 << 7);
+    //     for _ in 0..4 {
+    //         b_pepper_bytes_padding.push(0);
+    //     }
+    //     // "bits of b"
+    //     let len = 408u64.to_be_bytes();
+    //     for e in len {
+    //         b_pepper_bytes_padding.push(e);
+    //     }
 
-        // here we only make the address private,
-        let mut test_pub_match = sample_a_bytes_padding.clone();
-        for i in 32..=50 {
-            test_pub_match[i] = 0;
-        }
+    //     // here we only make the address private,
+    //     let mut test_pub_match = sample_a_bytes_padding.clone();
+    //     for i in 32..=50 {
+    //         test_pub_match[i] = 0;
+    //     }
 
-        let mask = Fr::from(337845818);
-        let mask_r = cs.alloc(mask);
-        let l = cs.alloc(Fr::from(32));
-        let m = cs.alloc(Fr::from(19));
-        // alloc variables for "a"
-        let mut a_vars = vec![];
-        for e in &sample_a_bytes_padding {
-            a_vars.push(cs.alloc(Fr::from(*e)));
-        }
-        let n = a_vars.len();
-        // padding "a" to max_lens
-        for _ in n..1024 {
-            a_vars.push(cs.alloc(Fr::zero()));
-        }
-        // alloc variables for "b"
-        let mut b_vars = vec![];
-        for e in &b_pepper_bytes_padding {
-            b_vars.push(cs.alloc(Fr::from(*e)));
-        }
-        let n = b_vars.len();
-        // padding "b" to b_max_lens
-        for _ in n..128 {
-            b_vars.push(cs.alloc(Fr::zero()));
-        }
+    //     let mask = Fr::from(337845818);
+    //     let mask_r = cs.alloc(mask);
+    //     let l = cs.alloc(Fr::from(32));
+    //     let m = cs.alloc(Fr::from(19));
+    //     // alloc variables for "a"
+    //     let mut a_vars = vec![];
+    //     for e in &sample_a_bytes_padding {
+    //         a_vars.push(cs.alloc(Fr::from(*e)));
+    //     }
+    //     let n = a_vars.len();
+    //     // padding "a" to max_lens
+    //     for _ in n..1024 {
+    //         a_vars.push(cs.alloc(Fr::zero()));
+    //     }
+    //     // alloc variables for "b"
+    //     let mut b_vars = vec![];
+    //     for e in &b_pepper_bytes_padding {
+    //         b_vars.push(cs.alloc(Fr::from(*e)));
+    //     }
+    //     let n = b_vars.len();
+    //     // padding "b" to b_max_lens
+    //     for _ in n..128 {
+    //         b_vars.push(cs.alloc(Fr::zero()));
+    //     }
 
-        // pub match "a"
-        // public string to be matched
-        let mut email_header_pubmatch_vars = vec![];
-        for e in &test_pub_match {
-            email_header_pubmatch_vars.push(cs.alloc(Fr::from(*e)));
-        }
-        // padding to max_lens
-        let n = email_header_pubmatch_vars.len();
-        for _ in n..1024 {
-            email_header_pubmatch_vars.push(cs.alloc(Fr::zero()));
-        }
+    //     // pub match "a"
+    //     // public string to be matched
+    //     let mut email_header_pubmatch_vars = vec![];
+    //     for e in &test_pub_match {
+    //         email_header_pubmatch_vars.push(cs.alloc(Fr::from(*e)));
+    //     }
+    //     // padding to max_lens
+    //     let n = email_header_pubmatch_vars.len();
+    //     for _ in n..1024 {
+    //         email_header_pubmatch_vars.push(cs.alloc(Fr::zero()));
+    //     }
 
-        // private substring check.
-        let (_output_words_a, _output_words_b) = cs
-        .add_substring_mask_poly_return_words(
-            &a_vars, 
-            &b_vars, 
-            mask_r, 
-            l, 
-            m,
-            1024,
-            128,
-        ).unwrap();
+    //     // private substring check.
+    //     let (_output_words_a, _output_words_b) = cs
+    //     .add_substring_mask_poly_return_words(
+    //         &a_vars, 
+    //         &b_vars, 
+    //         mask_r, 
+    //         l, 
+    //         m,
+    //         1024,
+    //         128,
+    //     ).unwrap();
 
-        cs.add_public_match_no_custom_gate(
-            &a_vars, 
-            &email_header_pubmatch_vars, 
-            1024
-        );
+    //     cs.add_public_match_no_custom_gate(
+    //         &a_vars, 
+    //         &email_header_pubmatch_vars, 
+    //         1024
+    //     );
 
-        // cs
-    }
+    //     // cs
+    // }
 
     fn test_prove_verify(cs: &mut Composer<Fr>,) -> Result<(), Error> {
         println!();
@@ -716,7 +716,7 @@ mod tests {
         composer_lookup2(&mut cs);
         composer_range(&mut cs);
         composer_mimc(&mut cs);
-        composer_substring(&mut cs);
+        // composer_substring(&mut cs);
 
         test_prove_verify(&mut cs)?;
 

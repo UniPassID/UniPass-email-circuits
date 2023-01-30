@@ -10,13 +10,24 @@ use crate::utils::{convert_proof, convert_public_inputs, convert_vk_data};
 #[derive(Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ContractInput {
-    pub from_left_index: u32,
-    pub from_len: u32,
+    #[serde(
+        deserialize_with = "deserialize_hex_string",
+        serialize_with = "serialize_hex_string"
+    )]
+    pub header_hash: Vec<u8>,
+    #[serde(
+        deserialize_with = "deserialize_hex_string",
+        serialize_with = "serialize_hex_string"
+    )]
+    pub addr_hash: Vec<u8>,
     #[serde(
         deserialize_with = "deserialize_hex_string",
         serialize_with = "serialize_hex_string"
     )]
     pub header_pub_match: Vec<u8>,
+    pub header_len: u32,
+    pub from_left_index: u32,
+    pub from_len: u32,
     #[serde(
         deserialize_with = "deserialize_hex_string",
         serialize_with = "serialize_hex_string"
@@ -39,9 +50,12 @@ pub struct ContractInput {
 
 impl ContractInput {
     pub fn new<F: PrimeField, D: Domain<F>, E: PairingEngine>(
+        header_hash: Vec<u8>,
+        addr_hash: Vec<u8>,
+        header_pub_match: Vec<u8>,
+        header_len: u32,
         from_left_index: u32,
         from_len: u32,
-        header_pub_match: Vec<u8>,
         public_inputs: &[F],
         domain: D,
         verifier_comms: &Vec<Commitment<E>>,
@@ -61,9 +75,12 @@ impl ContractInput {
         let proof_data = convert_proof(proof);
         let public_inputs = convert_public_inputs(public_inputs);
         Self {
+            header_hash,
+            addr_hash,
+            header_pub_match,
+            header_len,
             from_left_index,
             from_len,
-            header_pub_match,
             public_inputs_num,
             domain_size,
             vk_data,
@@ -77,29 +94,62 @@ impl ContractInput {
 #[derive(Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ContractTripleInput {
-    pub first_from_left_index: u32,
-    pub first_from_len: u32,
+    #[serde(
+        deserialize_with = "deserialize_hex_string",
+        serialize_with = "serialize_hex_string"
+    )]
+    pub first_header_hash: Vec<u8>,
+    #[serde(
+        deserialize_with = "deserialize_hex_string",
+        serialize_with = "serialize_hex_string"
+    )]
+    pub first_addr_hash: Vec<u8>,
     #[serde(
         deserialize_with = "deserialize_hex_string",
         serialize_with = "serialize_hex_string"
     )]
     pub first_header_pub_match: Vec<u8>,
+    pub first_header_len: u32,
+    pub first_from_left_index: u32,
+    pub first_from_len: u32,
 
-    pub second_from_left_index: u32,
-    pub second_from_len: u32,
+    #[serde(
+        deserialize_with = "deserialize_hex_string",
+        serialize_with = "serialize_hex_string"
+    )]
+    pub second_header_hash: Vec<u8>,
+    #[serde(
+        deserialize_with = "deserialize_hex_string",
+        serialize_with = "serialize_hex_string"
+    )]
+    pub second_addr_hash: Vec<u8>,
     #[serde(
         deserialize_with = "deserialize_hex_string",
         serialize_with = "serialize_hex_string"
     )]
     pub second_header_pub_match: Vec<u8>,
+    pub second_header_len: u32,
+    pub second_from_left_index: u32,
+    pub second_from_len: u32,
 
-    pub third_from_left_index: u32,
-    pub third_from_len: u32,
+    #[serde(
+        deserialize_with = "deserialize_hex_string",
+        serialize_with = "serialize_hex_string"
+    )]
+    pub third_header_hash: Vec<u8>,
+    #[serde(
+        deserialize_with = "deserialize_hex_string",
+        serialize_with = "serialize_hex_string"
+    )]
+    pub third_addr_hash: Vec<u8>,
     #[serde(
         deserialize_with = "deserialize_hex_string",
         serialize_with = "serialize_hex_string"
     )]
     pub third_header_pub_match: Vec<u8>,
+    pub third_header_len: u32,
+    pub third_from_left_index: u32,
+    pub third_from_len: u32,
 
     #[serde(
         deserialize_with = "deserialize_hex_string",
@@ -123,15 +173,26 @@ pub struct ContractTripleInput {
 
 impl ContractTripleInput {
     pub fn new<F: PrimeField, D: Domain<F>, E: PairingEngine>(
+        first_header_hash: Vec<u8>,
+        first_addr_hash: Vec<u8>,
+        first_header_pub_match: Vec<u8>,
+        first_header_len: u32,
         first_from_left_index: u32,
         first_from_len: u32,
-        first_header_pub_match: Vec<u8>,
+
+        second_header_hash: Vec<u8>,
+        second_addr_hash: Vec<u8>,
+        second_header_pub_match: Vec<u8>,
+        second_header_len: u32,
         second_from_left_index: u32,
         second_from_len: u32,
-        second_header_pub_match: Vec<u8>,
+
+        third_header_hash: Vec<u8>,
+        third_addr_hash: Vec<u8>,
+        third_header_pub_match: Vec<u8>,
+        third_header_len: u32,
         third_from_left_index: u32,
         third_from_len: u32,
-        third_header_pub_match: Vec<u8>,
         public_inputs: &[F],
         domain: D,
         verifier_comms: &Vec<Commitment<E>>,
@@ -151,21 +212,32 @@ impl ContractTripleInput {
         let proof_data = convert_proof(proof);
         let public_inputs = convert_public_inputs(public_inputs);
         Self {
+            first_header_hash,
+            first_addr_hash,
+            first_header_pub_match,
+            first_header_len,
+            first_from_left_index,
+            first_from_len,
+
+            second_header_hash,
+            second_addr_hash,
+            second_header_pub_match,
+            second_header_len,
+            second_from_left_index,
+            second_from_len,
+
+            third_header_hash,
+            third_addr_hash,
+            third_header_pub_match,
+            third_header_len,
+            third_from_left_index,
+            third_from_len,
             public_inputs_num,
             domain_size,
             vk_data,
             public_inputs,
             proof: proof_data,
             srs_hash: srs_hash.clone(),
-            first_from_left_index,
-            first_from_len,
-            first_header_pub_match,
-            second_from_left_index,
-            second_from_len,
-            second_header_pub_match,
-            third_from_left_index,
-            third_from_len,
-            third_header_pub_match,
         }
     }
 }

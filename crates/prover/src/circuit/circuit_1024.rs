@@ -195,7 +195,7 @@ impl Email1024CircuitInput {
             email_header_max_lens * 8 / 512,
         )
         .unwrap();
-        
+
         // cal sha256(a_hash|b_hash|a_bits_location|b_bits_location|sha256(pub_string)|header_len|addr_len)
         let mut sha256_all_public_data = vec![];
         for wd in email_header_hash {

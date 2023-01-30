@@ -38,6 +38,11 @@ fn main() -> Result<(), SerializationError> {
             let (email_public_inputs, email_private_inputs) =
                 parse_email(&email_bytes, from_pepper.clone()).unwrap();
 
+            let header_len = email_private_inputs.email_header.len() as u32;
+            let addr_len = (email_private_inputs.from_right_index
+                - email_private_inputs.from_left_index
+                + 1) as u32;
+            let from_left_index = email_private_inputs.from_left_index;
             index += 1;
             if email_private_inputs.email_header.len() > 1015 {
                 continue;
@@ -45,6 +50,7 @@ fn main() -> Result<(), SerializationError> {
             println!("----------------------------------------------------------------");
             println!("test circuit 1024-{}", index);
             let circuit = Email1024CircuitInput::new(email_private_inputs).unwrap();
+
             println!("[main] circuit construct finish");
             let mut cs = circuit.synthesize();
             println!("[main] synthesize finish");
@@ -112,11 +118,18 @@ fn main() -> Result<(), SerializationError> {
                 verify_start.elapsed().as_millis()
             ); // ms
 
+            let header_pub_match = circuit.email_header_pub_match.clone();
+            let header_hash = email_public_inputs.header_hash.clone();
+            let addr_hash = email_public_inputs.from_hash.clone();
+
             // gen contract inputs data for test
             let contract_inputs = ContractInput::new(
-                circuit.from_left_index,
-                circuit.from_len,
-                circuit.email_header_pub_match,
+                header_hash,
+                addr_hash,
+                header_pub_match,
+                header_len,
+                from_left_index as u32,
+                addr_len as u32,
                 &public_input,
                 verifier.domain,
                 verifier_comms_1024.as_ref().unwrap(),
@@ -153,6 +166,8 @@ fn main() -> Result<(), SerializationError> {
             let (email_public_inputs, email_private_inputs) =
                 parse_email(&email_bytes, from_pepper.clone()).unwrap();
             index += 1;
+
+            let header_len = email_private_inputs.email_header.len() as u32;
 
             println!("----------------------------------------------------------------");
             println!("Test circuit 2048-{}", index);
@@ -229,11 +244,17 @@ fn main() -> Result<(), SerializationError> {
                 verify_start.elapsed().as_millis()
             ); // ms
 
+            let header_hash = email_public_inputs.header_hash.clone();
+            let addr_hash = email_public_inputs.from_hash.clone();
+
             // gen contract inputs data for test
             let contract_inputs = ContractInput::new(
+                header_hash,
+                addr_hash,
+                circuit.email_header_pub_match,
+                header_len,
                 circuit.from_left_index,
                 circuit.from_len,
-                circuit.email_header_pub_match,
                 &public_input,
                 verifier.domain,
                 verifier_comms_2048.as_ref().unwrap(),
@@ -353,15 +374,24 @@ fn main() -> Result<(), SerializationError> {
 
         // gen contract inputs data for test
         let contract_inputs = ContractTripleInput::new(
+            all_email_public_inputs[0].header_hash.clone(),
+            all_email_public_inputs[0].from_hash.clone(),
+            circuit.first_email_header_pub_match,
+            all_email_private_inputs[0].email_header.len() as u32,
             circuit.first_from_left_index,
             circuit.first_from_len,
-            circuit.first_email_header_pub_match,
+            all_email_public_inputs[1].header_hash.clone(),
+            all_email_public_inputs[1].from_hash.clone(),
+            circuit.second_email_header_pub_match,
+            all_email_private_inputs[1].email_header.len() as u32,
             circuit.second_from_left_index,
             circuit.second_from_len,
-            circuit.second_email_header_pub_match,
+            all_email_public_inputs[2].header_hash.clone(),
+            all_email_public_inputs[2].from_hash.clone(),
+            circuit.third_email_header_pub_match,
+            all_email_private_inputs[2].email_header.len() as u32,
             circuit.third_from_left_index,
             circuit.third_from_len,
-            circuit.third_email_header_pub_match,
             &public_input,
             verifier.domain,
             verifier_comms_2048.as_ref().unwrap(),

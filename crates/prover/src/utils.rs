@@ -54,6 +54,19 @@ pub fn padding_bytes(input_bytes: &[u8]) -> Vec<u8> {
     return input_bytes_padding;
 }
 
+pub fn padding_len(input_len: u32) -> u32 {
+    let input_remainder = (input_len * 8) % 512;
+    let padding_count = if input_remainder < 448 {
+        (448 - input_remainder) / 8
+    } else if input_remainder >= 448 {
+        (448 + 512 - input_remainder) / 8
+    } else {
+        64
+    };
+
+    return input_len + padding_count + 8;
+}
+
 pub fn convert_public_inputs<F: PrimeField>(public_input: &[F]) -> Vec<String> {
     let mut res = vec![];
     for e in public_input {
@@ -79,6 +92,18 @@ pub fn convert_public_inputs<F: PrimeField>(public_input: &[F]) -> Vec<String> {
     }
 
     res
+}
+
+pub fn convert_sha256words<F: PrimeField>(input: &[F]) -> String {
+    let mut output = String::from("0x");
+    for e in input {
+        let a = e.into_repr();
+        for (_i, v) in a.to_bytes_be().iter().skip(28).enumerate() {
+            output.push_str(&format!("{:02x}", *v));
+        }
+    }
+
+    return output;
 }
 
 pub fn convert_vk_data<F: PrimeField, D: Domain<F>, E: PairingEngine>(

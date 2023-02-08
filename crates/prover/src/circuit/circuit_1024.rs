@@ -156,14 +156,16 @@ impl Email1024CircuitInput {
         )
         .unwrap();
 
-        let (bit_location_a, bit_location_b) = cs.gen_bit_location_for_substr(
-            l, m,
-            email_header_max_lens,
-            email_addr_max_lens,
-        ).unwrap();
+        let (bit_location_a, bit_location_b) = cs
+            .gen_bit_location_for_substr(l, m, email_header_max_lens, email_addr_max_lens)
+            .unwrap();
 
-        let output_words_a = cs.collect_bit_location_for_sha256(email_header_max_lens, &bit_location_a).unwrap();
-        let output_words_b = cs.collect_bit_location_for_sha256(email_addr_max_lens, &bit_location_b).unwrap();
+        let output_words_a = cs
+            .collect_bit_location_for_sha256(email_header_max_lens, &bit_location_a)
+            .unwrap();
+        let output_words_b = cs
+            .collect_bit_location_for_sha256(email_addr_max_lens, &bit_location_b)
+            .unwrap();
 
         // public string to be matched
         let mut email_header_pubmatch_vars = vec![];
@@ -332,18 +334,19 @@ impl Email1024CircuitInput {
         // use 'public inputs' as mask_r
         let mask_r = public_inputs_hash;
 
-        // private substring check. 
+        // private substring check.
         cs.add_substring_mask_poly_return_words(
-                &email_header_vars,
-                &email_addr_pepper_vars,
-                &bit_location_a,
-                &bit_location_b,
-                mask_r,
-                l,
-                m,
-                email_header_max_lens,
-                email_addr_max_lens,
-            ).unwrap();
+            &email_header_vars,
+            &email_addr_pepper_vars,
+            &bit_location_a,
+            &bit_location_b,
+            mask_r,
+            l,
+            m,
+            email_header_max_lens,
+            email_addr_max_lens,
+        )
+        .unwrap();
 
         // pub match "a"
         // public string match.

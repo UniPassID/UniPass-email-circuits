@@ -211,6 +211,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9e1b586273c5702936fe7b7d6896644d8be71e6314cfe09d3167c95f712589e8"
 
 [[package]]
+name = "base64"
+version = "0.21.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a4a4ddaa51a5bc52a6948f74c06d20aaaddb71924eab79b8c97a8c556e942d6a"
+
+[[package]]
 name = "block-buffer"
 version = "0.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -351,7 +357,7 @@ name = "email-rs"
 version = "0.1.0"
 source = "git+https://github.com/sking789/email-rs.git?branch=multi-dkim-header#9991035d76caf894b9b43a06b35dbecf7d281ef8"
 dependencies = [
- "base64",
+ "base64 0.13.1",
  "quoted_printable",
 ]
 
@@ -556,12 +562,14 @@ name = "prover"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "base64 0.21.0",
  "email-parser",
  "hex",
  "log",
  "plonk",
  "serde",
  "serde_json",
+ "sha2 0.10.6",
  "thiserror",
 ]
 

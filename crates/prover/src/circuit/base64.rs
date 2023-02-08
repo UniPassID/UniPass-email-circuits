@@ -9,6 +9,17 @@ use plonk::{
 const BASE64URL_ENCODE_CHARS: &[u8; 64] =
     b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
 
+pub fn get_encoded_len(input_len: usize) -> usize {
+    let mut encoded_len = input_len / 3 * 4;
+    if input_len % 3 == 1 {
+        encoded_len += 2;
+    } else if input_len % 3 == 2 {
+        encoded_len += 3;
+    }
+    
+    encoded_len
+}
+
 pub fn new_baseurl_chars_table<F: PrimeField>() -> Table<F> {
     let size = 64;
     let width = 2;

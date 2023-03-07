@@ -1,6 +1,6 @@
 use std::{fs::File, io};
 
-use plonk::ark_bn254::Bn254;
+use plonk::ark_bn254::{Bn254, Fr};
 use plonk::ark_ec::PairingEngine;
 use plonk::ark_ff::PrimeField;
 use plonk::ark_poly_commit::kzg10::Commitment;
@@ -17,6 +17,15 @@ use crate::ProverResult;
 use self::iden3::BinFile;
 
 pub mod iden3;
+
+pub fn read_ptau_to_pckey_and_apply_random(p: &str, new_beta: Fr) -> std::io::Result<PCKey<Bn254>> {
+    let mut file = File::open(p).unwrap();
+    let mut binfile = BinFile::new(&mut file).unwrap();
+    log::trace!("binfile: {}", serde_json::to_string(&binfile)?);
+    let pc_key = binfile.pckey()?;
+    let pc_key = pc_key.apply_new_rand(new_beta);
+    Ok(pc_key)
+}
 
 pub fn read_ptau_to_pckey(p: &str) -> std::io::Result<PCKey<Bn254>> {
     let mut file = File::open(p).unwrap();

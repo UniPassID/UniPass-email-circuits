@@ -182,3 +182,104 @@ impl ContractTripleInput {
         }
     }
 }
+
+#[derive(Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ContractOpenIdInput {
+    #[serde(
+        deserialize_with = "deserialize_hex_string",
+        serialize_with = "serialize_hex_string"
+    )]
+    pub header_raw_bytes: Vec<u8>,
+    #[serde(
+        deserialize_with = "deserialize_hex_string",
+        serialize_with = "serialize_hex_string"
+    )]
+    pub payload_pub_match: Vec<u8>,
+    #[serde(
+        deserialize_with = "deserialize_hex_string",
+        serialize_with = "serialize_hex_string"
+    )]
+    pub idtoken_hash: Vec<u8>,
+    #[serde(
+        deserialize_with = "deserialize_hex_string",
+        serialize_with = "serialize_hex_string"
+    )]
+    pub addr_hash: Vec<u8>,
+    pub header_left_index: u32,
+    pub header_base64_len: u32,
+    pub payload_left_index: u32,
+    pub payload_base64_len: u32,
+    pub email_addrleft_index: u32,
+    pub email_addrlen: u32,
+    #[serde(
+        deserialize_with = "deserialize_hex_string",
+        serialize_with = "serialize_hex_string"
+    )]
+    pub public_inputs_num: Vec<u8>,
+    #[serde(
+        deserialize_with = "deserialize_hex_string",
+        serialize_with = "serialize_hex_string"
+    )]
+    pub domain_size: Vec<u8>,
+    pub vk_data: Vec<String>,
+    pub public_inputs: Vec<String>,
+    pub proof: Vec<String>,
+    #[serde(
+        deserialize_with = "deserialize_hex_string",
+        serialize_with = "serialize_hex_string"
+    )]
+    pub srs_hash: Vec<u8>,
+}
+
+impl ContractOpenIdInput {
+    pub fn new<F: PrimeField, D: Domain<F>, E: PairingEngine>(
+        header_raw_bytes: Vec<u8>,
+        payload_pub_match: Vec<u8>,
+        idtoken_hash: Vec<u8>,
+        addr_hash: Vec<u8>,
+        header_left_index: u32,
+        header_base64_len: u32,
+        payload_left_index: u32,
+        payload_base64_len: u32,
+        email_addrleft_index: u32,
+        email_addrlen: u32,
+
+        public_inputs: &[F],
+        domain: D,
+        verifier_comms: &Vec<Commitment<E>>,
+        g2x: E::G2Affine,
+        proof: &Proof<F, E>,
+        srs_hash: &Vec<u8>,
+    ) -> Self {
+        // domain size
+        let v0_domainsize = BigInteger128::from(domain.size() as u64);
+        let domain_size = v0_domainsize.to_bytes_be();
+
+        // publicinput number
+        let public_inputs_num = BigInteger128::from(public_inputs.len() as u64);
+        let public_inputs_num = public_inputs_num.to_bytes_be();
+
+        let vk_data = convert_vk_data(domain, verifier_comms, g2x);
+        let proof_data = convert_proof(proof);
+        let public_inputs = convert_public_inputs(public_inputs);
+        Self {
+            header_raw_bytes,
+            payload_pub_match,
+            idtoken_hash,
+            addr_hash,
+            header_left_index,
+            header_base64_len,
+            payload_left_index,
+            payload_base64_len,
+            email_addrleft_index,
+            email_addrlen,
+            public_inputs_num,
+            domain_size,
+            vk_data,
+            public_inputs,
+            proof: proof_data,
+            srs_hash: srs_hash.clone(),
+        }
+    }
+}

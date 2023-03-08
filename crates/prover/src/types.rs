@@ -92,64 +92,23 @@ impl ContractInput {
 }
 
 #[derive(Clone, Serialize, Deserialize)]
+pub struct Bytes(
+    #[serde(
+        deserialize_with = "deserialize_hex_string",
+        serialize_with = "serialize_hex_string"
+    )]
+    Vec<u8>,
+);
+
+#[derive(Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ContractTripleInput {
-    #[serde(
-        deserialize_with = "deserialize_hex_string",
-        serialize_with = "serialize_hex_string"
-    )]
-    pub first_header_hash: Vec<u8>,
-    #[serde(
-        deserialize_with = "deserialize_hex_string",
-        serialize_with = "serialize_hex_string"
-    )]
-    pub first_addr_hash: Vec<u8>,
-    #[serde(
-        deserialize_with = "deserialize_hex_string",
-        serialize_with = "serialize_hex_string"
-    )]
-    pub first_header_pub_match: Vec<u8>,
-    pub first_header_len: u32,
-    pub first_from_left_index: u32,
-    pub first_from_len: u32,
-
-    #[serde(
-        deserialize_with = "deserialize_hex_string",
-        serialize_with = "serialize_hex_string"
-    )]
-    pub second_header_hash: Vec<u8>,
-    #[serde(
-        deserialize_with = "deserialize_hex_string",
-        serialize_with = "serialize_hex_string"
-    )]
-    pub second_addr_hash: Vec<u8>,
-    #[serde(
-        deserialize_with = "deserialize_hex_string",
-        serialize_with = "serialize_hex_string"
-    )]
-    pub second_header_pub_match: Vec<u8>,
-    pub second_header_len: u32,
-    pub second_from_left_index: u32,
-    pub second_from_len: u32,
-
-    #[serde(
-        deserialize_with = "deserialize_hex_string",
-        serialize_with = "serialize_hex_string"
-    )]
-    pub third_header_hash: Vec<u8>,
-    #[serde(
-        deserialize_with = "deserialize_hex_string",
-        serialize_with = "serialize_hex_string"
-    )]
-    pub third_addr_hash: Vec<u8>,
-    #[serde(
-        deserialize_with = "deserialize_hex_string",
-        serialize_with = "serialize_hex_string"
-    )]
-    pub third_header_pub_match: Vec<u8>,
-    pub third_header_len: u32,
-    pub third_from_left_index: u32,
-    pub third_from_len: u32,
+    pub header_hashs: Vec<Bytes>,
+    pub addr_hashs: Vec<Bytes>,
+    pub header_pub_matches: Vec<Bytes>,
+    pub header_lens: Vec<u32>,
+    pub from_left_indexes: Vec<u32>,
+    pub from_lens: Vec<u32>,
 
     #[serde(
         deserialize_with = "deserialize_hex_string",
@@ -173,26 +132,13 @@ pub struct ContractTripleInput {
 
 impl ContractTripleInput {
     pub fn new<F: PrimeField, D: Domain<F>, E: PairingEngine>(
-        first_header_hash: Vec<u8>,
-        first_addr_hash: Vec<u8>,
-        first_header_pub_match: Vec<u8>,
-        first_header_len: u32,
-        first_from_left_index: u32,
-        first_from_len: u32,
+        header_hashs: Vec<Vec<u8>>,
+        addr_hashs: Vec<Vec<u8>>,
+        header_pub_matches: Vec<Vec<u8>>,
+        header_lens: Vec<u32>,
+        from_left_indexes: Vec<u32>,
+        from_lens: Vec<u32>,
 
-        second_header_hash: Vec<u8>,
-        second_addr_hash: Vec<u8>,
-        second_header_pub_match: Vec<u8>,
-        second_header_len: u32,
-        second_from_left_index: u32,
-        second_from_len: u32,
-
-        third_header_hash: Vec<u8>,
-        third_addr_hash: Vec<u8>,
-        third_header_pub_match: Vec<u8>,
-        third_header_len: u32,
-        third_from_left_index: u32,
-        third_from_len: u32,
         public_inputs: &[F],
         domain: D,
         verifier_comms: &Vec<Commitment<E>>,
@@ -212,26 +158,21 @@ impl ContractTripleInput {
         let proof_data = convert_proof(proof);
         let public_inputs = convert_public_inputs(public_inputs);
         Self {
-            first_header_hash,
-            first_addr_hash,
-            first_header_pub_match,
-            first_header_len,
-            first_from_left_index,
-            first_from_len,
-
-            second_header_hash,
-            second_addr_hash,
-            second_header_pub_match,
-            second_header_len,
-            second_from_left_index,
-            second_from_len,
-
-            third_header_hash,
-            third_addr_hash,
-            third_header_pub_match,
-            third_header_len,
-            third_from_left_index,
-            third_from_len,
+            header_hashs: header_hashs
+                .into_iter()
+                .map(|header_hash| Bytes(header_hash))
+                .collect(),
+            addr_hashs: addr_hashs
+                .into_iter()
+                .map(|addr_hash| Bytes(addr_hash))
+                .collect(),
+            header_pub_matches: header_pub_matches
+                .into_iter()
+                .map(|header_pub_match| Bytes(header_pub_match))
+                .collect(),
+            header_lens,
+            from_left_indexes,
+            from_lens,
             public_inputs_num,
             domain_size,
             vk_data,

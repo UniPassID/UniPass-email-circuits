@@ -10,15 +10,14 @@ use plonk::{
     Composer,
 };
 
-use crate::utils::convert_sha256words;
 use crate::{error::ProverError, utils::padding_bytes};
 
 pub struct Email2048TripleCircuitInput {
     pub email_header_bytes: Vec<Vec<u8>>,
     pub email_addr_pepper_bytes: Vec<Vec<u8>>,
-    pub email_header_pub_match: Vec<Vec<u8>>,
-    pub from_left_index: Vec<u32>,
-    pub from_len: Vec<u32>,
+    pub email_header_pub_matches: Vec<Vec<u8>>,
+    pub from_left_indexes: Vec<u32>,
+    pub from_lens: Vec<u32>,
 }
 
 impl Email2048TripleCircuitInput {
@@ -31,9 +30,9 @@ impl Email2048TripleCircuitInput {
 
         let mut all_email_header_bytes = vec![];
         let mut all_email_addr_pepper_bytes = vec![];
-        let mut all_email_header_pub_match = vec![];
-        let mut all_from_left_index = vec![];
-        let mut all_from_len = vec![];
+        let mut all_email_header_pub_matches = vec![];
+        let mut all_from_left_indexes = vec![];
+        let mut all_from_lens = vec![];
 
         for mut private_inputs in private_inputs {
             let email_addr_bytes = private_inputs.email_header
@@ -88,17 +87,17 @@ impl Email2048TripleCircuitInput {
 
             all_email_header_bytes.push(email_header_bytes);
             all_email_addr_pepper_bytes.push(email_addr_pepper_bytes);
-            all_email_header_pub_match.push(email_header_pub_match);
-            all_from_left_index.push(from_left_index);
-            all_from_len.push(from_len);
+            all_email_header_pub_matches.push(email_header_pub_match);
+            all_from_left_indexes.push(from_left_index);
+            all_from_lens.push(from_len);
         }
 
         Ok(Self {
             email_header_bytes: all_email_header_bytes,
             email_addr_pepper_bytes: all_email_addr_pepper_bytes,
-            email_header_pub_match: all_email_header_pub_match,
-            from_left_index: all_from_left_index,
-            from_len: all_from_len,
+            email_header_pub_matches: all_email_header_pub_matches,
+            from_left_indexes: all_from_left_indexes,
+            from_lens: all_from_lens,
         })
     }
 
@@ -118,7 +117,7 @@ impl Email2048TripleCircuitInput {
             // padding bytes
             let email_header_bytes_padding = padding_bytes(&self.email_header_bytes[i]);
             let email_addr_pepper_bytes_padding = padding_bytes(&self.email_addr_pepper_bytes[i]);
-            let email_header_pub_match_padding = padding_bytes(&self.email_header_pub_match[i]);
+            let email_header_pub_match_padding = padding_bytes(&self.email_header_pub_matches[i]);
             let from_padding_len = (email_addr_pepper_bytes_padding.len() / 64) as u32;
             let header_padding_len = (email_header_bytes_padding.len() / 64) as u32;
 
@@ -145,9 +144,9 @@ impl Email2048TripleCircuitInput {
             }
 
             // start index of the email address
-            let l = cs.alloc(Fr::from(self.from_left_index[i]));
+            let l = cs.alloc(Fr::from(self.from_left_indexes[i]));
             // length of the email address
-            let m = cs.alloc(Fr::from(self.from_len[i]));
+            let m = cs.alloc(Fr::from(self.from_lens[i]));
 
             // num of 512bits. we need the index to output correct sha256.
             let email_header_data_len = cs.alloc(Fr::from(header_padding_len));
@@ -609,7 +608,6 @@ Content-Type: multipart/alternative; boundary="000000000000964f7205db09ef67"
 
         let mut all_email_public_inputs = vec![];
         let mut all_email_private_inputs = vec![];
-        let mut sha256_input: Vec<u8> = vec![];
         for email_bytes in emails {
             let (email_public_inputs, email_private_inputs) =
                 parse_email(email_bytes.as_bytes(), from_pepper.clone()).unwrap();
@@ -620,6 +618,7 @@ Content-Type: multipart/alternative; boundary="000000000000964f7205db09ef67"
         println!("----------------------------------------------------------------");
         println!("Test circuit 2048triple");
 
+        let mut sha256_input: Vec<u8> = vec![];
         let circuit =
             Email2048TripleCircuitInput::new((&all_email_private_inputs[0..3]).to_vec()).unwrap();
 
@@ -641,7 +640,8 @@ Content-Type: multipart/alternative; boundary="000000000000964f7205db09ef67"
             r.extend(&bit_location_a);
             r.extend(&bit_location_b);
             sha256_input.extend(sha2::Sha256::digest(&r.to_vec()));
-            sha256_input.extend(sha2::Sha256::digest(&circuit.email_header_pub_match[i]).to_vec());
+            sha256_input
+                .extend(sha2::Sha256::digest(&circuit.email_header_pub_matches[i]).to_vec());
             sha256_input.extend((padding_len(header_len) as u16 / 64).to_be_bytes());
             sha256_input.extend((padding_len(addr_len + 32) as u16 / 64).to_be_bytes());
         }

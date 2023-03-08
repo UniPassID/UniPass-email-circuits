@@ -8,7 +8,6 @@ use plonk::{
     Composer,
 };
 
-use crate::utils::convert_sha256words;
 use crate::{error::ProverError, utils::padding_bytes};
 
 pub struct Email1024CircuitInput {

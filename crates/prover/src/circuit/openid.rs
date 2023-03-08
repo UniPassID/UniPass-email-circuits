@@ -91,7 +91,7 @@ impl OpenIdCircuit {
         // num of 512bits. we need the index to output correct sha256.
         let email_addr_pepper_data_len = cs.alloc(Fr::from(email_addr_padding_len));
 
-        // cal sha256 of b_pepper
+        // cal sha256 of email_pepper
         let mut sha256_addr_data = vec![];
         for vs in email_addr_pepper_vars.chunks(4) {
             sha256_addr_data
@@ -212,10 +212,19 @@ impl OpenIdCircuit {
         let payload_left_index = cs.alloc(Fr::from(self.payload_left_index));
         // length of the encoded payload
         let payload_base64_len = cs.alloc(Fr::from(self.payload_base64_len));
+        let payload_base64_len_minus_1 = cs.alloc(Fr::from(self.payload_base64_len - 1));
+        cs.poly_gate(
+            vec![
+                (payload_base64_len, Fr::one()),
+                (payload_base64_len_minus_1, -Fr::one()),
+            ],
+            Fr::zero(),
+            -Fr::one(),
+        );
         let (bit_location_id_token_1, bit_location_payload_base64) = cs
             .gen_bit_location_for_substr(
                 payload_left_index,
-                payload_base64_len,
+                payload_base64_len_minus_1,
                 ID_TOKEN_MAX_LEN,
                 PAYLOAD_BASE64_MAX_LEN,
             )
@@ -230,7 +239,7 @@ impl OpenIdCircuit {
                 &bit_location_payload_base64,
                 mask_r,
                 payload_left_index,
-                payload_base64_len,
+                payload_base64_len_minus_1,
                 ID_TOKEN_MAX_LEN,
                 PAYLOAD_BASE64_MAX_LEN,
             )
@@ -241,10 +250,19 @@ impl OpenIdCircuit {
         let header_left_index = cs.alloc(Fr::from(self.header_left_index));
         // length of the encoded header
         let header_base64_len = cs.alloc(Fr::from(self.header_base64_len));
+        let header_base64_len_minus_1 = cs.alloc(Fr::from(self.header_base64_len - 1));
+        cs.poly_gate(
+            vec![
+                (header_base64_len, Fr::one()),
+                (header_base64_len_minus_1, -Fr::one()),
+            ],
+            Fr::zero(),
+            -Fr::one(),
+        );
         let (bit_location_id_token_2, bit_location_header_base64) = cs
             .gen_bit_location_for_substr(
                 header_left_index,
-                header_base64_len,
+                header_base64_len_minus_1,
                 ID_TOKEN_MAX_LEN,
                 HEADER_BASE64_MAX_LEN,
             )
@@ -259,7 +277,7 @@ impl OpenIdCircuit {
                 &bit_location_header_base64,
                 mask_r,
                 header_left_index,
-                header_base64_len,
+                header_base64_len_minus_1,
                 ID_TOKEN_MAX_LEN,
                 HEADER_BASE64_MAX_LEN,
             )
@@ -698,9 +716,9 @@ mod tests {
             hash_inputs.extend(payload_pub_match_hash);
 
             let (location_id_token_1, location_payload_base64) =
-                bit_location(payload_left_index, payload_base64_len, 2048, 1536);
+                bit_location(payload_left_index, payload_base64_len - 1, 2048, 1536);
             let (location_id_token_2, location_header_base64) =
-                bit_location(0, header_base64_len, 2048, 512);
+                bit_location(0, header_base64_len - 1, 2048, 512);
             let (location_payload_raw, location_email_addr) =
                 bit_location(email_addrleft_index as u32, email_addrlen as u32, 1152, 192);
 
@@ -719,10 +737,10 @@ mod tests {
                 (padding_len(email_addr_pepper_bytes.len() as u32) as u16 / 64).to_be_bytes(),
             );
 
-            let mut hash_result = sha2::Sha256::digest(&hash_inputs).to_vec();
-            hash_result[0] = hash_result[0] & 0x1f;
+            let mut public_input = sha2::Sha256::digest(&hash_inputs).to_vec();
+            public_input[0] = public_input[0] & 0x1f;
 
-            println!("hash_result: {}", to_0x_hex(&hash_result));
+            println!("public_input: {}", to_0x_hex(&public_input));
 
             let circuit = OpenIdCircuit {
                 id_token_bytes: id_token.as_bytes().to_vec(),
@@ -740,7 +758,7 @@ mod tests {
             };
 
             let mut cs = circuit.synthesize();
-            test_prove_verify(&mut cs, vec![Fr::from_be_bytes_mod_order(&hash_result)]).unwrap();
+            test_prove_verify(&mut cs, vec![Fr::from_be_bytes_mod_order(&public_input)]).unwrap();
         }
     }
 }

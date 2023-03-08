@@ -37,7 +37,7 @@ pub struct OpenIdCircuit {
 }
 
 impl OpenIdCircuit {
-    pub fn new(id_token: &str) -> Self {
+    pub fn new(id_token: &str, from_pepper: &[u8]) -> Self {
         let id_tokens: Vec<_> = id_token.split('.').collect();
         let header_base64_bytes = id_tokens[0].as_bytes().to_vec();
         let payload_base64_bytes = id_tokens[1].as_bytes().to_vec();
@@ -46,31 +46,20 @@ impl OpenIdCircuit {
         let payload_base64_len = payload_base64_bytes.len() as u32;
         let header_base64_len = header_base64_bytes.len() as u32;
 
-        let idtoken_hash = sha2::Sha256::digest(id_token).to_vec();
-
         let base64url_engine = base64::engine::general_purpose::URL_SAFE_NO_PAD;
         let payload_raw_bytes = base64url_engine.decode(&payload_base64_bytes).unwrap();
         let header_raw_bytes = base64url_engine.decode(&header_base64_bytes).unwrap();
 
-        println!("header: {}", String::from_utf8_lossy(&header_raw_bytes));
-        println!("payload: {}", String::from_utf8_lossy(&payload_raw_bytes));
-
-        let needle = br#""sub":""#;
+        let needle = br#""email":""#;
         let email_addrleft_index =
             find_subsequence(&payload_raw_bytes, needle).unwrap() + needle.len();
         let email_addrlen =
             find_subsequence(&payload_raw_bytes[email_addrleft_index..], br#"""#).unwrap();
 
-        println!(
-            "id: [{}]",
-            String::from_utf8_lossy(
-                &payload_raw_bytes[email_addrleft_index..email_addrleft_index + email_addrlen]
-            )
-        );
         let mut email_addr_pepper_bytes =
             payload_raw_bytes[email_addrleft_index..email_addrleft_index + email_addrlen].to_vec();
-        let pepper = [0u8; 32];
-        email_addr_pepper_bytes.extend(pepper);
+
+        email_addr_pepper_bytes.extend(from_pepper);
 
         let mut payload_pub_match = payload_raw_bytes.clone();
         for i in email_addrleft_index..email_addrleft_index + email_addrlen {
@@ -705,10 +694,10 @@ mod tests {
     #[test]
     fn test_openid_circuit() {
         let id_tokens = ["eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6ImgzejJzZnFQcU1WQmNKQUJKM1FRQSJ9.eyJuaWNrbmFtZSI6IjEzMjExMTQ2IiwibmFtZSI6IuWNkyDpg5EiLCJwaWN0dXJlIjoiaHR0cHM6Ly9zLmdyYXZhdGFyLmNvbS9hdmF0YXIvZGQ1YjJjM2NjNjU2ZTgzYWYxOTE5NmI4YzA1OGZkYTg_cz00ODAmcj1wZyZkPWh0dHBzJTNBJTJGJTJGY2RuLmF1dGgwLmNvbSUyRmF2YXRhcnMlMkZkZWZhdWx0LnBuZyIsInVwZGF0ZWRfYXQiOiIyMDIzLTAzLTAzVDA4OjQyOjQxLjc5M1oiLCJlbWFpbCI6IjEzMjExMTQ2QGJqdHUuZWR1LmNuIiwiZW1haWxfdmVyaWZpZWQiOiJ0cnVlIiwiaXNzIjoiaHR0cHM6Ly9hdXRoLndhbGxldC51bmlwYXNzLmlkLyIsImF1ZCI6InZyNktJZ2h4Q3FtRWxwQWQ0VE5EMG5yTUJpQVIzWDJtIiwiaWF0IjoxNjc3ODMyOTYyLCJleHAiOjE2Nzc4MzY1NjIsInN1YiI6ImFwcGxlfDAwMDA2MS4xZTkzNmMwNmUzNWE0OWI5YmJmYzBmMzJjY2FlNTMyZC4xNDMzIiwiYXV0aF90aW1lIjoxNjc3ODMyOTYxLCJhdF9oYXNoIjoiVmpLekRsMEU1SlhyZDRxYkItQm9LZyIsInNpZCI6InBSYWxnWkMwUlhtTng3SjlCRzEtSjBWbGQtbXd4QmpHIiwibm9uY2UiOiJHRllRWE1RVEpoSnRiUWlxdHNsaHR2SEZ1WDRyYzdVZyJ9",
-        "eyJhbGciOiJSUzI1NiIsImtpZCI6IjI1NWNjYTZlYzI4MTA2MDJkODBiZWM4OWU0NTZjNDQ5NWQ3NDE4YmIiLCJ0eXAiOiJKV1QifQ.eyJpc3MiOiJodHRwczovL2FjY291bnRzLmdvb2dsZS5jb20iLCJhenAiOiIxMDc2MjQ5Njg2NjQyLWcwZDQyNTI0ZmhkaXJqZWhvMHQ2bjNjamQ3cHVsbW5zLmFwcHMuZ29vZ2xldXNlcmNvbnRlbnQuY29tIiwiYXVkIjoiMTA3NjI0OTY4NjY0Mi1nMGQ0MjUyNGZoZGlyamVobzB0Nm4zY2pkN3B1bG1ucy5hcHBzLmdvb2dsZXVzZXJjb250ZW50LmNvbSIsInN1YiI6IjEwNDMzMTY2MDQxMDE2NDA1MzAyMSIsImhkIjoibGF5Mi5kZXYiLCJlbWFpbCI6Inp6aGVuQGxheTIuZGV2IiwiZW1haWxfdmVyaWZpZWQiOnRydWUsImF0X2hhc2giOiJqNmQ1aHRFLTF0Mm1Pd2ZQRUFTMXpRIiwibm9uY2UiOiIyYWVjNzM4MSIsImlhdCI6MTY3ODE4OTg4NCwiZXhwIjoxNjc4MTkzNDg0LCJqdGkiOiJkMTRkNTcxYTlhNmRmZmZjNmU2OTM2NjBiNDhlODdlYjIyNTMyYjg5In0",
-        "eyJhbGciOiJSUzI1NiIsImtpZCI6IjI3NDA1MmEyYjY0NDg3NDU3NjRlNzJjMzU5MDk3MWQ5MGNmYjU4NWEiLCJ0eXAiOiJKV1QifQ.eyJpc3MiOiJodHRwczovL2FjY291bnRzLmdvb2dsZS5jb20iLCJhenAiOiIxMDc2MjQ5Njg2NjQyLWcwZDQyNTI0ZmhkaXJqZWhvMHQ2bjNjamQ3cHVsbW5zLmFwcHMuZ29vZ2xldXNlcmNvbnRlbnQuY29tIiwiYXVkIjoiMTA3NjI0OTY4NjY0Mi1nMGQ0MjUyNGZoZGlyamVobzB0Nm4zY2pkN3B1bG1ucy5hcHBzLmdvb2dsZXVzZXJjb250ZW50LmNvbSIsInN1YiI6IjExMzA3NTM0MDQ2MjI1NTQ2NzEyMyIsImF0X2hhc2giOiJDOEVrMEdnZFFHY2c0SXZScDEwMnRRIiwibm9uY2UiOiIweGRmMTI1MDA5MGQ3NWQxZDlmM2U1Mzg3Yjg1NGY0ZWJjNWY5MjI5YjAyYzY4OGMwNGRlNjVmZDEwNzQzOTNlOTEiLCJpYXQiOjE2NzUzMzYwODYsImV4cCI6MTY3NTMzOTY4NiwianRpIjoiNjVjZmRjYjQ4MWQ1NjkzNTY3NmQwOTJmNjY0Njg5Y2U0ZTFmYTJmMCJ9",];
+        "eyJhbGciOiJSUzI1NiIsImtpZCI6IjI1NWNjYTZlYzI4MTA2MDJkODBiZWM4OWU0NTZjNDQ5NWQ3NDE4YmIiLCJ0eXAiOiJKV1QifQ.eyJpc3MiOiJodHRwczovL2FjY291bnRzLmdvb2dsZS5jb20iLCJhenAiOiIxMDc2MjQ5Njg2NjQyLWcwZDQyNTI0ZmhkaXJqZWhvMHQ2bjNjamQ3cHVsbW5zLmFwcHMuZ29vZ2xldXNlcmNvbnRlbnQuY29tIiwiYXVkIjoiMTA3NjI0OTY4NjY0Mi1nMGQ0MjUyNGZoZGlyamVobzB0Nm4zY2pkN3B1bG1ucy5hcHBzLmdvb2dsZXVzZXJjb250ZW50LmNvbSIsInN1YiI6IjEwNDMzMTY2MDQxMDE2NDA1MzAyMSIsImhkIjoibGF5Mi5kZXYiLCJlbWFpbCI6Inp6aGVuQGxheTIuZGV2IiwiZW1haWxfdmVyaWZpZWQiOnRydWUsImF0X2hhc2giOiJqNmQ1aHRFLTF0Mm1Pd2ZQRUFTMXpRIiwibm9uY2UiOiIyYWVjNzM4MSIsImlhdCI6MTY3ODE4OTg4NCwiZXhwIjoxNjc4MTkzNDg0LCJqdGkiOiJkMTRkNTcxYTlhNmRmZmZjNmU2OTM2NjBiNDhlODdlYjIyNTMyYjg5In0"];
         for id_token in id_tokens {
-            let circuit = OpenIdCircuit::new(id_token);
+            let from_pepper = [0u8; 32];
+            let circuit = OpenIdCircuit::new(id_token, &from_pepper);
 
             let header_hash = sha2::Sha256::digest(&circuit.header_raw_bytes).to_vec();
             println!("header hash: {}", to_0x_hex(&header_hash));

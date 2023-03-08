@@ -210,8 +210,8 @@ pub struct ContractOpenIdInput {
     pub header_base64_len: u32,
     pub payload_left_index: u32,
     pub payload_base64_len: u32,
-    pub email_addrleft_index: u32,
-    pub email_addrlen: u32,
+    pub addr_left_index: u32,
+    pub addr_len: u32,
     #[serde(
         deserialize_with = "deserialize_hex_string",
         serialize_with = "serialize_hex_string"
@@ -242,8 +242,8 @@ impl ContractOpenIdInput {
         header_base64_len: u32,
         payload_left_index: u32,
         payload_base64_len: u32,
-        email_addrleft_index: u32,
-        email_addrlen: u32,
+        addr_left_index: u32,
+        addr_len: u32,
 
         public_inputs: &[F],
         domain: D,
@@ -272,8 +272,8 @@ impl ContractOpenIdInput {
             header_base64_len,
             payload_left_index,
             payload_base64_len,
-            email_addrleft_index,
-            email_addrlen,
+            addr_left_index,
+            addr_len,
             public_inputs_num,
             domain_size,
             vk_data,

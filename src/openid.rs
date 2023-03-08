@@ -78,15 +78,6 @@ pub fn test_open_id<R: RngCore>(pckey: &PCKey<Bn254>, from_pepper: &[u8], rng: &
         hash_inputs.extend(location_header_base64);
         hash_inputs.extend(location_payload_raw);
         hash_inputs.extend(location_email_addr);
-        hash_inputs.extend((padding_len(id_token.len() as u32) as u16 / 64).to_be_bytes());
-        hash_inputs
-            .extend((padding_len(circuit.header_raw_bytes.len() as u32) as u16 / 64).to_be_bytes());
-        hash_inputs.extend(
-            (padding_len(circuit.payload_raw_bytes.len() as u32) as u16 / 64).to_be_bytes(),
-        );
-        hash_inputs.extend(
-            (padding_len(circuit.email_addr_pepper_bytes.len() as u32) as u16 / 64).to_be_bytes(),
-        );
 
         let mut expected_public_input = sha2::Sha256::digest(&hash_inputs).to_vec();
         expected_public_input[0] = expected_public_input[0] & 0x1f;

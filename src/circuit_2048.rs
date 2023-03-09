@@ -41,7 +41,7 @@ pub fn test_2048<R: RngCore>(pckey: &PCKey<Bn254>, from_pepper: &[u8], rng: &mut
         println!("[main] circuit construct finish");
 
         let (bit_location_a, bit_location_b) =
-            bit_location(from_left_index as u32, addr_len, 1024, 192);
+            bit_location(from_left_index as u32, addr_len, 2048, 192);
 
         println!(
             "bit_loaction_a: {}, bit_location_b: {}",

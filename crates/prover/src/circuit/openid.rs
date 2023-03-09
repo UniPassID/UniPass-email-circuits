@@ -13,6 +13,16 @@ use crate::utils::padding_bytes;
 
 use super::base64::base64url_encode_gadget;
 
+pub const PAYLOAD_RAW_MAX_LEN: usize = 1152;
+// (PAYLOAD_RAW_MAX_LEN / 3) * 4
+pub const PAYLOAD_BASE64_MAX_LEN: usize = 1536;
+
+pub const HEADER_RAW_MAX_LEN: usize = 384;
+pub const HEADER_BASE64_MAX_LEN: usize = 512;
+
+pub const ID_TOKEN_MAX_LEN: usize = 2048;
+pub const EMAIL_ADDR_MAX_LEN: usize = 192;
+
 fn find_subsequence(haystack: &[u8], needle: &[u8]) -> Option<usize> {
     haystack
         .windows(needle.len())
@@ -31,8 +41,8 @@ pub struct OpenIdCircuit {
     pub header_base64_len: u32,
     pub payload_left_index: u32,
     pub payload_base64_len: u32,
-    pub email_addrleft_index: u32,
-    pub email_addrlen: u32,
+    pub addr_left_index: u32,
+    pub addr_len: u32,
 }
 
 impl OpenIdCircuit {
@@ -50,18 +60,16 @@ impl OpenIdCircuit {
         let header_raw_bytes = base64url_engine.decode(&header_base64_bytes).unwrap();
 
         let needle = br#""email":""#;
-        let email_addrleft_index =
-            find_subsequence(&payload_raw_bytes, needle).unwrap() + needle.len();
-        let email_addrlen =
-            find_subsequence(&payload_raw_bytes[email_addrleft_index..], br#"""#).unwrap();
+        let addr_left_index = find_subsequence(&payload_raw_bytes, needle).unwrap() + needle.len();
+        let addr_len = find_subsequence(&payload_raw_bytes[addr_left_index..], br#"""#).unwrap();
 
         let mut email_addr_pepper_bytes =
-            payload_raw_bytes[email_addrleft_index..email_addrleft_index + email_addrlen].to_vec();
+            payload_raw_bytes[addr_left_index..addr_left_index + addr_len].to_vec();
 
         email_addr_pepper_bytes.extend(from_pepper);
 
         let mut payload_pub_match = payload_raw_bytes.clone();
-        for i in email_addrleft_index..email_addrleft_index + email_addrlen {
+        for i in addr_left_index..addr_left_index + addr_len {
             payload_pub_match[i] = 0;
         }
 
@@ -76,22 +84,12 @@ impl OpenIdCircuit {
             header_base64_len,
             payload_left_index,
             payload_base64_len,
-            email_addrleft_index: email_addrleft_index as u32,
-            email_addrlen: email_addrlen as u32,
+            addr_left_index: addr_left_index as u32,
+            addr_len: addr_len as u32,
         }
     }
     pub fn synthesize(&self) -> Composer<Fr> {
         let mut cs = Composer::new(5, false);
-
-        const PAYLOAD_RAW_MAX_LEN: usize = 1152;
-        // (PAYLOAD_RAW_MAX_LEN / 3) * 4
-        const PAYLOAD_BASE64_MAX_LEN: usize = 1536;
-
-        const HEADER_RAW_MAX_LEN: usize = 384;
-        const HEADER_BASE64_MAX_LEN: usize = 512;
-
-        const ID_TOKEN_MAX_LEN: usize = 2048;
-        const EMAIL_ADDR_MAX_LEN: usize = 192;
 
         // get the id_token hash
         let id_token_padding_bytes = padding_bytes(&self.id_token_bytes);
@@ -335,14 +333,14 @@ impl OpenIdCircuit {
             .unwrap();
         }
         // start index of the email address
-        let email_addrleft_index = cs.alloc(Fr::from(self.email_addrleft_index));
+        let addr_left_index = cs.alloc(Fr::from(self.addr_left_index));
         // length of the email address
-        let email_addrlen = cs.alloc(Fr::from(self.email_addrlen));
+        let addr_len = cs.alloc(Fr::from(self.addr_len));
 
         let (bit_location_payload_raw, bit_location_email_addr) = cs
             .gen_bit_location_for_substr(
-                email_addrleft_index,
-                email_addrlen,
+                addr_left_index,
+                addr_len,
                 PAYLOAD_RAW_MAX_LEN,
                 EMAIL_ADDR_MAX_LEN,
             )
@@ -357,8 +355,8 @@ impl OpenIdCircuit {
                 &bit_location_payload_raw,
                 &bit_location_email_addr,
                 mask_r,
-                email_addrleft_index,
-                email_addrlen,
+                addr_left_index,
+                addr_len,
                 PAYLOAD_RAW_MAX_LEN,
                 EMAIL_ADDR_MAX_LEN,
             )
@@ -550,7 +548,13 @@ impl OpenIdCircuit {
 mod tests {
     use std::time::Instant;
 
-    use crate::utils::{bit_location, convert_public_inputs, padding_len, to_0x_hex};
+    use crate::{
+        circuit::openid::{
+            EMAIL_ADDR_MAX_LEN, HEADER_BASE64_MAX_LEN, ID_TOKEN_MAX_LEN, PAYLOAD_BASE64_MAX_LEN,
+            PAYLOAD_RAW_MAX_LEN,
+        },
+        utils::{bit_location, convert_public_inputs, to_0x_hex},
+    };
 
     use super::OpenIdCircuit;
     use plonk::{
@@ -642,16 +646,20 @@ mod tests {
             let (location_id_token_1, location_payload_base64) = bit_location(
                 circuit.payload_left_index,
                 circuit.payload_base64_len - 1,
-                2048,
-                1536,
+                ID_TOKEN_MAX_LEN as u32,
+                PAYLOAD_BASE64_MAX_LEN as u32,
             );
-            let (location_id_token_2, location_header_base64) =
-                bit_location(0, circuit.header_base64_len - 1, 2048, 512);
+            let (location_id_token_2, location_header_base64) = bit_location(
+                0,
+                circuit.header_base64_len - 1,
+                ID_TOKEN_MAX_LEN as u32,
+                HEADER_BASE64_MAX_LEN as u32,
+            );
             let (location_payload_raw, location_email_addr) = bit_location(
-                circuit.email_addrleft_index as u32,
-                circuit.email_addrlen as u32,
-                1152,
-                192,
+                circuit.addr_left_index as u32,
+                circuit.addr_len as u32,
+                PAYLOAD_RAW_MAX_LEN as u32,
+                EMAIL_ADDR_MAX_LEN as u32,
             );
 
             hash_inputs.extend(location_id_token_1);

@@ -16,7 +16,7 @@ pub fn get_encoded_len(input_len: usize) -> usize {
     } else if input_len % 3 == 2 {
         encoded_len += 3;
     }
-    
+
     encoded_len
 }
 
@@ -68,6 +68,13 @@ pub fn base64url_encode_gadget<F: PrimeField>(
     let base64url_index = cs.add_table(new_baseurl_chars_table());
     assert!(base64url_index != 0);
 
+    let spread2_index = cs.get_table_index(format!("spread_2bits"));
+    assert!(spread2_index != 0);
+    let spread_4_index = cs.get_table_index(format!("spread_5bits_4bits"));
+    assert!(spread_4_index != 0);
+    let spread_6_index = cs.get_table_index(format!("spread_7bits_6bits"));
+    assert!(spread_6_index != 0);
+
     for chars in input_messages.chunks(3) {
         let chars_value = cs.get_assignments(chars);
         let char1 = {
@@ -85,24 +92,28 @@ pub fn base64url_encode_gadget<F: PrimeField>(
 
         let char1_1 = char1 >> 2;
         let char1_1_var = cs.alloc(F::from(char1_1));
-        cs.enforce_range(char1_1_var, 6)?;
+        let _ = cs.read_from_table(spread_6_index, vec![char1_1_var, Composer::<F>::null()])?;
+
+
         let char1_2 = char1 & 0x3;
         let char1_2_var = cs.alloc(F::from(char1_2));
-        cs.enforce_range(char1_2_var, 2)?;
+        let _ = cs.read_from_table(spread2_index, vec![char1_2_var])?;
 
         let char2_1 = char2 >> 4;
         let char2_1_var = cs.alloc(F::from(char2_1));
-        cs.enforce_range(char2_1_var, 4)?;
+        let _ = cs.read_from_table(spread_4_index, vec![char2_1_var, Composer::<F>::null()])?;
+
         let char2_2 = char2 & 0xf;
         let char2_2_var = cs.alloc(F::from(char2_2));
-        cs.enforce_range(char2_2_var, 4)?;
+        let _ = cs.read_from_table(spread_4_index, vec![char2_2_var, Composer::<F>::null()])?;
 
         let char3_1 = char3 >> 6;
         let char3_1_var = cs.alloc(F::from(char3_1));
-        cs.enforce_range(char3_1_var, 2)?;
+        let _ = cs.read_from_table(spread2_index, vec![char3_1_var])?;
+        
         let char3_2 = char3 & 0x3f;
         let char3_2_var = cs.alloc(F::from(char3_2));
-        cs.enforce_range(char3_2_var, 6)?;
+        let _ = cs.read_from_table(spread_6_index, vec![char3_2_var, Composer::<F>::null()])?;
 
         cs.poly_gate(
             vec![

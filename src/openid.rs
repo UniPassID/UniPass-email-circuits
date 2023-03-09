@@ -6,10 +6,13 @@ use plonk::kzg10::PCKey;
 use plonk::Field;
 
 use plonk::{prover::Prover, verifier::Verifier, GeneralEvaluationDomain};
-use prover::circuit::openid::OpenIdCircuit;
+use prover::circuit::openid::{
+    OpenIdCircuit, EMAIL_ADDR_MAX_LEN, HEADER_BASE64_MAX_LEN, ID_TOKEN_MAX_LEN,
+    PAYLOAD_BASE64_MAX_LEN, PAYLOAD_RAW_MAX_LEN,
+};
 use prover::parameters::{store_prover_key, store_verifier_comms};
 use prover::types::ContractOpenIdInput;
-use prover::utils::{bit_location, padding_len};
+use prover::utils::bit_location;
 use prover::utils::{convert_public_inputs, to_0x_hex};
 use rand::RngCore;
 use sha2::Digest;
@@ -40,8 +43,8 @@ pub fn test_open_id<R: RngCore>(pckey: &PCKey<Bn254>, from_pepper: &[u8], rng: &
         println!(
             "id: [{}]",
             String::from_utf8_lossy(
-                &circuit.payload_raw_bytes[circuit.email_addrleft_index as usize
-                    ..(circuit.email_addrleft_index + circuit.email_addrlen) as usize]
+                &circuit.payload_raw_bytes[circuit.addr_left_index as usize
+                    ..(circuit.addr_left_index + circuit.addr_len) as usize]
             )
         );
         let header_hash = sha2::Sha256::digest(&circuit.header_raw_bytes).to_vec();
@@ -57,19 +60,25 @@ pub fn test_open_id<R: RngCore>(pckey: &PCKey<Bn254>, from_pepper: &[u8], rng: &
         hash_inputs.extend(header_hash);
         hash_inputs.extend(payload_pub_match_hash);
 
+        println!("concat_hash: {}", to_0x_hex(&hash_inputs));
+
         let (location_id_token_1, location_payload_base64) = bit_location(
             circuit.payload_left_index,
             circuit.payload_base64_len - 1,
-            2048,
-            1536,
+            ID_TOKEN_MAX_LEN as u32,
+            PAYLOAD_BASE64_MAX_LEN as u32,
         );
-        let (location_id_token_2, location_header_base64) =
-            bit_location(0, circuit.header_base64_len - 1, 2048, 512);
+        let (location_id_token_2, location_header_base64) = bit_location(
+            0,
+            circuit.header_base64_len - 1,
+            ID_TOKEN_MAX_LEN as u32,
+            HEADER_BASE64_MAX_LEN as u32,
+        );
         let (location_payload_raw, location_email_addr) = bit_location(
-            circuit.email_addrleft_index as u32,
-            circuit.email_addrlen as u32,
-            1152,
-            192,
+            circuit.addr_left_index as u32,
+            circuit.addr_len as u32,
+            PAYLOAD_RAW_MAX_LEN as u32,
+            EMAIL_ADDR_MAX_LEN as u32,
         );
 
         hash_inputs.extend(location_id_token_1);
@@ -78,6 +87,8 @@ pub fn test_open_id<R: RngCore>(pckey: &PCKey<Bn254>, from_pepper: &[u8], rng: &
         hash_inputs.extend(location_header_base64);
         hash_inputs.extend(location_payload_raw);
         hash_inputs.extend(location_email_addr);
+
+        println!("hash_inputs: {}", to_0x_hex(&hash_inputs));
 
         let mut expected_public_input = sha2::Sha256::digest(&hash_inputs).to_vec();
         expected_public_input[0] = expected_public_input[0] & 0x1f;
@@ -163,8 +174,8 @@ pub fn test_open_id<R: RngCore>(pckey: &PCKey<Bn254>, from_pepper: &[u8], rng: &
             circuit.header_base64_len,
             circuit.payload_left_index,
             circuit.payload_base64_len,
-            circuit.email_addrleft_index,
-            circuit.email_addrlen,
+            circuit.addr_left_index,
+            circuit.addr_len,
             &public_input,
             verifier.domain,
             verifier_comms_openid.as_ref().unwrap(),

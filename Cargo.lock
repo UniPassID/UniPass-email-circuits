@@ -211,13 +211,10 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9e1b586273c5702936fe7b7d6896644d8be71e6314cfe09d3167c95f712589e8"
 
 [[package]]
-name = "block-buffer"
-version = "0.9.0"
+name = "base64"
+version = "0.21.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4152116fd6e9dadb291ae18fc1ec3575ed6d84c29642d97890f4b4a3417297e4"
-dependencies = [
- "generic-array",
-]
+checksum = "a4a4ddaa51a5bc52a6948f74c06d20aaaddb71924eab79b8c97a8c556e942d6a"
 
 [[package]]
 name = "block-buffer"
@@ -322,7 +319,7 @@ version = "0.10.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "adfbc57365a37acbd2ebf2b64d7e69bb766e2fea813521ed536f5d0520dcf86c"
 dependencies = [
- "block-buffer 0.10.3",
+ "block-buffer",
  "crypto-common",
 ]
 
@@ -342,7 +339,7 @@ dependencies = [
  "hexlit",
  "serde",
  "serde_json",
- "sha2 0.9.9",
+ "sha2",
  "thiserror",
 ]
 
@@ -351,7 +348,7 @@ name = "email-rs"
 version = "0.1.0"
 source = "git+https://github.com/sking789/email-rs.git?branch=multi-dkim-header#9991035d76caf894b9b43a06b35dbecf7d281ef8"
 dependencies = [
- "base64",
+ "base64 0.13.1",
  "quoted_printable",
 ]
 
@@ -489,12 +486,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "86f0b0d4bf799edbc74508c1e8bf170ff5f41238e5f8225603ca7caaae2b7860"
 
 [[package]]
-name = "opaque-debug"
-version = "0.3.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "624a8340c38c1b80fd549087862da4ba43e08858af025b236e509b6649fc13d5"
-
-[[package]]
 name = "paste"
 version = "1.0.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -532,7 +523,7 @@ dependencies = [
  "num-bigint",
  "rand_core",
  "rayon",
- "sha2 0.10.6",
+ "sha2",
  "sha3",
 ]
 
@@ -556,12 +547,14 @@ name = "prover"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "base64 0.21.0",
  "email-parser",
  "hex",
  "log",
  "plonk",
  "serde",
  "serde_json",
+ "sha2",
  "thiserror",
 ]
 
@@ -705,19 +698,6 @@ dependencies = [
 
 [[package]]
 name = "sha2"
-version = "0.9.9"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4d58a1e1bf39749807d89cf2d98ac2dfa0ff1cb3faa38fbb64dd88ac8013d800"
-dependencies = [
- "block-buffer 0.9.0",
- "cfg-if",
- "cpufeatures",
- "digest 0.9.0",
- "opaque-debug",
-]
-
-[[package]]
-name = "sha2"
 version = "0.10.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "82e6b795fe2e3b1e845bafcb27aa35405c4d47cdfc92af5fc8d3002f76cebdc0"
@@ -850,6 +830,7 @@ checksum = "f962df74c8c05a667b5ee8bcf162993134c104e96440b663c8daa176dc772d8c"
 name = "unipass-examples"
 version = "0.1.0"
 dependencies = [
+ "base64 0.21.0",
  "email-parser",
  "hex",
  "num-bigint",
@@ -858,7 +839,7 @@ dependencies = [
  "rand",
  "serde",
  "serde_json",
- "sha2 0.9.9",
+ "sha2",
  "sha3",
 ]
 

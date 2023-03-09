@@ -1,5 +1,5 @@
 use serde::{de, Deserialize, Serialize, Serializer};
-use sha2::{Digest, Sha256};
+use sha2::{digest::Update, Digest, Sha256};
 
 #[derive(Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]

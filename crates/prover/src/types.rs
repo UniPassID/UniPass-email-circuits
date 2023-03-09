@@ -92,64 +92,23 @@ impl ContractInput {
 }
 
 #[derive(Clone, Serialize, Deserialize)]
+pub struct Bytes(
+    #[serde(
+        deserialize_with = "deserialize_hex_string",
+        serialize_with = "serialize_hex_string"
+    )]
+    Vec<u8>,
+);
+
+#[derive(Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ContractTripleInput {
-    #[serde(
-        deserialize_with = "deserialize_hex_string",
-        serialize_with = "serialize_hex_string"
-    )]
-    pub first_header_hash: Vec<u8>,
-    #[serde(
-        deserialize_with = "deserialize_hex_string",
-        serialize_with = "serialize_hex_string"
-    )]
-    pub first_addr_hash: Vec<u8>,
-    #[serde(
-        deserialize_with = "deserialize_hex_string",
-        serialize_with = "serialize_hex_string"
-    )]
-    pub first_header_pub_match: Vec<u8>,
-    pub first_header_len: u32,
-    pub first_from_left_index: u32,
-    pub first_from_len: u32,
-
-    #[serde(
-        deserialize_with = "deserialize_hex_string",
-        serialize_with = "serialize_hex_string"
-    )]
-    pub second_header_hash: Vec<u8>,
-    #[serde(
-        deserialize_with = "deserialize_hex_string",
-        serialize_with = "serialize_hex_string"
-    )]
-    pub second_addr_hash: Vec<u8>,
-    #[serde(
-        deserialize_with = "deserialize_hex_string",
-        serialize_with = "serialize_hex_string"
-    )]
-    pub second_header_pub_match: Vec<u8>,
-    pub second_header_len: u32,
-    pub second_from_left_index: u32,
-    pub second_from_len: u32,
-
-    #[serde(
-        deserialize_with = "deserialize_hex_string",
-        serialize_with = "serialize_hex_string"
-    )]
-    pub third_header_hash: Vec<u8>,
-    #[serde(
-        deserialize_with = "deserialize_hex_string",
-        serialize_with = "serialize_hex_string"
-    )]
-    pub third_addr_hash: Vec<u8>,
-    #[serde(
-        deserialize_with = "deserialize_hex_string",
-        serialize_with = "serialize_hex_string"
-    )]
-    pub third_header_pub_match: Vec<u8>,
-    pub third_header_len: u32,
-    pub third_from_left_index: u32,
-    pub third_from_len: u32,
+    pub header_hashs: Vec<Bytes>,
+    pub addr_hashs: Vec<Bytes>,
+    pub header_pub_matches: Vec<Bytes>,
+    pub header_lens: Vec<u32>,
+    pub from_left_indexes: Vec<u32>,
+    pub from_lens: Vec<u32>,
 
     #[serde(
         deserialize_with = "deserialize_hex_string",
@@ -173,26 +132,13 @@ pub struct ContractTripleInput {
 
 impl ContractTripleInput {
     pub fn new<F: PrimeField, D: Domain<F>, E: PairingEngine>(
-        first_header_hash: Vec<u8>,
-        first_addr_hash: Vec<u8>,
-        first_header_pub_match: Vec<u8>,
-        first_header_len: u32,
-        first_from_left_index: u32,
-        first_from_len: u32,
+        header_hashs: Vec<Vec<u8>>,
+        addr_hashs: Vec<Vec<u8>>,
+        header_pub_matches: Vec<Vec<u8>>,
+        header_lens: Vec<u32>,
+        from_left_indexes: Vec<u32>,
+        from_lens: Vec<u32>,
 
-        second_header_hash: Vec<u8>,
-        second_addr_hash: Vec<u8>,
-        second_header_pub_match: Vec<u8>,
-        second_header_len: u32,
-        second_from_left_index: u32,
-        second_from_len: u32,
-
-        third_header_hash: Vec<u8>,
-        third_addr_hash: Vec<u8>,
-        third_header_pub_match: Vec<u8>,
-        third_header_len: u32,
-        third_from_left_index: u32,
-        third_from_len: u32,
         public_inputs: &[F],
         domain: D,
         verifier_comms: &Vec<Commitment<E>>,
@@ -212,26 +158,122 @@ impl ContractTripleInput {
         let proof_data = convert_proof(proof);
         let public_inputs = convert_public_inputs(public_inputs);
         Self {
-            first_header_hash,
-            first_addr_hash,
-            first_header_pub_match,
-            first_header_len,
-            first_from_left_index,
-            first_from_len,
+            header_hashs: header_hashs
+                .into_iter()
+                .map(|header_hash| Bytes(header_hash))
+                .collect(),
+            addr_hashs: addr_hashs
+                .into_iter()
+                .map(|addr_hash| Bytes(addr_hash))
+                .collect(),
+            header_pub_matches: header_pub_matches
+                .into_iter()
+                .map(|header_pub_match| Bytes(header_pub_match))
+                .collect(),
+            header_lens,
+            from_left_indexes,
+            from_lens,
+            public_inputs_num,
+            domain_size,
+            vk_data,
+            public_inputs,
+            proof: proof_data,
+            srs_hash: srs_hash.clone(),
+        }
+    }
+}
 
-            second_header_hash,
-            second_addr_hash,
-            second_header_pub_match,
-            second_header_len,
-            second_from_left_index,
-            second_from_len,
+#[derive(Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ContractOpenIdInput {
+    #[serde(
+        deserialize_with = "deserialize_hex_string",
+        serialize_with = "serialize_hex_string"
+    )]
+    pub header_raw_bytes: Vec<u8>,
+    #[serde(
+        deserialize_with = "deserialize_hex_string",
+        serialize_with = "serialize_hex_string"
+    )]
+    pub payload_pub_match: Vec<u8>,
+    #[serde(
+        deserialize_with = "deserialize_hex_string",
+        serialize_with = "serialize_hex_string"
+    )]
+    pub idtoken_hash: Vec<u8>,
+    #[serde(
+        deserialize_with = "deserialize_hex_string",
+        serialize_with = "serialize_hex_string"
+    )]
+    pub addr_hash: Vec<u8>,
+    pub header_left_index: u32,
+    pub header_base64_len: u32,
+    pub payload_left_index: u32,
+    pub payload_base64_len: u32,
+    pub addr_left_index: u32,
+    pub addr_len: u32,
+    #[serde(
+        deserialize_with = "deserialize_hex_string",
+        serialize_with = "serialize_hex_string"
+    )]
+    pub public_inputs_num: Vec<u8>,
+    #[serde(
+        deserialize_with = "deserialize_hex_string",
+        serialize_with = "serialize_hex_string"
+    )]
+    pub domain_size: Vec<u8>,
+    pub vk_data: Vec<String>,
+    pub public_inputs: Vec<String>,
+    pub proof: Vec<String>,
+    #[serde(
+        deserialize_with = "deserialize_hex_string",
+        serialize_with = "serialize_hex_string"
+    )]
+    pub srs_hash: Vec<u8>,
+}
 
-            third_header_hash,
-            third_addr_hash,
-            third_header_pub_match,
-            third_header_len,
-            third_from_left_index,
-            third_from_len,
+impl ContractOpenIdInput {
+    pub fn new<F: PrimeField, D: Domain<F>, E: PairingEngine>(
+        header_raw_bytes: Vec<u8>,
+        payload_pub_match: Vec<u8>,
+        idtoken_hash: Vec<u8>,
+        addr_hash: Vec<u8>,
+        header_left_index: u32,
+        header_base64_len: u32,
+        payload_left_index: u32,
+        payload_base64_len: u32,
+        addr_left_index: u32,
+        addr_len: u32,
+
+        public_inputs: &[F],
+        domain: D,
+        verifier_comms: &Vec<Commitment<E>>,
+        g2x: E::G2Affine,
+        proof: &Proof<F, E>,
+        srs_hash: &Vec<u8>,
+    ) -> Self {
+        // domain size
+        let v0_domainsize = BigInteger128::from(domain.size() as u64);
+        let domain_size = v0_domainsize.to_bytes_be();
+
+        // publicinput number
+        let public_inputs_num = BigInteger128::from(public_inputs.len() as u64);
+        let public_inputs_num = public_inputs_num.to_bytes_be();
+
+        let vk_data = convert_vk_data(domain, verifier_comms, g2x);
+        let proof_data = convert_proof(proof);
+        let public_inputs = convert_public_inputs(public_inputs);
+        Self {
+            header_raw_bytes,
+            payload_pub_match,
+            idtoken_hash,
+            addr_hash,
+            header_left_index,
+            header_base64_len,
+            payload_left_index,
+            payload_base64_len,
+            addr_left_index,
+            addr_len,
             public_inputs_num,
             domain_size,
             vk_data,

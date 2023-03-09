@@ -1,3 +1,5 @@
+use std::vec;
+
 use plonk::{
     ark_ec::PairingEngine,
     ark_ff::{BigInteger, PrimeField, ToBytes, Zero},
@@ -67,6 +69,48 @@ pub fn padding_len(input_len: u32) -> u32 {
     return input_len + padding_count + 8;
 }
 
+fn set_bit(a: u8, n: u32) -> u8 {
+    return a | (2_i32.pow(7 - n)) as u8;
+}
+
+pub fn bit_location(
+    from_left_index: u32,
+    from_len: u32,
+    max_alen: u32,
+    max_blen: u32,
+) -> (Vec<u8>, Vec<u8>) {
+    let mut bit_location_a = vec![0u8; (max_alen / 8) as usize];
+    let mut bit_location_b = vec![0u8; (max_blen / 8) as usize];
+
+    for i in 0..(from_len / 8) as usize {
+        bit_location_b[i] = 0xff;
+    }
+    for i in 0..(from_len % 8) as u32 {
+        bit_location_b[(from_len / 8) as usize] =
+            set_bit(bit_location_b[(from_len / 8) as usize], i);
+    }
+
+    let start_bytes = from_left_index / 8;
+    let mut tmp_index = 8 - (from_left_index % 8);
+    for i in 0..tmp_index {
+        bit_location_a[start_bytes as usize] =
+            set_bit(bit_location_a[start_bytes as usize], (7 - i) as u32);
+    }
+
+    tmp_index = from_len - tmp_index;
+    for i in 0..tmp_index / 8 {
+        bit_location_a[(start_bytes + 1 + i) as usize] = 0xff;
+    }
+
+    for i in 0..tmp_index % 8 {
+        bit_location_a[(start_bytes + 1 + tmp_index / 8) as usize] = set_bit(
+            bit_location_a[(start_bytes + 1 + tmp_index / 8) as usize],
+            i,
+        );
+    }
+    return (bit_location_a, bit_location_b);
+}
+
 pub fn convert_public_inputs<F: PrimeField>(public_input: &[F]) -> Vec<String> {
     let mut res = vec![];
     for e in public_input {
@@ -99,6 +143,18 @@ pub fn convert_sha256words<F: PrimeField>(input: &[F]) -> String {
     for e in input {
         let a = e.into_repr();
         for (_i, v) in a.to_bytes_be().iter().skip(28).enumerate() {
+            output.push_str(&format!("{:02x}", *v));
+        }
+    }
+
+    return output;
+}
+
+pub fn convert_bytes<F: PrimeField>(input: &[F]) -> String {
+    let mut output = String::from("0x");
+    for e in input {
+        let a = e.into_repr();
+        for (_i, v) in a.to_bytes_be().iter().skip(31).enumerate() {
             output.push_str(&format!("{:02x}", *v));
         }
     }

@@ -205,7 +205,6 @@ X-Coremail-Antispam: 1U5529EdanIXcx71UUUUU7vcSsGvfC2KfnxnUU==
         panic!("Public input error")
     }
 
-    return;
     println!(
         "[main] public input: {:?}",
         convert_public_inputs(&public_input)

@@ -295,9 +295,6 @@ impl<F: Field> Composer<F> {
             return;
         };
 
-        // handle eq constraints
-        self.handle_eq_constraints();
-
         let input_size = self.input_size();
         self.size += input_size;
 
@@ -315,6 +312,9 @@ impl<F: Field> Composer<F> {
                 self.epicycles[Self::null().0].push(Wire::new(col, i));
             }
         }
+
+        // handle eq constraints
+        self.handle_eq_constraints();
 
         let mut wires = Map::new();
         //put PI at the front of w_0, q0 must be 1 and other 'q' must be 0.

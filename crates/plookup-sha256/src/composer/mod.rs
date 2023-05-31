@@ -49,17 +49,6 @@ pub struct SimpleUnionFind {
 }
 
 impl SimpleUnionFind {
-    pub fn new(initsize: usize) -> Self {
-        let mut disjoint = vec![0usize; initsize];
-        let rank = vec![1usize; initsize];
-
-        for i in 0..disjoint.len() {
-            disjoint[i] = i;
-        }
-
-        SimpleUnionFind { disjoint, rank }
-    }
-
     pub fn size(&self) -> usize {
         self.disjoint.len()
     }
@@ -192,11 +181,6 @@ impl<F: Field> Composer<F> {
 
     /// const 0
     pub fn null() -> Variable {
-        Variable(1)
-    }
-
-    /// any value should be OK
-    pub fn any() -> Variable {
         Variable(0)
     }
 
@@ -611,18 +595,18 @@ mod tests {
     //     // private substring check.
     //     let (_output_words_a, _output_words_b) = cs
     //     .add_substring_mask_poly_return_words(
-    //         &a_vars, 
-    //         &b_vars, 
-    //         mask_r, 
-    //         l, 
+    //         &a_vars,
+    //         &b_vars,
+    //         mask_r,
+    //         l,
     //         m,
     //         1024,
     //         128,
     //     ).unwrap();
 
     //     cs.add_public_match_no_custom_gate(
-    //         &a_vars, 
-    //         &email_header_pubmatch_vars, 
+    //         &a_vars,
+    //         &email_header_pubmatch_vars,
     //         1024
     //     );
 

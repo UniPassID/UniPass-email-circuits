@@ -298,12 +298,11 @@ impl<F: Field> Composer<F> {
         let input_size = self.input_size();
         self.size += input_size;
 
-        for epicycle in self.epicycles.iter_mut() {
-            *epicycle = cfg_iter_mut!(epicycle)
+        self.epicycles.iter_mut().for_each(|epicycle| {
+            cfg_iter_mut!(epicycle).for_each
                 //Move all wires down 'input size' lines
-                .map(|w| Wire::new(w.col, w.row + input_size))
-                .collect()
-        }
+                (|w| *w = Wire::new(w.col, w.row + input_size))
+        });
 
         for (i, var) in self.public_input.iter().enumerate() {
             self.epicycles[var.0].push(Wire::new(0, i));
@@ -316,30 +315,27 @@ impl<F: Field> Composer<F> {
         // handle eq constraints
         self.handle_eq_constraints();
 
-        let mut wires = Map::new();
+        let public_input = self.public_input.clone();
         //put PI at the front of w_0, q0 must be 1 and other 'q' must be 0.
-        for (label, wire) in self.wires.iter_mut() {
+        self.wires.iter_mut().for_each(|(label, wire)| {
             let mut vars = if label == "w_0" {
-                self.public_input.clone()
+                public_input.clone()
             } else {
                 vec![Self::null(); input_size]
             };
             vars.append(wire);
-            wires.insert(label.to_string(), vars);
-        }
-        self.wires = wires;
+            std::mem::swap(wire, &mut vars)
+        });
 
-        let mut selectors = Map::new();
-        for (label, selector) in self.selectors.iter_mut() {
+        self.selectors.iter_mut().for_each(|(label, selector)| {
             let mut values = if label == "q_0" {
                 vec![F::one(); input_size]
             } else {
                 vec![F::zero(); input_size]
             };
             values.append(selector);
-            selectors.insert(label.to_string(), values);
-        }
-        self.selectors = selectors;
+            std::mem::swap(selector, &mut values)
+        });
 
         self.is_finalized = true;
     }

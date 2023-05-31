@@ -8,7 +8,7 @@ use plonk::Field;
 use email_parser::parser::parse_email;
 use plonk::{prover::Prover, verifier::Verifier, GeneralEvaluationDomain};
 use prover::circuit::circuit_1024::Email1024CircuitInput;
-use prover::parameters::{prepare_generic_params, store_prover_key, store_verifier_comms};
+use prover::parameters::prepare_generic_params;
 use prover::types::ContractInput;
 use prover::utils::{bit_location, padding_len};
 use prover::utils::{convert_public_inputs, to_0x_hex};
@@ -69,7 +69,7 @@ fn test_1024() {
         sha256_input.extend(bit_location_b);
         sha256_input.extend(sha2::Sha256::digest(&circuit.email_header_pub_match).to_vec());
         sha256_input.extend((padding_len(header_len) as u16 / 64).to_be_bytes());
-        sha256_input.extend((padding_len(addr_len) as u16 / 64).to_be_bytes());
+        sha256_input.extend((padding_len(addr_len + 32) as u16 / 64).to_be_bytes());
 
         let mut expected_public_input = sha2::Sha256::digest(&sha256_input).to_vec();
         expected_public_input[0] = expected_public_input[0] & 0x1f;
@@ -98,8 +98,6 @@ fn test_1024() {
                 cs.compute_prover_key::<GeneralEvaluationDomain<Fr>>()
                     .unwrap(),
             );
-
-            store_prover_key(pk_1024.as_ref().clone().unwrap(), "email_1024.pk").unwrap();
         }
         println!("[main] compute_prover_key...done");
         let mut prover = Prover::<Fr, GeneralEvaluationDomain<Fr>, Bn254>::new(
@@ -108,11 +106,6 @@ fn test_1024() {
         println!("[main] init_comms...");
         if verifier_comms_1024.is_none() {
             verifier_comms_1024 = Some(prover.init_comms(&pckey));
-            store_verifier_comms(
-                verifier_comms_1024.as_ref().clone().unwrap(),
-                "email_1024.vc",
-            )
-            .unwrap();
         } else {
             // if already exists, no need "init_comms"
             prover.insert_verifier_comms(verifier_comms_1024.as_ref().unwrap());

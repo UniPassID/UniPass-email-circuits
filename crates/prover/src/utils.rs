@@ -93,8 +93,7 @@ pub fn bit_location(
     let start_bytes = from_left_index / 8;
     let mut tmp_index = 8 - (from_left_index % 8);
     for i in 0..tmp_index {
-        bit_location_a[start_bytes as usize] =
-            set_bit(bit_location_a[start_bytes as usize], 7 - i);
+        bit_location_a[start_bytes as usize] = set_bit(bit_location_a[start_bytes as usize], 7 - i);
     }
 
     tmp_index = from_len - tmp_index;

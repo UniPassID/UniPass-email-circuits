@@ -10,7 +10,7 @@ use prover::circuit::openid::{
     OpenIdCircuit, EMAIL_ADDR_MAX_LEN, HEADER_BASE64_MAX_LEN, ID_TOKEN_MAX_LEN,
     PAYLOAD_BASE64_MAX_LEN, PAYLOAD_RAW_MAX_LEN,
 };
-use prover::parameters::{store_prover_key, store_verifier_comms, prepare_generic_params};
+use prover::parameters::{prepare_generic_params, store_prover_key, store_verifier_comms};
 use prover::types::ContractOpenIdInput;
 use prover::utils::bit_location;
 use prover::utils::{convert_public_inputs, to_0x_hex};
@@ -137,11 +137,8 @@ fn test_open_id() {
         println!("[main] init_comms...");
         if verifier_comms_openid.is_none() {
             verifier_comms_openid = Some(prover.init_comms(&pckey));
-            store_verifier_comms(
-                verifier_comms_openid.as_ref().unwrap(),
-                "email_openid.vc",
-            )
-            .unwrap();
+            store_verifier_comms(verifier_comms_openid.as_ref().unwrap(), "email_openid.vc")
+                .unwrap();
         } else {
             // if already exists, no need "init_comms"
             prover.insert_verifier_comms(verifier_comms_openid.as_ref().unwrap());

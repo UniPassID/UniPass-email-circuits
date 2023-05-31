@@ -21,9 +21,7 @@ impl PubMatchWidget {
         assert!(program_width >= 4);
         Self {
             program_width,
-            wire_labels: (0..program_width)
-                .map(|i| format!("w_{}", i))
-                .collect(),
+            wire_labels: (0..program_width).map(|i| format!("w_{}", i)).collect(),
         }
     }
 }

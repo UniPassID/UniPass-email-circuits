@@ -8,7 +8,7 @@ use plonk::Field;
 use email_parser::parser::parse_email;
 use plonk::{prover::Prover, verifier::Verifier, GeneralEvaluationDomain};
 use prover::circuit::circuit_2048::Email2048CircuitInput;
-use prover::parameters::{prepare_generic_params};
+use prover::parameters::prepare_generic_params;
 use prover::types::ContractInput;
 use prover::utils::{bit_location, padding_len};
 use prover::utils::{convert_public_inputs, to_0x_hex};
@@ -66,7 +66,7 @@ fn test_2048() {
         sha256_input.extend(bit_location_b);
         sha256_input.extend(sha2::Sha256::digest(&circuit.email_header_pub_match).to_vec());
         sha256_input.extend((padding_len(header_len) as u16 / 64).to_be_bytes());
-        sha256_input.extend((padding_len(addr_len+ 32) as u16 / 64).to_be_bytes());
+        sha256_input.extend((padding_len(addr_len + 32) as u16 / 64).to_be_bytes());
 
         let mut expected_public_input = sha2::Sha256::digest(&sha256_input).to_vec();
         expected_public_input[0] &= 0x1f;

@@ -158,18 +158,9 @@ impl ContractTripleInput {
         let proof_data = convert_proof(proof);
         let public_inputs = convert_public_inputs(public_inputs);
         Self {
-            header_hashs: header_hashs
-                .into_iter()
-                .map(Bytes)
-                .collect(),
-            addr_hashs: addr_hashs
-                .into_iter()
-                .map(Bytes)
-                .collect(),
-            header_pub_matches: header_pub_matches
-                .into_iter()
-                .map(Bytes)
-                .collect(),
+            header_hashs: header_hashs.into_iter().map(Bytes).collect(),
+            addr_hashs: addr_hashs.into_iter().map(Bytes).collect(),
+            header_pub_matches: header_pub_matches.into_iter().map(Bytes).collect(),
             header_lens,
             from_left_indexes,
             from_lens,

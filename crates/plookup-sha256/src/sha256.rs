@@ -737,8 +737,8 @@ impl Sha256sigma0form {
             cs.poly_gate_with_next(
                 vec![
                     (a, F::one()),
-                    (b, F::from(8_u64)),   //2^(3)
-                    (c, F::from(128_u64)), //2^(3+4)
+                    (b, F::from(8_u64)),      //2^(3)
+                    (c, F::from(128_u64)),    //2^(3+4)
                     (d, F::from(1u64 << 18)), //2^(3+4+11)
                 ],
                 F::zero(),
@@ -750,8 +750,8 @@ impl Sha256sigma0form {
                 vec![
                     (word.var, -F::one()),
                     (a, F::one()),
-                    (b, F::from(8_u64)),   //2^(3)
-                    (c, F::from(128_u64)), //2^(3+4)
+                    (b, F::from(8_u64)),      //2^(3)
+                    (c, F::from(128_u64)),    //2^(3+4)
                     (d, F::from(1u64 << 18)), //2^(3+4+11)
                 ],
                 F::zero(),
@@ -1023,9 +1023,9 @@ impl Sha256sigma1form {
             cs.poly_gate_with_next(
                 vec![
                     (a, F::one()),
-                    (b, F::from(1024_u64)), //2^(10)
-                    (c, F::from(1u64 << 17)),  //2^(10+7)
-                    (d, F::from(1u64 << 19)),  //2^(10+7+2)
+                    (b, F::from(1024_u64)),   //2^(10)
+                    (c, F::from(1u64 << 17)), //2^(10+7)
+                    (d, F::from(1u64 << 19)), //2^(10+7+2)
                 ],
                 F::zero(),
                 F::zero(),
@@ -1036,9 +1036,9 @@ impl Sha256sigma1form {
                 vec![
                     (word.var, -F::one()),
                     (a, F::one()),
-                    (b, F::from(1024_u64)), //2^(10)
-                    (c, F::from(1u64 << 17)),  //2^(10+7)
-                    (d, F::from(1u64 << 19)),  //2^(10+7+2)
+                    (b, F::from(1024_u64)),   //2^(10)
+                    (c, F::from(1u64 << 17)), //2^(10+7)
+                    (d, F::from(1u64 << 19)), //2^(10+7+2)
                 ],
                 F::zero(),
                 F::zero(),
@@ -1299,7 +1299,7 @@ impl Sha256sum0form {
             cs.poly_gate_with_next(
                 vec![
                     (a, F::one()),
-                    (b, F::from(4_u64)),   //2^(2)
+                    (b, F::from(4_u64)),      //2^(2)
                     (c, F::from(1u64 << 13)), //2^(11+2)
                     (d, F::from(1u64 << 22)), //2^(9+11+2)
                 ],
@@ -1312,7 +1312,7 @@ impl Sha256sum0form {
                 vec![
                     (word.var, -F::one()),
                     (a, F::one()),
-                    (b, F::from(4_u64)),   //2^(2)
+                    (b, F::from(4_u64)),      //2^(2)
                     (c, F::from(1u64 << 13)), //2^(11+2)
                     (d, F::from(1u64 << 22)), //2^(9+11+2)
                 ],
@@ -1403,7 +1403,7 @@ impl Sha256sum1form {
             cs.poly_gate_with_next(
                 vec![
                     (a, F::one()),
-                    (b, F::from(64_u64)),  //2^(6)
+                    (b, F::from(64_u64)),     //2^(6)
                     (c, F::from(1u64 << 11)), //2^(6+5)
                     (d, F::from(1u64 << 25)), //2^(6+5+14)
                 ],
@@ -1416,7 +1416,7 @@ impl Sha256sum1form {
                 vec![
                     (word.var, -F::one()),
                     (a, F::one()),
-                    (b, F::from(64_u64)),  //2^(6)
+                    (b, F::from(64_u64)),     //2^(6)
                     (c, F::from(1u64 << 11)), //2^(6+5)
                     (d, F::from(1u64 << 25)), //2^(6+5+14)
                 ],
@@ -2146,10 +2146,7 @@ fn sha256_Ch<F: Field>(
     let oh = cs.get_assignment(Podd_hi_spread[0]);
     let ol = cs.get_assignment(Podd_low_spread[0]);
     assert_eq!(
-        P - eh * F::from(1u64 << 32)
-            - el
-            - oh * F::from(1u64 << 33)
-            - ol * F::from(2_u64),
+        P - eh * F::from(1u64 << 32) - el - oh * F::from(1u64 << 33) - ol * F::from(2_u64),
         F::zero()
     );
 

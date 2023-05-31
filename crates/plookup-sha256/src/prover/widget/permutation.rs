@@ -21,12 +21,8 @@ impl<'a> PermutationWidget {
     pub fn new(program_width: usize) -> Self {
         Self {
             program_width,
-            wire_labels: (0..program_width)
-                .map(|i| format!("w_{}", i))
-                .collect(),
-            sigma_labels: (0..program_width)
-                .map(|i| format!("sigma_{}", i))
-                .collect(),
+            wire_labels: (0..program_width).map(|i| format!("w_{}", i)).collect(),
+            sigma_labels: (0..program_width).map(|i| format!("sigma_{}", i)).collect(),
         }
     }
 }

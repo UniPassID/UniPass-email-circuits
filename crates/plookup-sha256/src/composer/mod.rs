@@ -161,8 +161,6 @@ impl<F: Field> Composer<F> {
 
     /// alloc a variable
     pub fn alloc(&mut self, value: F) -> Variable {
-        
-
         self.alloc_variable(value)
     }
 

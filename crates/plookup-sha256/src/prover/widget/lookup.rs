@@ -22,15 +22,11 @@ impl LookupWidget {
     pub fn new(program_width: usize) -> Self {
         Self {
             program_width,
-            wire_labels: (0..program_width)
-                .map(|i| format!("w_{}", i))
-                .collect(),
+            wire_labels: (0..program_width).map(|i| format!("w_{}", i)).collect(),
             table_column_labels: (0..program_width + 1)
                 .map(|i| format!("table_{}", i))
                 .collect(),
-            sorted_list_labels: (0..program_width + 1)
-                .map(|i| format!("s_{}", i))
-                .collect(),
+            sorted_list_labels: (0..program_width + 1).map(|i| format!("s_{}", i)).collect(),
         }
     }
 }

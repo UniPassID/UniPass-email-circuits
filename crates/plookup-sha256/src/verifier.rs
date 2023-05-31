@@ -169,8 +169,7 @@ impl<F: Field, D: Domain<F>, E: PairingEngine> Verifier<F, D, E> {
 
         // step 2
         trans.update_with_g1::<E>(&proof.commitment2.0);
-        self.commitments
-            .insert("s".to_string(), proof.commitment2);
+        self.commitments.insert("s".to_string(), proof.commitment2);
         let beta = trans.generate_challenge::<F>();
         let gamma = trans.generate_challenge::<F>();
 
@@ -503,7 +502,6 @@ impl<F: Field, D: Domain<F>, E: PairingEngine> Verifier<F, D, E> {
                 comb *= v;
             }
 
-            
             Commitment::<E>(cal_Wz_comm.into_affine())
         };
         //combined evaluations at zeta. fixed order
@@ -525,7 +523,6 @@ impl<F: Field, D: Domain<F>, E: PairingEngine> Verifier<F, D, E> {
                 comb *= v;
             }
 
-            
             Commitment::<E>(cal_wx_comm.into_affine())
         };
         //combined evaluations at omega_zeta. fixed order

@@ -466,7 +466,6 @@ impl<'a, F: Field, D: Domain<F>, E: PairingEngine> Prover<F, D, E> {
 
             let vi = self.get_coset_values("vi")?;
             cfg_iter_mut!(quotient).zip(vi).for_each(|(q, v)| *q *= v);
-            
 
             DensePolynomial::from_coefficients_vec(self.coset.coset_ifft(&quotient))
         };

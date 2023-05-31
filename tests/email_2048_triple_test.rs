@@ -543,11 +543,7 @@ X-MS-Exchange-Transport-CrossTenantHeadersStamped: OS3P286MB2152
     if verifier_comms_2048.is_none() {
         verifier_comms_2048 = Some(prover.init_comms(&pckey));
 
-        store_verifier_comms(
-            verifier_comms_2048.as_ref().unwrap(),
-            "email_2048triple.vc",
-        )
-        .unwrap();
+        store_verifier_comms(verifier_comms_2048.as_ref().unwrap(), "email_2048triple.vc").unwrap();
     } else {
         // if already exists, no need "init_comms"
         prover.insert_verifier_comms(verifier_comms_2048.as_ref().unwrap());

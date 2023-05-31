@@ -115,7 +115,6 @@ impl<E: PairingEngine> PCKey<E> {
             max_degree: self.max_degree,
         };
 
-        
         PCKey::<E> {
             powers: new_powers_of_g,
             max_degree: self.max_degree,
@@ -127,8 +126,6 @@ impl<E: PairingEngine> PCKey<E> {
         &self,
         polynomials: &[DensePolynomial<F>],
     ) -> Vec<Commitment<E>> {
-        
-
         cfg_into_iter!(polynomials)
             .map(|p| self.commit_one(p))
             .collect()
@@ -149,7 +146,6 @@ impl<E: PairingEngine> PCKey<E> {
 
         let commitment = VariableBaseMSM::multi_scalar_mul(&self.powers, &coeffs_bignum);
 
-        
         Commitment::<E>(commitment.into_affine())
     }
 
@@ -178,8 +174,6 @@ impl<E: PairingEngine> PCKey<E> {
         let coeffs_bignum = convert_to_bigints(&witness_polynomial.coeffs);
 
         let commitment = VariableBaseMSM::multi_scalar_mul(&self.powers, &coeffs_bignum);
-
-        
 
         Commitment::<E>(commitment.into_affine())
     }

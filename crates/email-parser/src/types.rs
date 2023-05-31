@@ -78,10 +78,7 @@ impl PrivateInputs {
         let from_hash = {
             let hasher = Sha256::default();
             let hasher = hasher
-                .chain(
-                    &self.email_header
-                        [self.from_left_index..self.from_right_index + 1],
-                )
+                .chain(&self.email_header[self.from_left_index..self.from_right_index + 1])
                 .chain(&self.from_pepper);
 
             hasher.finalize().to_vec()
@@ -90,17 +87,13 @@ impl PrivateInputs {
             header_hash,
             from_hash,
             subject: String::from_utf8(
-                self.email_header
-                    [self.subject_index + 8..self.subject_right_index]
-                    .to_vec(),
+                self.email_header[self.subject_index + 8..self.subject_right_index].to_vec(),
             )?,
             selector: String::from_utf8(
-                self.email_header[self.selector_index..self.selector_right_index]
-                    .to_vec(),
+                self.email_header[self.selector_index..self.selector_right_index].to_vec(),
             )?,
             sdid: String::from_utf8(
-                self.email_header[self.sdid_index..self.sdid_right_index]
-                    .to_vec(),
+                self.email_header[self.sdid_index..self.sdid_right_index].to_vec(),
             )?,
         })
     }

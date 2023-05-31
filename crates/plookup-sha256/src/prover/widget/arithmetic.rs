@@ -20,12 +20,8 @@ impl<'a> ArithmeticWidget {
     pub fn new(program_width: usize) -> Self {
         assert!(program_width >= 3);
         Self {
-            wire_labels: (0..program_width)
-                .map(|i| format!("w_{}", i))
-                .collect(),
-            scaling_labels: (0..program_width)
-                .map(|i| format!("q_{}", i))
-                .collect(),
+            wire_labels: (0..program_width).map(|i| format!("w_{}", i)).collect(),
+            scaling_labels: (0..program_width).map(|i| format!("q_{}", i)).collect(),
         }
     }
 }

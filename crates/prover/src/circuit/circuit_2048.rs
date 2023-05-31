@@ -55,7 +55,9 @@ impl Email2048CircuitInput {
                 if i >= private_inputs.subject_index && i < private_inputs.subject_right_index {
                     continue;
                 }
-            } else if i >= private_inputs.subject_index - 2 && i < private_inputs.subject_right_index {
+            } else if i >= private_inputs.subject_index - 2
+                && i < private_inputs.subject_right_index
+            {
                 continue;
             }
 

@@ -7,6 +7,9 @@ use crate::{
 };
 
 fn find_subsequence(haystack: &[u8], needle: &[u8]) -> Option<usize> {
+    if needle.is_empty() {
+        return None;
+    }
     haystack
         .windows(needle.len())
         .position(|window| window == needle)

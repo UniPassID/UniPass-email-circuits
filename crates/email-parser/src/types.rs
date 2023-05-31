@@ -1,6 +1,8 @@
 use serde::{de, Deserialize, Serialize, Serializer};
 use sha2::{digest::Update, Digest, Sha256};
 
+use crate::error::ParserError;
+
 #[derive(Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct DkimParams {
@@ -70,6 +72,38 @@ impl PrivateInputs {
             sdid_right_index: params.sdid_right_index,
         };
     }
+
+    pub fn to_public(&self) -> Result<PublicInputs, ParserError> {
+        let header_hash = Sha256::digest(&self.email_header).to_vec();
+        let from_hash = {
+            let hasher = Sha256::default();
+            let hasher = hasher
+                .chain(
+                    &self.email_header
+                        [self.from_left_index as usize..self.from_right_index as usize + 1],
+                )
+                .chain(&self.from_pepper);
+
+            hasher.finalize().to_vec()
+        };
+        Ok(PublicInputs {
+            header_hash,
+            from_hash,
+            subject: String::from_utf8(
+                self.email_header
+                    [self.subject_index as usize + 8..self.subject_right_index as usize]
+                    .to_vec(),
+            )?,
+            selector: String::from_utf8(
+                self.email_header[self.selector_index as usize..self.selector_right_index as usize]
+                    .to_vec(),
+            )?,
+            sdid: String::from_utf8(
+                self.email_header[self.sdid_index as usize..self.sdid_right_index as usize]
+                    .to_vec(),
+            )?,
+        })
+    }
 }
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -88,42 +122,6 @@ pub struct PublicInputs {
     pub subject: String,
     pub selector: String,
     pub sdid: String,
-}
-
-impl From<&PrivateInputs> for PublicInputs {
-    fn from(private: &PrivateInputs) -> PublicInputs {
-        let header_hash = Sha256::digest(&private.email_header).to_vec();
-        let from_hash = {
-            let hasher = Sha256::default();
-            let hasher = hasher
-                .chain(
-                    &private.email_header
-                        [private.from_left_index as usize..private.from_right_index as usize + 1],
-                )
-                .chain(&private.from_pepper);
-
-            hasher.finalize().to_vec()
-        };
-        PublicInputs {
-            header_hash,
-            from_hash,
-            subject: String::from_utf8_lossy(
-                &private.email_header
-                    [private.subject_index as usize + 8..private.subject_right_index as usize],
-            )
-            .to_string(),
-            selector: String::from_utf8_lossy(
-                &private.email_header
-                    [private.selector_index as usize..private.selector_right_index as usize],
-            )
-            .to_string(),
-            sdid: String::from_utf8_lossy(
-                &private.email_header
-                    [private.sdid_index as usize..private.sdid_right_index as usize],
-            )
-            .to_string(),
-        }
-    }
 }
 
 pub fn deserialize_hex_string<'de, D>(deserializer: D) -> Result<Vec<u8>, D::Error>

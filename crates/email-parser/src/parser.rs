@@ -109,7 +109,7 @@ fn parse_header(
         sdid_right_index,
     };
 
-    let public_input: PublicInputs = (&private_input).into();
+    let public_input: PublicInputs = (&private_input).to_public()?;
 
     return Ok((public_input, private_input));
 }

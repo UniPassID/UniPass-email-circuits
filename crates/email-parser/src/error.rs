@@ -1,3 +1,5 @@
+use std::string::FromUtf8Error;
+
 /// Error thrown by the server.
 #[derive(Debug, thiserror::Error)]
 pub enum ParserError {
@@ -9,6 +11,8 @@ pub enum ParserError {
     SpecificError(String),
     #[error("dkim error: `{0}`")]
     DkimParsingError(String),
+    #[error(transparent)]
+    FromUtf8Error(#[from] FromUtf8Error),
 }
 
 impl From<email_rs::dkim::DkimParsingError> for ParserError {

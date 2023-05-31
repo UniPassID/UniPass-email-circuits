@@ -2,7 +2,7 @@ use std::time::Instant;
 
 use plonk::ark_bn254::{Bn254, Fr};
 use plonk::ark_serialize::Write;
-use plonk::kzg10::PCKey;
+use plonk::ark_std::test_rng;
 use plonk::Field;
 
 use plonk::{prover::Prover, verifier::Verifier, GeneralEvaluationDomain};
@@ -10,14 +10,25 @@ use prover::circuit::openid::{
     OpenIdCircuit, EMAIL_ADDR_MAX_LEN, HEADER_BASE64_MAX_LEN, ID_TOKEN_MAX_LEN,
     PAYLOAD_BASE64_MAX_LEN, PAYLOAD_RAW_MAX_LEN,
 };
-use prover::parameters::{store_prover_key, store_verifier_comms};
+use prover::parameters::{store_prover_key, store_verifier_comms, prepare_generic_params};
 use prover::types::ContractOpenIdInput;
 use prover::utils::bit_location;
 use prover::utils::{convert_public_inputs, to_0x_hex};
-use rand::RngCore;
 use sha2::Digest;
 
-pub fn test_open_id<R: RngCore>(pckey: &PCKey<Bn254>, from_pepper: &[u8], rng: &mut R) {
+#[test]
+pub fn test_open_id() {
+    println!("begin 1024 circuits tests...");
+    let mut rng = test_rng();
+    // prepare SRS
+    let pckey = prepare_generic_params(2097150, &mut rng);
+
+    println!("pckey degree: {}", pckey.max_degree());
+
+    // append 32bytes pepper
+    let pepper = "03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4";
+    let from_pepper = hex::decode(pepper).unwrap();
+
     let mut pk_openid = None;
     let mut verifier_comms_openid = None;
 
@@ -30,7 +41,7 @@ pub fn test_open_id<R: RngCore>(pckey: &PCKey<Bn254>, from_pepper: &[u8], rng: &
         println!("----------------------------------------------------------------");
         println!("test openId-{}", index);
 
-        let circuit = OpenIdCircuit::new(id_token, from_pepper);
+        let circuit = OpenIdCircuit::new(id_token, &from_pepper);
         println!(
             "header: {}",
             String::from_utf8_lossy(&circuit.header_raw_bytes)
@@ -141,7 +152,7 @@ pub fn test_open_id<R: RngCore>(pckey: &PCKey<Bn254>, from_pepper: &[u8], rng: &
 
         let prove_start = Instant::now();
         println!("[main] prove start:");
-        let proof = prover.prove(&mut cs, &pckey, rng).unwrap();
+        let proof = prover.prove(&mut cs, &pckey, &mut rng).unwrap();
         println!("[main] prove finish:");
         println!(
             "[main] prove time cost: {:?} ms",

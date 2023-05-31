@@ -2,21 +2,31 @@ use std::time::Instant;
 
 use plonk::ark_bn254::{Bn254, Fr};
 use plonk::ark_serialize::Write;
-use plonk::kzg10::PCKey;
+use plonk::ark_std::test_rng;
 use plonk::Field;
 
 use email_parser::parser::parse_email;
 use plonk::{prover::Prover, verifier::Verifier, GeneralEvaluationDomain};
 use prover::circuit::circuit_1024::Email1024CircuitInput;
-use prover::parameters::{store_verifier_comms, store_prover_key};
+use prover::parameters::{prepare_generic_params, store_prover_key, store_verifier_comms};
 use prover::types::ContractInput;
 use prover::utils::{bit_location, padding_len};
 use prover::utils::{convert_public_inputs, to_0x_hex};
-use rand::RngCore;
 use sha2::Digest;
 
+#[test]
+pub fn test_1024() {
+    println!("begin 1024 circuits tests...");
+    let mut rng = test_rng();
+    // prepare SRS
+    let pckey = prepare_generic_params(2097150, &mut rng);
 
-pub fn test_1024<R: RngCore>(pckey: &PCKey<Bn254>, from_pepper: &[u8], rng: &mut R) {
+    println!("pckey degree: {}", pckey.max_degree());
+
+    // append 32bytes pepper
+    let pepper = "03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4";
+    let from_pepper = hex::decode(pepper).unwrap();
+
     let mut pk_1024 = None;
     let mut verifier_comms_1024 = None;
 
@@ -113,7 +123,7 @@ pub fn test_1024<R: RngCore>(pckey: &PCKey<Bn254>, from_pepper: &[u8], rng: &mut
 
         let prove_start = Instant::now();
         println!("[main] prove start:");
-        let proof = prover.prove(&mut cs, &pckey, rng).unwrap();
+        let proof = prover.prove(&mut cs, &pckey, &mut rng).unwrap();
         println!("[main] prove finish:");
         println!(
             "[main] prove time cost: {:?} ms",

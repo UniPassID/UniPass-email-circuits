@@ -1,8 +1,12 @@
 /target
 /.vscode
+/emails*
+/ptau
 /email.pckey
 /emailtriple.pckey
 /email_1024.pk
 /email_1024.vc
 /email_2048.pk
 /email_2048.vc
+/email_openid.pk
+/email_openid.vc

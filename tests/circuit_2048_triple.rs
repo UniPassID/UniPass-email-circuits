@@ -2,20 +2,21 @@ use std::time::Instant;
 
 use plonk::ark_bn254::{Bn254, Fr};
 use plonk::ark_serialize::Write;
-use plonk::kzg10::PCKey;
+use plonk::ark_std::test_rng;
 use plonk::Field;
 
 use email_parser::parser::parse_email;
 use plonk::{prover::Prover, verifier::Verifier, GeneralEvaluationDomain};
 use prover::circuit::circuit_2048_triple::Email2048TripleCircuitInput;
-use prover::parameters::store_verifier_comms;
+use prover::parameters::{prepare_generic_params, store_verifier_comms};
 use prover::types::ContractTripleInput;
 use prover::utils::{bit_location, padding_len};
 use prover::utils::{convert_public_inputs, to_0x_hex};
-use rand::RngCore;
 use sha2::Digest;
 
-pub fn test_2048tri<R: RngCore>(pckey: &PCKey<Bn254>, from_pepper: &[u8], rng: &mut R) {
+
+#[test]
+pub fn test_2048tri() {
     let mut pk_2048 = None;
     let mut verifier_comms_2048 = None;
 
@@ -136,6 +137,16 @@ X-Coremail-Antispam: 1U5529EdanIXcx71UUUUU7vcSsGvfC2KfnxnUU==
 
  Unipass Test"#,
     ];
+    println!("begin 2048tri circuits tests...");
+    let mut rng = test_rng();
+    // prepare SRS
+    let pckey = prepare_generic_params(2097150, &mut rng);
+
+    println!("pckey degree: {}", pckey.max_degree());
+
+    // append 32bytes pepper
+    let pepper = "03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4";
+    let from_pepper = hex::decode(pepper).unwrap();
 
     let mut all_email_public_inputs = vec![];
     let mut all_email_private_inputs = vec![];
@@ -245,7 +256,7 @@ X-Coremail-Antispam: 1U5529EdanIXcx71UUUUU7vcSsGvfC2KfnxnUU==
 
     let prove_start = Instant::now();
     println!("[main] prove start:");
-    let proof = prover.prove(&mut cs, &pckey, rng).unwrap();
+    let proof = prover.prove(&mut cs, &pckey, &mut rng).unwrap();
     println!("[main] prove finish:");
     println!(
         "[main] prove time cost: {:?} ms",

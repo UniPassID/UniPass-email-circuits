@@ -218,9 +218,14 @@ pub(crate) fn blind_and_coset_fft<F: Field, R: Rng>(
 ) -> (Vec<F>, DensePolynomial<F>) {
     assert!(open_num > 0);
     let mut blind_coeffs = vec![F::rand(rng)];
-    for _ in 0..open_num {
+    for _ in 0..open_num - 1 {
         blind_coeffs.push(F::rand(rng));
     }
+    let mut r = F::rand(rng);
+    while r.is_zero() {
+        r = F::rand(rng);
+    }
+    blind_coeffs.push(r);
 
     let blind_polynomial =
         DensePolynomial::from_coefficients_vec(blind_coeffs).mul_by_vanishing_poly(domain);

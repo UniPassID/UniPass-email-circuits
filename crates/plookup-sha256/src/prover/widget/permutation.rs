@@ -145,6 +145,7 @@ impl<F: Field, D: Domain<F>, E: PairingEngine, R: RngCore> Widget<F, D, E, R>
         prover.remove_coset_values("sigma_1");
         prover.remove_coset_values("sigma_2");
         prover.remove_coset_values("sigma_3");
+        prover.remove_coset_values("sigma_4");
 
         Ok(())
     }

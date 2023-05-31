@@ -340,7 +340,11 @@ mod tests {
         k2: F,
         domain: &D,
     ) -> bool {
-        let k2_inv = k2.inverse().unwrap();
+        let k2_inv = if let Some(k2_inv) = k2.inverse() {
+            k2_inv
+        } else {
+            return false;
+        };
         !domain.evaluate_vanishing_polynomial(k1 * k2_inv).is_zero()
     }
 

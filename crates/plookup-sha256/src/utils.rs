@@ -107,7 +107,7 @@ pub fn gen_verify_open_zeta_omega_labels(
 /// Coset generators are factors, k1, k2, ..., by which the generator of the
 /// largest multiplicative subgroup (denoted by H) is multiplied such that
 /// we can have cosets H1, H2 ... and so on. These factors should be non-conflicting,
-/// saying that $Hi \cup Hj \neq \emptyset$.
+/// saying that $Hi \cup Hj \eq \emptyset$.
 /// The condition can be checked by a simple algorithm, i.e. ki/kj ?= \omega^a for
 /// some a, where \omega is the generator of H.
 /// See more here: https://hackmd.io/CfFCbA0TTJ6X08vHg0-9_g

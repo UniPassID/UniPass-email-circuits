@@ -1,8 +1,8 @@
 #[cfg(test)]
-mod circuit_1024;
+mod email_1024_test;
 #[cfg(test)]
-mod circuit_2048;
+mod email_2048_test;
 #[cfg(test)]
-mod circuit_2048_triple;
+mod email_2048_triple_test;
 #[cfg(test)]
-mod openid;
+mod openid_test;

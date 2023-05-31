@@ -627,7 +627,7 @@ mod tests {
         println!("pk.domain_size() {}", pk.domain_size());
         println!("compute_prover_key...done");
         let pckey = PCKey::<ark_bn254::Bn254>::setup(pk.domain_size() + pk.program_width + 6, rng);
-        println!("pckey.max_degree() {}", pckey.max_degree());
+        println!("pckey.max_degree {}", pckey.max_degree);
         let mut prover =
             prover::Prover::<Fr, GeneralEvaluationDomain<Fr>, ark_bn254::Bn254>::new(pk);
 

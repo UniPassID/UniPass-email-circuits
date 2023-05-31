@@ -23,7 +23,7 @@ fn test_open_id() {
     // prepare SRS
     let pckey = prepare_generic_params(2097150, &mut rng);
 
-    println!("pckey degree: {}", pckey.max_degree());
+    println!("pckey degree: {}", pckey.max_degree);
 
     // append 32bytes pepper
     let pepper = "03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4";

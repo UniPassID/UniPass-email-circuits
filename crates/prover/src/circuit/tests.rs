@@ -51,7 +51,7 @@ fn test_prove_verify(cs: &mut Composer<Fr>, expected_public_input: Vec<Fr>) -> R
     println!("pk.domain_size() {}", pk.domain_size());
     println!("compute_prover_key...done");
     let pckey = PCKey::<ark_bn254::Bn254>::setup(pk.domain_size() + pk.program_width + 6, rng);
-    println!("pckey.max_degree() {}", pckey.max_degree());
+    println!("pckey.max_degree {}", pckey.max_degree);
     let mut prover = prover::Prover::<Fr, GeneralEvaluationDomain<Fr>, ark_bn254::Bn254>::new(pk);
 
     println!("init_comms...");
@@ -626,7 +626,7 @@ fn test_base64url_gadget() {
     println!("pk.domain_size() {}", pk.domain_size());
     println!("compute_prover_key...done");
     let pckey = PCKey::<ark_bn254::Bn254>::setup(pk.domain_size() + pk.program_width + 6, rng);
-    println!("pckey.max_degree() {}", pckey.max_degree());
+    println!("pckey.max_degree {}", pckey.max_degree);
     let mut prover = prover::Prover::<Fr, GeneralEvaluationDomain<Fr>, ark_bn254::Bn254>::new(pk);
 
     println!("init_comms...");

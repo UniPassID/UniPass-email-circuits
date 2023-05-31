@@ -458,7 +458,7 @@ X-MS-Exchange-Transport-CrossTenantHeadersStamped: OS3P286MB2152
     // prepare SRS
     let pckey = prepare_generic_params(2097150, &mut rng);
 
-    println!("pckey degree: {}", pckey.max_degree());
+    println!("pckey degree: {}", pckey.max_degree);
 
     println!("----------------------------------------------------------------");
     println!("Test circuit 2048triple");

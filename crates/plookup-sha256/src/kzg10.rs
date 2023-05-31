@@ -198,10 +198,6 @@ impl<E: PairingEngine> PCKey<E> {
         Commitment::<E>(pi_res.into_affine())
     }
 
-    pub fn max_degree(&self) -> usize {
-        self.max_degree
-    }
-
     pub fn sha256_of_srs(&self) -> Vec<u8> {
         let mut srshasher = Sha256::new();
         for srs in &self.powers {
@@ -350,10 +346,6 @@ impl<E: PairingEngine> VKey<E> {
         }
 
         true
-    }
-
-    pub fn max_degree(&self) -> usize {
-        self.max_degree
     }
 }
 

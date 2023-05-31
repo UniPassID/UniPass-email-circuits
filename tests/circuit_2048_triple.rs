@@ -16,7 +16,7 @@ use sha2::Digest;
 
 
 #[test]
-pub fn test_2048tri() {
+fn test_2048tri() {
     let mut pk_2048 = None;
     let mut verifier_comms_2048 = None;
 

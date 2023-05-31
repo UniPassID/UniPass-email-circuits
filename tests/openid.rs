@@ -17,7 +17,7 @@ use prover::utils::{convert_public_inputs, to_0x_hex};
 use sha2::Digest;
 
 #[test]
-pub fn test_open_id() {
+fn test_open_id() {
     println!("begin 1024 circuits tests...");
     let mut rng = test_rng();
     // prepare SRS

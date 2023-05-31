@@ -19,6 +19,25 @@ pub const SHA256CONSTS: &[&str] = &[
     "748f82ee", "78a5636f", "84c87814", "8cc70208", "90befffa", "a4506ceb", "bef9a3f7", "c67178f2",
 ];
 
+fn key_to_spread(key: usize, bits: usize) -> u64 {
+    let mut key_spread = 0u64;
+
+    let mut tmp = key;
+    for i in 0..bits {
+        if tmp == 0 {
+            break;
+        }
+
+        let this_bit = tmp % 2;
+        tmp >>= 1;
+
+        if this_bit == 1 {
+            key_spread += 1 << (2 * i);
+        }
+    }
+    key_spread
+}
+
 impl<F: Field> Table<F> {
     /// used for sha256. also can be used as range constraint.
     /// reference https://zcash.github.io/halo2/design/gadgets/sha256/table16.html
@@ -31,22 +50,7 @@ impl<F: Field> Table<F> {
         let mut key_map = Map::new();
         let mut row = 0;
         for key in 0..size {
-            let mut key_spread = 0u64;
-
-            let mut tmp = key;
-            for i in 0..bits {
-                if tmp == 0 {
-                    break;
-                }
-
-                let this_bit = tmp % 2;
-                tmp >>= 1;
-
-                if this_bit == 1 {
-                    key_spread += 1 << (2 * i);
-                }
-            }
-
+            let key_spread = key_to_spread(key, bits);
             for (i, v) in vec![F::from(key as u64), F::from(key_spread)]
                 .into_iter()
                 .enumerate()
@@ -84,21 +88,7 @@ impl<F: Field> Table<F> {
         let mut key_map = Map::new();
         let mut row = 0;
         for key in 0..size {
-            let mut key_spread = 0u64;
-
-            let mut tmp = key;
-            for i in 0..bits {
-                if tmp == 0 {
-                    break;
-                }
-
-                let this_bit = tmp % 2;
-                tmp >>= 1;
-
-                if this_bit == 1 {
-                    key_spread += 1 << (2 * i);
-                }
-            }
+            let key_spread = key_to_spread(key, bits);
 
             if key < small_size {
                 for (i, v) in vec![F::from(key as u64), F::zero(), F::from(key_spread)]

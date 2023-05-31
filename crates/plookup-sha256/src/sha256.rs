@@ -326,7 +326,7 @@ pub fn sha256_chunk_words_var<F: Field>(
 
     // generate 64 words from chunk_messages
     let mut Words = vec![];
-    Words.append(&mut chunk_messages.clone().to_vec());
+    Words.extend_from_slice(chunk_messages);
     for i in 16..64 {
         let (sigma0h, sigma0l) = sha256_sigma_0(cs, &Words[i - 15])?;
         let (sigma1h, sigma1l) = sha256_sigma_1(cs, &Words[i - 2])?;
@@ -2591,7 +2591,11 @@ pub fn sha256_collect_8_outputs_to_field<F: Field>(
     let top_var = cs.alloc(top_value);
     let remainder_var = cs.alloc(top_remainder);
     cs.poly_gate(
-        vec![(sha256_hash[0], -F::one()), (top_var, F::one()), (remainder_var, F::from(1u64 << 29))],
+        vec![
+            (sha256_hash[0], -F::one()),
+            (top_var, F::one()),
+            (remainder_var, F::from(1u64 << 29)),
+        ],
         F::zero(),
         F::zero(),
     );
@@ -2620,7 +2624,11 @@ pub fn sha256_collect_8_outputs_to_field<F: Field>(
     let _ = cs.read_from_table(spread3_index, vec![remainder_var])?;
 
     cs.poly_gate(
-        vec![(top_var, -F::one()), (top_lvar, F::one()), (top_hvar, F::from(1u64 << 16))],
+        vec![
+            (top_var, -F::one()),
+            (top_lvar, F::one()),
+            (top_hvar, F::from(1u64 << 16)),
+        ],
         F::zero(),
         F::zero(),
     );

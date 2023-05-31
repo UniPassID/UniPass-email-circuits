@@ -32,10 +32,8 @@ pub fn padding_bytes(input_bytes: &[u8]) -> Vec<u8> {
     );
     let padding_count = if input_remainder < 448 {
         (448 - input_remainder) / 8
-    } else if input_remainder >= 448 {
-        (448 + 512 - input_remainder) / 8
     } else {
-        64
+        (448 + 512 - input_remainder) / 8
     };
 
     log::trace!("padding_count: {}", padding_count);
@@ -60,10 +58,8 @@ pub fn padding_len(input_len: u32) -> u32 {
     let input_remainder = (input_len * 8) % 512;
     let padding_count = if input_remainder < 448 {
         (448 - input_remainder) / 8
-    } else if input_remainder >= 448 {
-        (448 + 512 - input_remainder) / 8
     } else {
-        64
+        (448 + 512 - input_remainder) / 8
     };
 
     input_len + padding_count + 8

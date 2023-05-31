@@ -21,11 +21,9 @@ impl<'a> ArithmeticWidget {
         assert!(program_width >= 3);
         Self {
             wire_labels: (0..program_width)
-                .into_iter()
                 .map(|i| format!("w_{}", i))
                 .collect(),
             scaling_labels: (0..program_width)
-                .into_iter()
                 .map(|i| format!("q_{}", i))
                 .collect(),
         }

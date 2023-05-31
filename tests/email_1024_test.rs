@@ -72,7 +72,7 @@ fn test_1024() {
         sha256_input.extend((padding_len(addr_len + 32) as u16 / 64).to_be_bytes());
 
         let mut expected_public_input = sha2::Sha256::digest(&sha256_input).to_vec();
-        expected_public_input[0] = expected_public_input[0] & 0x1f;
+        expected_public_input[0] &= 0x1f;
         println!(
             "expected_public_input: {}",
             to_0x_hex(&expected_public_input)
@@ -150,7 +150,7 @@ fn test_1024() {
             header_pub_match,
             header_len,
             from_left_index as u32,
-            addr_len as u32,
+            addr_len,
             &public_input,
             verifier.domain,
             verifier_comms_1024.as_ref().unwrap(),

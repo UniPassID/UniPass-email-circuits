@@ -27,7 +27,7 @@ impl Email1024CircuitInput {
         let email_addr_bytes = private_inputs.email_header
             [private_inputs.from_left_index..private_inputs.from_right_index + 1]
             .to_vec();
-        let mut email_addr_pepper_bytes = email_addr_bytes.clone();
+        let mut email_addr_pepper_bytes = email_addr_bytes;
         email_addr_pepper_bytes.append(&mut private_inputs.from_pepper);
 
         let email_header_bytes = private_inputs.email_header.clone();
@@ -41,10 +41,8 @@ impl Email1024CircuitInput {
                 if i >= private_inputs.from_index && i < private_inputs.from_left_index {
                     continue;
                 }
-            } else {
-                if i >= private_inputs.from_index - 2 && i < private_inputs.from_left_index {
-                    continue;
-                }
+            } else if i >= private_inputs.from_index - 2 && i < private_inputs.from_left_index {
+                continue;
             }
 
             if i == private_inputs.from_right_index + 1 {
@@ -55,10 +53,8 @@ impl Email1024CircuitInput {
                 if i >= private_inputs.subject_index && i < private_inputs.subject_right_index {
                     continue;
                 }
-            } else {
-                if i >= private_inputs.subject_index - 2 && i < private_inputs.subject_right_index {
-                    continue;
-                }
+            } else if i >= private_inputs.subject_index - 2 && i < private_inputs.subject_right_index {
+                continue;
             }
 
             if i == private_inputs.dkim_header_index - 2 {
@@ -253,7 +249,7 @@ impl Email1024CircuitInput {
 
         // (header_len|addr_len) as a 32bits word
         let word_var = {
-            let spread8_index = cs.get_table_index(format!("spread_8bits"));
+            let spread8_index = cs.get_table_index("spread_8bits".to_string());
             assert!(spread8_index != 0);
             let _ = cs
                 .read_from_table(spread8_index, vec![email_header_data_len])

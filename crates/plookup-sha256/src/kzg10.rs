@@ -83,18 +83,14 @@ impl<E: PairingEngine> PCKey<E> {
         let pckey = PCKey::<E> {
             powers: powers_of_g,
             max_degree,
-            vk: vk.clone(),
+            vk,
         };
         log::trace!("[setup]finish.");
         pckey
     }
 
     pub fn check(&self) -> bool {
-        if !E::pairing(self.powers[0], self.vk.beta_h).eq(&E::pairing(self.powers[1], self.vk.h)) {
-            return false;
-        } else {
-            return true;
-        }
+        !(!E::pairing(self.powers[0], self.vk.beta_h).eq(&E::pairing(self.powers[1], self.vk.h)))
     }
 
     pub fn apply_new_rand(&self, new_beta: E::Fr) -> Self {
@@ -119,23 +115,23 @@ impl<E: PairingEngine> PCKey<E> {
             max_degree: self.max_degree,
         };
 
-        let pckey = PCKey::<E> {
+        
+        PCKey::<E> {
             powers: new_powers_of_g,
             max_degree: self.max_degree,
             vk,
-        };
-        pckey
+        }
     }
 
     pub fn commit_vec<F: PrimeField>(
         &self,
         polynomials: &[DensePolynomial<F>],
     ) -> Vec<Commitment<E>> {
-        let comms = cfg_into_iter!(polynomials)
-            .map(|p| self.commit_one(p))
-            .collect();
+        
 
-        comms
+        cfg_into_iter!(polynomials)
+            .map(|p| self.commit_one(p))
+            .collect()
     }
 
     pub fn commit_one<F: PrimeField>(&self, polynomial: &DensePolynomial<F>) -> Commitment<E> {
@@ -153,10 +149,8 @@ impl<E: PairingEngine> PCKey<E> {
 
         let commitment = VariableBaseMSM::multi_scalar_mul(&self.powers, &coeffs_bignum);
 
-        let c = Commitment::<E> {
-            0: commitment.into_affine(),
-        };
-        c
+        
+        Commitment::<E>(commitment.into_affine())
     }
 
     pub fn open_one<F: PrimeField>(
@@ -185,11 +179,9 @@ impl<E: PairingEngine> PCKey<E> {
 
         let commitment = VariableBaseMSM::multi_scalar_mul(&self.powers, &coeffs_bignum);
 
-        let c = Commitment::<E> {
-            0: commitment.into_affine(),
-        };
+        
 
-        c
+        Commitment::<E>(commitment.into_affine())
     }
 
     pub fn compute_batched_proof_pi<'a>(
@@ -209,9 +201,7 @@ impl<E: PairingEngine> PCKey<E> {
             eta_pow *= eta;
         }
 
-        Commitment::<E> {
-            0: pi_res.into_affine(),
-        }
+        Commitment::<E>(pi_res.into_affine())
     }
 
     pub fn max_degree(&self) -> usize {
@@ -287,9 +277,9 @@ impl<E: PairingEngine> VKey<E> {
         let batch_num = comms.len();
         assert_eq!(batch_num, point_evals.len());
         for i in 0..batch_num {
-            batch_comm = batch_comm + comms[i].0.into_projective().mul(v_pow.into_repr());
+            batch_comm += comms[i].0.into_projective().mul(v_pow.into_repr());
 
-            batch_eval = batch_eval + point_es[i] * v_pow;
+            batch_eval += point_es[i] * v_pow;
 
             v_pow = v * v_pow;
         }
@@ -465,7 +455,7 @@ mod tests {
 
         let point = Fr::rand(&mut test_rng());
         let point_evals: Vec<_> = polys.iter().map(|p| p.evaluate(&point)).collect();
-        let pis: Vec<_> = polys.iter().map(|p| pckey.open_one(&p, point)).collect();
+        let pis: Vec<_> = polys.iter().map(|p| pckey.open_one(p, point)).collect();
         let batched_pi = pckey.compute_batched_proof_pi(&pis, x);
 
         let res = pckey
@@ -499,12 +489,12 @@ mod tests {
         let point_evals: Vec<_> = polys
             .iter()
             .zip(&points)
-            .map(|(p, point)| p.evaluate(&point))
+            .map(|(p, point)| p.evaluate(point))
             .collect();
         let pis: Vec<_> = polys
             .iter()
             .zip(&points)
-            .map(|(p, point)| pckey.open_one(&p, *point))
+            .map(|(p, point)| pckey.open_one(p, *point))
             .collect();
 
         let res = pckey

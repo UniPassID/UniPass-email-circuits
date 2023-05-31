@@ -84,10 +84,10 @@ impl<F: Field> Composer<F> {
         self.selectors.get_mut("q_m").unwrap()[index] = mul_scaling;
         self.selectors.get_mut("q_c").unwrap()[index] = const_scaling;
 
-        if next_wire.len() != 0 {
+        if !next_wire.is_empty() {
             let nextindex = self.insert_gate(vec![next_wire[0].0]);
             assert_eq!(nextindex, index + 1);
-            self.selectors.get_mut(&format!("q0next")).unwrap()[index] = next_wire[0].1;
+            self.selectors.get_mut(&"q0next".to_string()).unwrap()[index] = next_wire[0].1;
         }
     }
 

@@ -1,6 +1,6 @@
 use super::{Composer, Variable};
 use crate::{Error, Field};
-use ark_std::{format, vec::Vec};
+use ark_std::{vec::Vec};
 
 impl<F: Field> Composer<F> {
     /// "b" is substring of "a". should be padding to the max len.
@@ -98,7 +98,7 @@ impl<F: Field> Composer<F> {
             Composer::<F>::null(),
             mask,
         ]);
-        self.selectors.get_mut(&format!("q_substring_r")).unwrap()[index] = F::one();
+        self.selectors.get_mut(&"q_substring_r".to_string()).unwrap()[index] = F::one();
 
         let mut current_index = self.size();
         for i in 0..max_lens {
@@ -107,9 +107,9 @@ impl<F: Field> Composer<F> {
             let index = self.insert_gate(wires);
             assert_eq!(current_index, index);
 
-            self.selectors.get_mut(&format!("q_substring_r")).unwrap()[index] = F::one();
+            self.selectors.get_mut(&"q_substring_r".to_string()).unwrap()[index] = F::one();
             if i == max_lens - 1 {
-                self.selectors.get_mut(&format!("q_substring_r")).unwrap()[index] = F::zero();
+                self.selectors.get_mut(&"q_substring_r".to_string()).unwrap()[index] = F::zero();
             }
 
             // enforce_bool
@@ -126,7 +126,7 @@ impl<F: Field> Composer<F> {
             Composer::<F>::null(),
             mask,
         ]);
-        self.selectors.get_mut(&format!("q_substring_r")).unwrap()[index] = F::one();
+        self.selectors.get_mut(&"q_substring_r".to_string()).unwrap()[index] = F::one();
 
         let mut current_index = self.size();
         for i in 0..b_max_lens {
@@ -135,9 +135,9 @@ impl<F: Field> Composer<F> {
             let index = self.insert_gate(wires);
             assert_eq!(current_index, index);
 
-            self.selectors.get_mut(&format!("q_substring_r")).unwrap()[index] = F::one();
+            self.selectors.get_mut(&"q_substring_r".to_string()).unwrap()[index] = F::one();
             if i == b_max_lens - 1 {
-                self.selectors.get_mut(&format!("q_substring_r")).unwrap()[index] = F::zero();
+                self.selectors.get_mut(&"q_substring_r".to_string()).unwrap()[index] = F::zero();
             }
 
             // enforce_bool
@@ -156,7 +156,7 @@ impl<F: Field> Composer<F> {
             let index = self.insert_gate(wires);
             assert_eq!(current_index, index);
 
-            self.selectors.get_mut(&format!("q_substring")).unwrap()[index] = F::one();
+            self.selectors.get_mut(&"q_substring".to_string()).unwrap()[index] = F::one();
 
             current_index += 1;
         }
@@ -228,7 +228,7 @@ impl<F: Field> Composer<F> {
         assert!(self.program_width >= 5);
         
         // output bit_location for sha256 inputs
-        let bit_location_value = self.get_assignments(&bit_location);
+        let bit_location_value = self.get_assignments(bit_location);
         let mut output_words = vec![];
         for i in 0..max_lens / 32 {
             let mut tmp_vars = vec![];

@@ -22,7 +22,7 @@ fn quad<F: Field>(lower: F, higher: F) -> F {
     v += v;
     v += v;
     v = higher - v;
-    (0..4).into_iter().map(|i| v - F::from(i as u64)).product()
+    (0..4).map(|i| v - F::from(i as u64)).product()
 }
 
 /// out = values[0] + challenge *values[1] +...+ challenge^n *values[n-1]
@@ -57,7 +57,7 @@ impl<F: Field, D: Domain<F>, E: PairingEngine> Verifier<F, D, E> {
         let mut commitments = Map::new();
         let labels = gen_verify_comms_labels(prover.program_width, prover.composer_config);
         for (str, comm) in labels.iter().zip(v_comms) {
-            commitments.insert(str.to_string(), comm.clone());
+            commitments.insert(str.to_string(), *comm);
         }
 
         Self {
@@ -163,14 +163,14 @@ impl<F: Field, D: Domain<F>, E: PairingEngine> Verifier<F, D, E> {
         // step 1
         for (i, ci) in proof.commitments1.iter().enumerate() {
             trans.update_with_g1::<E>(&ci.0);
-            self.commitments.insert(format!("w_{}", i), ci.clone());
+            self.commitments.insert(format!("w_{}", i), *ci);
         }
         let eta = trans.generate_challenge::<F>();
 
         // step 2
         trans.update_with_g1::<E>(&proof.commitment2.0);
         self.commitments
-            .insert(format!("s"), proof.commitment2.clone());
+            .insert("s".to_string(), proof.commitment2);
         let beta = trans.generate_challenge::<F>();
         let gamma = trans.generate_challenge::<F>();
 
@@ -180,7 +180,7 @@ impl<F: Field, D: Domain<F>, E: PairingEngine> Verifier<F, D, E> {
                 continue;
             }
             trans.update_with_g1::<E>(&ci.0);
-            self.commitments.insert(str.to_string(), ci.clone());
+            self.commitments.insert(str.to_string(), *ci);
         }
         let mut beta_1 = F::zero();
         let mut gamma_1 = F::zero();
@@ -189,7 +189,7 @@ impl<F: Field, D: Domain<F>, E: PairingEngine> Verifier<F, D, E> {
             gamma_1 = trans.generate_challenge::<F>();
             trans.update_with_g1::<E>(&proof.commitments3[1].0);
             self.commitments
-                .insert(format!("z_lookup"), proof.commitments3[1].clone());
+                .insert("z_lookup".to_string(), proof.commitments3[1]);
         }
 
         let alpha = trans.generate_challenge::<F>();
@@ -197,7 +197,7 @@ impl<F: Field, D: Domain<F>, E: PairingEngine> Verifier<F, D, E> {
         // step 4
         for (i, ci) in proof.commitments4.iter().enumerate() {
             trans.update_with_g1::<E>(&ci.0);
-            self.commitments.insert(format!("t_{}", i), ci.clone());
+            self.commitments.insert(format!("t_{}", i), *ci);
         }
         let zeta = trans.generate_challenge::<F>();
 
@@ -291,7 +291,7 @@ impl<F: Field, D: Domain<F>, E: PairingEngine> Verifier<F, D, E> {
         log::trace!("check equality done");
 
         log::trace!("pc check...");
-        let zeta_n = zeta.pow(&[self.domain.size() as u64]);
+        let zeta_n = zeta.pow([self.domain.size() as u64]);
 
         //linear combine commitments at zeta. fixed order
         let cal_combine_comm_zeta = {
@@ -309,7 +309,7 @@ impl<F: Field, D: Domain<F>, E: PairingEngine> Verifier<F, D, E> {
                 tmp *= zeta_n;
             }
 
-            comb = comb * v;
+            comb *= v;
 
             //cal r comm
             let cal_r_comm = {
@@ -391,7 +391,6 @@ impl<F: Field, D: Domain<F>, E: PairingEngine> Verifier<F, D, E> {
                 if self.composer_config.enable_range {
                     let quads = {
                         let mut quads: Vec<_> = (0..self.program_width - 1)
-                            .into_iter()
                             .map(|j| {
                                 quad(
                                     self.evaluations[&format!("w_{}_zeta", j)],
@@ -410,7 +409,7 @@ impl<F: Field, D: Domain<F>, E: PairingEngine> Verifier<F, D, E> {
                     acc += self.commitments["q_range"]
                         .0
                         .into_projective()
-                        .mul((alpha_combinator * (combine(eta, quads.clone()))).into_repr());
+                        .mul((alpha_combinator * (combine(eta, quads))).into_repr());
 
                     alpha_combinator *= alpha;
                 }
@@ -483,7 +482,7 @@ impl<F: Field, D: Domain<F>, E: PairingEngine> Verifier<F, D, E> {
             };
 
             cal_Wz_comm += cal_r_comm.mul(comb.into_repr());
-            comb = comb * v;
+            comb *= v;
 
             //cal table comm
             let mut cal_table_comm = self.commitments["table_0"].0.into_projective();
@@ -495,28 +494,24 @@ impl<F: Field, D: Domain<F>, E: PairingEngine> Verifier<F, D, E> {
                     .mul(tmp.into_repr());
                 tmp *= eta;
             }
-            let cal_table_comm = Commitment::<E> {
-                0: cal_table_comm.into_affine(),
-            };
+            let cal_table_comm = Commitment::<E>(cal_table_comm.into_affine());
             self.commitments.insert("table".to_string(), cal_table_comm);
 
             for str in verify_open_zeta_labels.iter().skip(2) {
                 let tmp = self.commitments[str.as_str()];
                 cal_Wz_comm += tmp.0.into_projective().mul(comb.into_repr());
-                comb = comb * v;
+                comb *= v;
             }
 
-            let c = Commitment::<E> {
-                0: cal_Wz_comm.into_affine(),
-            };
-            c
+            
+            Commitment::<E>(cal_Wz_comm.into_affine())
         };
         //combined evaluations at zeta. fixed order
         let mut Wz_poly_eval = F::zero();
         let mut comb = F::one();
         for val in &proof.evaluations {
             Wz_poly_eval += comb * val;
-            comb = comb * v;
+            comb *= v;
         }
 
         //linear combine commitments at omega_zeta. fixed order
@@ -527,20 +522,18 @@ impl<F: Field, D: Domain<F>, E: PairingEngine> Verifier<F, D, E> {
             for str in &verify_open_zeta_omega_labels {
                 let tmp = self.commitments[str.as_str()];
                 cal_wx_comm += tmp.0.into_projective().mul(comb.into_repr());
-                comb = comb * v;
+                comb *= v;
             }
 
-            let c = Commitment::<E> {
-                0: cal_wx_comm.into_affine(),
-            };
-            c
+            
+            Commitment::<E>(cal_wx_comm.into_affine())
         };
         //combined evaluations at omega_zeta. fixed order
         let mut Wzw_poly_eval = F::zero();
         let mut comb = F::one();
         for val in &proof.evaluations_alt_point {
             Wzw_poly_eval += comb * val;
-            comb = comb * v;
+            comb *= v;
         }
 
         // batch multi_point pc check

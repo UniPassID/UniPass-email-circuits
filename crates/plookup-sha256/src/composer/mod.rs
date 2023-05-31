@@ -62,10 +62,10 @@ impl SimpleUnionFind {
 
     pub fn find(&mut self, x: usize) -> usize {
         if x == self.disjoint[x] {
-            return x;
+            x
         } else {
             self.disjoint[x] = self.find(self.disjoint[x]);
-            return self.disjoint[x];
+            self.disjoint[x]
         }
     }
 
@@ -161,9 +161,9 @@ impl<F: Field> Composer<F> {
 
     /// alloc a variable
     pub fn alloc(&mut self, value: F) -> Variable {
-        let var = self.alloc_variable(value);
+        
 
-        var
+        self.alloc_variable(value)
     }
 
     ///alloc a public input variable
@@ -244,7 +244,7 @@ impl<F: Field> Composer<F> {
             ProverKey::new(size, self.input_size(), self.program_width, self.switches)?;
 
         for (k, q) in self.selectors.iter() {
-            prover_key.insert(&k, q.clone());
+            prover_key.insert(k, q.clone());
         }
 
         let sigmas = self.compute_sigmas(prover_key.domain);
@@ -360,7 +360,7 @@ mod tests {
 
     fn composer_basic(cs: &mut Composer<Fr>) {
         // x^3 + x + pi = 35
-        let pi = cs.alloc_input(Fr::from(5 as u64));
+        let pi = cs.alloc_input(Fr::from(5_u64));
         let x = cs.alloc(Fr::from(3));
         let y = cs.mul(x, x);
         let z = cs.mul(x, y);

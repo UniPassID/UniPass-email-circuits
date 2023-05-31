@@ -23,7 +23,6 @@ impl SubStringWidget {
         Self {
             program_width,
             wire_labels: (0..program_width)
-                .into_iter()
                 .map(|i| format!("w_{}", i))
                 .collect(),
         }

@@ -23,15 +23,12 @@ impl LookupWidget {
         Self {
             program_width,
             wire_labels: (0..program_width)
-                .into_iter()
                 .map(|i| format!("w_{}", i))
                 .collect(),
             table_column_labels: (0..program_width + 1)
-                .into_iter()
                 .map(|i| format!("table_{}", i))
                 .collect(),
             sorted_list_labels: (0..program_width + 1)
-                .into_iter()
                 .map(|i| format!("s_{}", i))
                 .collect(),
         }

@@ -29,18 +29,18 @@ impl TranscriptLibrary {
     }
 
     pub fn update_with_u256(&mut self, value: impl AsRef<[u8]>) {
-        let old_state_0: [u8; 32] = self.state_0.clone();
+        let old_state_0: [u8; 32] = self.state_0;
 
         let mut hasher = Keccak256::new();
-        hasher.update(&self.DST_0);
-        hasher.update(&old_state_0);
-        hasher.update(&self.state_1);
+        hasher.update(self.DST_0);
+        hasher.update(old_state_0);
+        hasher.update(self.state_1);
         hasher.update(&value);
         self.state_0 = <[u8; 32]>::from(hasher.finalize_reset());
 
-        hasher.update(&self.DST_1);
-        hasher.update(&old_state_0);
-        hasher.update(&self.state_1);
+        hasher.update(self.DST_1);
+        hasher.update(old_state_0);
+        hasher.update(self.state_1);
         hasher.update(&value);
         self.state_1 = <[u8; 32]>::from(hasher.finalize_reset());
     }
@@ -75,9 +75,9 @@ impl TranscriptLibrary {
     }
 
     fn change_u32_to_bytes(&value: &u32) -> [u8; 4] {
-        let musk = 0x000f as u32;
+        let musk = 0x000f_u32;
         let mut res = [0u8; 4];
-        let mut val = value.clone();
+        let mut val = value;
         for i in 0..4 {
             res[4 - i - 1] = (val & musk) as u8;
             val >>= 8;
@@ -87,15 +87,15 @@ impl TranscriptLibrary {
 
     pub fn generate_challenge<F: PrimeField>(&mut self) -> F {
         let mut hasher = Keccak256::new();
-        hasher.update(&self.DST_CHALLENGE);
-        hasher.update(&self.state_0);
-        hasher.update(&self.state_1);
+        hasher.update(self.DST_CHALLENGE);
+        hasher.update(self.state_0);
+        hasher.update(self.state_1);
         let cc = TranscriptLibrary::change_u32_to_bytes(&self.challenge_counter);
         hasher.update(cc);
         let mut query = <[u8; 32]>::from(hasher.finalize_reset());
 
         self.challenge_counter += 1;
-        query[0] = self.FR_MASK & query[0];
+        query[0] &= self.FR_MASK;
         F::from_be_bytes_mod_order(&query)
     }
 }

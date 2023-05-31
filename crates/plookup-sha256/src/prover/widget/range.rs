@@ -22,7 +22,6 @@ impl RangeWidget {
         Self {
             program_width,
             wire_labels: (0..program_width)
-                .into_iter()
                 .map(|i| format!("w_{}", i))
                 .collect(),
         }
@@ -99,7 +98,6 @@ impl<F: Field, D: Domain<F>, E: PairingEngine, R: RngCore> Widget<F, D, E, R> fo
             let w_zeta_omega = prover.evaluate("w_0", "zeta_omega")?;
 
             let mut quads: Vec<_> = (0..self.program_width - 1)
-                .into_iter()
                 .map(|j| quad(w_zeta[j], w_zeta[j + 1]))
                 .collect();
             quads.push(quad(w_zeta[self.program_width - 1], w_zeta_omega));
@@ -110,7 +108,7 @@ impl<F: Field, D: Domain<F>, E: PairingEngine, R: RngCore> Widget<F, D, E, R> fo
         // eta3*D(w00-4w3) + eta2*D(w3-4w2) + eta*D(w2-4w1) + D(w1-4w0)
         let lc = LinearCombination::new(
             "range",
-            vec![(*combinator * combine(eta, quads.clone()), "q_range")],
+            vec![(*combinator * combine(eta, quads), "q_range")],
         );
 
         *combinator *= alpha;
@@ -125,7 +123,7 @@ fn quad<F: Field>(lower: F, higher: F) -> F {
     v += v;
     v += v;
     v = higher - v;
-    (0..4).into_iter().map(|i| v - F::from(i as u64)).product()
+    (0..4).map(|i| v - F::from(i as u64)).product()
 }
 
 fn combine<F: Field>(challenge: F, mut values: Vec<F>) -> F {

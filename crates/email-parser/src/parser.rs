@@ -109,9 +109,9 @@ fn parse_header(
         sdid_right_index,
     };
 
-    let public_input: PublicInputs = (&private_input).to_public()?;
+    let public_input: PublicInputs = private_input.to_public()?;
 
-    return Ok((public_input, private_input));
+    Ok((public_input, private_input))
 }
 
 pub fn parse_email_with_domain(
@@ -128,11 +128,7 @@ pub fn parse_email_with_domain(
         .into_iter()
         .zip(email.dkim_headers.iter())
         .find(|(_dkim_msg, dkim_header)| {
-            if &dkim_header.sdid == domain {
-                return true;
-            } else {
-                return false;
-            }
+            &dkim_header.sdid == domain
         }) {
         Some((dkim_msg, dkim_header)) => (dkim_msg, dkim_header),
         None => (Default::default(), &binding),
@@ -163,7 +159,7 @@ pub fn parse_email(
         .into_iter()
         .zip(email.dkim_headers.iter())
         .find(|(_dkim_msg, _dkim_header)| {
-            return true;
+            true
         }) {
         Some((dkim_msg, dkim_header)) => (dkim_msg, dkim_header),
         None => (Default::default(), &binding),

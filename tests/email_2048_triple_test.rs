@@ -492,7 +492,7 @@ X-MS-Exchange-Transport-CrossTenantHeadersStamped: OS3P286MB2152
             "email_header_pub_matches: {}",
             to_0x_hex(&circuit.email_header_pub_matches[i])
         );
-        sha256_input.extend(sha2::Sha256::digest(&r.to_vec()));
+        sha256_input.extend(sha2::Sha256::digest(&r));
         sha256_input.extend(sha2::Sha256::digest(&circuit.email_header_pub_matches[i]).to_vec());
         sha256_input.extend((padding_len(header_len) as u16 / 64).to_be_bytes());
         sha256_input.extend((padding_len(addr_len + 32) as u16 / 64).to_be_bytes());
@@ -501,7 +501,7 @@ X-MS-Exchange-Transport-CrossTenantHeadersStamped: OS3P286MB2152
     println!("sha256_input: {}", to_0x_hex(&sha256_input));
 
     let mut expected_public_input = sha2::Sha256::digest(&sha256_input).to_vec();
-    expected_public_input[0] = expected_public_input[0] & 0x1f;
+    expected_public_input[0] &= 0x1f;
     println!(
         "expected_public_input: {}",
         to_0x_hex(&expected_public_input)
@@ -544,7 +544,7 @@ X-MS-Exchange-Transport-CrossTenantHeadersStamped: OS3P286MB2152
         verifier_comms_2048 = Some(prover.init_comms(&pckey));
 
         store_verifier_comms(
-            verifier_comms_2048.as_ref().clone().unwrap(),
+            verifier_comms_2048.as_ref().unwrap(),
             "email_2048triple.vc",
         )
         .unwrap();

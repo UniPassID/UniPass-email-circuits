@@ -221,7 +221,7 @@ impl<'a, F: Field, D: Domain<F>, E: PairingEngine> Prover<F, D, E> {
         let labels = gen_verify_comms_labels(self.program_width, self.composer_config);
 
         for (str, comm) in labels.iter().zip(vcomms) {
-            self.commitments.insert(str.to_string(), comm.clone());
+            self.commitments.insert(str.to_string(), *comm);
         }
     }
 
@@ -236,7 +236,7 @@ impl<'a, F: Field, D: Domain<F>, E: PairingEngine> Prover<F, D, E> {
             let v = &polys[str.as_str()];
             let tmp = pckey.commit_one(v);
 
-            res.push(tmp.clone());
+            res.push(tmp);
             commitments.insert(str.to_string(), tmp);
         }
 
@@ -390,7 +390,6 @@ impl<'a, F: Field, D: Domain<F>, E: PairingEngine> Prover<F, D, E> {
         }
 
         let w_poly: Vec<_> = (0..self.program_width)
-            .into_iter()
             .map(|i| {
                 let str = format!("w_{}", i);
                 self.polynomials()[&str].clone()
@@ -467,9 +466,9 @@ impl<'a, F: Field, D: Domain<F>, E: PairingEngine> Prover<F, D, E> {
 
             let vi = self.get_coset_values("vi")?;
             cfg_iter_mut!(quotient).zip(vi).for_each(|(q, v)| *q *= v);
-            let t = DensePolynomial::from_coefficients_vec(self.coset.coset_ifft(&quotient));
+            
 
-            t
+            DensePolynomial::from_coefficients_vec(self.coset.coset_ifft(&quotient))
         };
 
         // free mem
@@ -501,7 +500,6 @@ impl<'a, F: Field, D: Domain<F>, E: PairingEngine> Prover<F, D, E> {
         }
 
         let t_poly: Vec<_> = (0..self.program_width)
-            .into_iter()
             .map(|i| {
                 let str = format!("t_{}", i);
                 self.polynomials()[&str].clone()
@@ -557,7 +555,7 @@ impl<'a, F: Field, D: Domain<F>, E: PairingEngine> Prover<F, D, E> {
         self.add_polynomial("r", r_poly);
         let r_zeta = self.evaluate("r", "zeta")?;
 
-        let zeta_n = zeta.pow(&[self.domain_size() as u64]);
+        let zeta_n = zeta.pow([self.domain_size() as u64]);
 
         let mut tmp = zeta_n;
         let mut t_LC_terms = vec![(F::one(), format!("t_{}", 0))];
@@ -615,7 +613,7 @@ impl<'a, F: Field, D: Domain<F>, E: PairingEngine> Prover<F, D, E> {
             let mut comb = F::one();
             for str in &verify_open_zeta_labels {
                 Wz_numer = Wz_numer + self.polynomials[str.as_str()].mul(comb);
-                comb = comb * v;
+                comb *= v;
             }
 
             Wz_numer
@@ -629,7 +627,7 @@ impl<'a, F: Field, D: Domain<F>, E: PairingEngine> Prover<F, D, E> {
             let mut comb = F::one();
             for str in &verify_open_zeta_omega_labels {
                 Wzw_numer = Wzw_numer + self.polynomials[str.as_str()].mul(comb);
-                comb = comb * v;
+                comb *= v;
             }
 
             Wzw_numer
@@ -688,8 +686,8 @@ impl<'a, F: Field, D: Domain<F>, E: PairingEngine> Prover<F, D, E> {
             commitments4: proof_comms4,
             evaluations: proof_evals,
             evaluations_alt_point: proof_evals_alt,
-            Wz_pi: Wz_pi,
-            Wzw_pi: Wzw_pi,
+            Wz_pi,
+            Wzw_pi,
         };
 
         log::trace!("prove time cost: {:?} ms", start.elapsed().as_millis()); // ms

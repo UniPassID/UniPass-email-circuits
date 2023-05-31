@@ -52,10 +52,8 @@ impl Email2048TripleCircuitInput {
                     if i >= private_inputs.from_index && i < private_inputs.from_left_index {
                         continue;
                     }
-                } else {
-                    if i >= private_inputs.from_index - 2 && i < private_inputs.from_left_index {
-                        continue;
-                    }
+                } else if i >= private_inputs.from_index - 2 && i < private_inputs.from_left_index {
+                    continue;
                 }
 
                 if i == private_inputs.from_right_index + 1 {
@@ -66,12 +64,10 @@ impl Email2048TripleCircuitInput {
                     if i >= private_inputs.subject_index && i < private_inputs.subject_right_index {
                         continue;
                     }
-                } else {
-                    if i >= private_inputs.subject_index - 2
-                        && i < private_inputs.subject_right_index
-                    {
-                        continue;
-                    }
+                } else if i >= private_inputs.subject_index - 2
+                    && i < private_inputs.subject_right_index
+                {
+                    continue;
                 }
 
                 if i == private_inputs.dkim_header_index - 2 {
@@ -283,7 +279,7 @@ impl Email2048TripleCircuitInput {
             // collect public-inputs
             for wd in &mask_hash {
                 let word = Sha256Word {
-                    var: wd.clone(),
+                    var: *wd,
                     hvar: Composer::<Fr>::null(),
                     lvar: Composer::<Fr>::null(),
                     hvar_spread: Composer::<Fr>::null(),
@@ -293,7 +289,7 @@ impl Email2048TripleCircuitInput {
             }
             for wd in &pubstr_hash {
                 let word = Sha256Word {
-                    var: wd.clone(),
+                    var: *wd,
                     hvar: Composer::<Fr>::null(),
                     lvar: Composer::<Fr>::null(),
                     hvar_spread: Composer::<Fr>::null(),
@@ -303,7 +299,7 @@ impl Email2048TripleCircuitInput {
             }
             // (header_len|addr_len) as a 32bits word
             let word_var = {
-                let spread8_index = cs.get_table_index(format!("spread_8bits"));
+                let spread8_index = cs.get_table_index("spread_8bits".to_string());
                 assert!(spread8_index != 0);
                 let _ = cs
                     .read_from_table(spread8_index, vec![email_header_data_len])

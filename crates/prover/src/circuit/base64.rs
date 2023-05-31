@@ -31,7 +31,7 @@ pub fn new_baseurl_chars_table<F: PrimeField>() -> Table<F> {
     for key in 0..size {
         for (i, v) in vec![
             F::from(key as u64),
-            F::from(BASE64URL_ENCODE_CHARS[key as usize] as u64),
+            F::from(BASE64URL_ENCODE_CHARS[key] as u64),
         ]
         .into_iter()
         .enumerate()
@@ -44,7 +44,7 @@ pub fn new_baseurl_chars_table<F: PrimeField>() -> Table<F> {
     }
 
     Table {
-        id: format!("base64urlchars"),
+        id: "base64urlchars".to_string(),
         index: 0,
         size,
         width,
@@ -68,26 +68,26 @@ pub fn base64url_encode_gadget<F: PrimeField>(
     let base64url_index = cs.add_table(new_baseurl_chars_table());
     assert!(base64url_index != 0);
 
-    let spread2_index = cs.get_table_index(format!("spread_2bits"));
+    let spread2_index = cs.get_table_index("spread_2bits".to_string());
     assert!(spread2_index != 0);
-    let spread_4_index = cs.get_table_index(format!("spread_5bits_4bits"));
+    let spread_4_index = cs.get_table_index("spread_5bits_4bits".to_string());
     assert!(spread_4_index != 0);
-    let spread_6_index = cs.get_table_index(format!("spread_7bits_6bits"));
+    let spread_6_index = cs.get_table_index("spread_7bits_6bits".to_string());
     assert!(spread_6_index != 0);
 
     for chars in input_messages.chunks(3) {
         let chars_value = cs.get_assignments(chars);
         let char1 = {
             let tmp = chars_value[0].into_repr();
-            tmp.as_ref()[0].clone()
+            tmp.as_ref()[0]
         };
         let char2 = {
             let tmp = chars_value[1].into_repr();
-            tmp.as_ref()[0].clone()
+            tmp.as_ref()[0]
         };
         let char3 = {
             let tmp = chars_value[2].into_repr();
-            tmp.as_ref()[0].clone()
+            tmp.as_ref()[0]
         };
 
         let char1_1 = char1 >> 2;
@@ -182,5 +182,5 @@ pub fn base64url_encode_gadget<F: PrimeField>(
         output.push(output_var4[0]);
     }
 
-    return Ok(output);
+    Ok(output)
 }

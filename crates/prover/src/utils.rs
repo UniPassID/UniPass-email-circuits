@@ -53,7 +53,7 @@ pub fn padding_bytes(input_bytes: &[u8]) -> Vec<u8> {
         input_bytes_padding.push(e);
     }
 
-    return input_bytes_padding;
+    input_bytes_padding
 }
 
 pub fn padding_len(input_len: u32) -> u32 {
@@ -66,11 +66,11 @@ pub fn padding_len(input_len: u32) -> u32 {
         64
     };
 
-    return input_len + padding_count + 8;
+    input_len + padding_count + 8
 }
 
 fn set_bit(a: u8, n: u32) -> u8 {
-    return a | (2_i32.pow(7 - n)) as u8;
+    a | (2_i32.pow(7 - n)) as u8
 }
 
 pub fn bit_location(
@@ -85,7 +85,7 @@ pub fn bit_location(
     for i in 0..(from_len / 8) as usize {
         bit_location_b[i] = 0xff;
     }
-    for i in 0..(from_len % 8) as u32 {
+    for i in 0..(from_len % 8) {
         bit_location_b[(from_len / 8) as usize] =
             set_bit(bit_location_b[(from_len / 8) as usize], i);
     }
@@ -94,7 +94,7 @@ pub fn bit_location(
     let mut tmp_index = 8 - (from_left_index % 8);
     for i in 0..tmp_index {
         bit_location_a[start_bytes as usize] =
-            set_bit(bit_location_a[start_bytes as usize], (7 - i) as u32);
+            set_bit(bit_location_a[start_bytes as usize], 7 - i);
     }
 
     tmp_index = from_len - tmp_index;
@@ -108,7 +108,7 @@ pub fn bit_location(
             i,
         );
     }
-    return (bit_location_a, bit_location_b);
+    (bit_location_a, bit_location_b)
 }
 
 pub fn convert_public_inputs<F: PrimeField>(public_input: &[F]) -> Vec<String> {
@@ -118,12 +118,12 @@ pub fn convert_public_inputs<F: PrimeField>(public_input: &[F]) -> Vec<String> {
         let a = e.into_repr();
         let mut pre = true;
         for (i, v) in a.to_bytes_be().iter().enumerate() {
-            if *v == 0 && pre == true {
+            if *v == 0 && pre {
                 if i == 31 {
                     e_hex.push('0');
                 }
             } else {
-                if pre == true {
+                if pre {
                     e_hex.push_str(&format!("{:x}", *v));
                 } else {
                     e_hex.push_str(&format!("{:02x}", *v));
@@ -147,7 +147,7 @@ pub fn convert_sha256words<F: PrimeField>(input: &[F]) -> String {
         }
     }
 
-    return output;
+    output
 }
 
 pub fn convert_bytes<F: PrimeField>(input: &[F]) -> String {
@@ -159,7 +159,7 @@ pub fn convert_bytes<F: PrimeField>(input: &[F]) -> String {
         }
     }
 
-    return output;
+    output
 }
 
 pub fn convert_vk_data<F: PrimeField, D: Domain<F>, E: PairingEngine>(

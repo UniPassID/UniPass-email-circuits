@@ -57,7 +57,7 @@ pub struct PrivateInputs {
 
 impl PrivateInputs {
     pub fn from_params(params: DkimParams, from_pepper: Vec<u8>) -> PrivateInputs {
-        return PrivateInputs {
+        PrivateInputs {
             email_header: params.email_header,
             from_pepper,
             from_index: params.from_index,
@@ -70,7 +70,7 @@ impl PrivateInputs {
             selector_right_index: params.selector_right_index,
             sdid_index: params.sdid_index,
             sdid_right_index: params.sdid_right_index,
-        };
+        }
     }
 
     pub fn to_public(&self) -> Result<PublicInputs, ParserError> {
@@ -80,7 +80,7 @@ impl PrivateInputs {
             let hasher = hasher
                 .chain(
                     &self.email_header
-                        [self.from_left_index as usize..self.from_right_index as usize + 1],
+                        [self.from_left_index..self.from_right_index + 1],
                 )
                 .chain(&self.from_pepper);
 
@@ -91,15 +91,15 @@ impl PrivateInputs {
             from_hash,
             subject: String::from_utf8(
                 self.email_header
-                    [self.subject_index as usize + 8..self.subject_right_index as usize]
+                    [self.subject_index + 8..self.subject_right_index]
                     .to_vec(),
             )?,
             selector: String::from_utf8(
-                self.email_header[self.selector_index as usize..self.selector_right_index as usize]
+                self.email_header[self.selector_index..self.selector_right_index]
                     .to_vec(),
             )?,
             sdid: String::from_utf8(
-                self.email_header[self.sdid_index as usize..self.sdid_right_index as usize]
+                self.email_header[self.sdid_index..self.sdid_right_index]
                     .to_vec(),
             )?,
         })
@@ -129,8 +129,8 @@ where
     D: de::Deserializer<'de>,
 {
     let s: String = de::Deserialize::deserialize(deserializer)?;
-    Ok(hex::decode(s.trim_start_matches("0x"))
-        .map_err(|e| de::Error::custom(format!("deserialize call failed:{:?}", e)))?)
+    hex::decode(s.trim_start_matches("0x"))
+        .map_err(|e| de::Error::custom(format!("deserialize call failed:{:?}", e)))
 }
 
 pub fn serialize_hex_string<S>(v: &[u8], serializer: S) -> Result<S::Ok, S::Error>

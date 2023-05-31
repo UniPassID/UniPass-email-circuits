@@ -17,15 +17,15 @@ pub fn gen_verify_comms_labels(
         let value = format!("q_{}", i);
         labels.push(value);
     }
-    labels.push(format!("q_m"));
-    labels.push(format!("q_c"));
+    labels.push("q_m".to_string());
+    labels.push("q_c".to_string());
     if composer_config.enable_q0next {
-        labels.push(format!("q0next"));
+        labels.push("q0next".to_string());
     }
 
     if composer_config.enable_lookup {
-        labels.push(format!("q_lookup"));
-        labels.push(format!("q_table"));
+        labels.push("q_lookup".to_string());
+        labels.push("q_table".to_string());
     }
     for i in 0..program_width {
         let value = format!("sigma_{}", i);
@@ -39,17 +39,17 @@ pub fn gen_verify_comms_labels(
     }
 
     if composer_config.enable_range {
-        labels.push(format!("q_range"));
+        labels.push("q_range".to_string());
     }
     if composer_config.enable_private_substring {
-        labels.push(format!("q_substring"));
-        labels.push(format!("q_substring_r"));
+        labels.push("q_substring".to_string());
+        labels.push("q_substring_r".to_string());
     }
     if composer_config.enable_pubmatch {
-        labels.push(format!("q_pubmatch"));
+        labels.push("q_pubmatch".to_string());
     }
     if composer_config.enable_mimc {
-        labels.push(format!("q_mimc"));
+        labels.push("q_mimc".to_string());
     }
 
     labels
@@ -57,8 +57,8 @@ pub fn gen_verify_comms_labels(
 
 pub fn gen_verify_open_zeta_labels(program_width: usize, enable_lookup: bool) -> Vec<String> {
     let mut labels = vec![];
-    labels.push(format!("t4t"));
-    labels.push(format!("r"));
+    labels.push("t4t".to_string());
+    labels.push("r".to_string());
     for i in 0..program_width {
         let value = format!("w_{}", i);
         labels.push(value);
@@ -68,9 +68,9 @@ pub fn gen_verify_open_zeta_labels(program_width: usize, enable_lookup: bool) ->
         labels.push(value);
     }
     if enable_lookup {
-        labels.push(format!("q_table"));
-        labels.push(format!("q_lookup"));
-        labels.push(format!("table"));
+        labels.push("q_table".to_string());
+        labels.push("q_lookup".to_string());
+        labels.push("table".to_string());
     }
 
     labels
@@ -86,18 +86,18 @@ pub fn gen_verify_open_zeta_omega_labels(
         || composer_config.enable_private_substring
         || composer_config.enable_q0next
     {
-        labels.push(format!("w_0"));
+        labels.push("w_0".to_string());
     }
 
-    labels.push(format!("z"));
+    labels.push("z".to_string());
     if composer_config.enable_lookup {
-        labels.push(format!("s"));
-        labels.push(format!("z_lookup"));
-        labels.push(format!("table"));
+        labels.push("s".to_string());
+        labels.push("z_lookup".to_string());
+        labels.push("table".to_string());
     }
     if composer_config.enable_private_substring {
-        labels.push(format!("w_2"));
-        labels.push(format!("z_substring"));
+        labels.push("w_2".to_string());
+        labels.push("z_substring".to_string());
     }
 
     labels
@@ -147,7 +147,7 @@ pub trait Domain<F: Field>: 'static + EvaluationDomain<F> {
     fn evaluate_lagrange_polynomial(&self, index: usize, point: &F) -> F {
         let n = self.size();
         assert!(index >= 1 && index <= n);
-        let numerator = point.pow(&[n as u64]) - F::one();
+        let numerator = point.pow([n as u64]) - F::one();
         let denominator = (F::from(n as u64) * (self.element(n - index + 1) * point - F::one()))
             .inverse()
             .unwrap();
@@ -168,7 +168,7 @@ pub trait Domain<F: Field>: 'static + EvaluationDomain<F> {
             .collect();
         batch_inversion(&mut denominators);
 
-        let numerator = point.pow(&[n as u64]) - F::one();
+        let numerator = point.pow([n as u64]) - F::one();
 
         denominators
             .into_iter()
@@ -298,7 +298,7 @@ mod tests {
     #[test]
     fn utils_lagrange_evaluation() {
         let rng = &mut test_rng();
-        let size: usize = rng.gen_range(1..(2 as usize).pow(10));
+        let size: usize = rng.gen_range(1..2_usize.pow(10));
         let domain = GeneralEvaluationDomain::<Fr>::new(size).unwrap();
         let index = rng.gen_range(1..domain.size() + 1);
         let point = Fr::rand(rng);
@@ -317,11 +317,10 @@ mod tests {
     #[test]
     fn utils_batch_lagrange_evaluation() {
         let rng = &mut test_rng();
-        let size: usize = rng.gen_range(1..(2 as usize).pow(10));
+        let size: usize = rng.gen_range(1..2_usize.pow(10));
         let domain = GeneralEvaluationDomain::<Fr>::new(size).unwrap();
         let batch_size = 32;
         let indices: Vec<_> = (0..batch_size)
-            .into_iter()
             .map(|_| rng.gen_range(1..domain.size() + 1))
             .collect();
         let point = Fr::rand(rng);
@@ -359,7 +358,7 @@ mod tests {
                 }
             }
         }
-        return (true, F::zero(), F::zero());
+        (true, F::zero(), F::zero())
     }
 
     /// Check if the coset generators chosen are valid.

@@ -101,7 +101,7 @@ impl<F: Field> Table<F> {
             }
 
             if key < small_size {
-                for (i, v) in vec![F::from(key as u64), F::zero(), F::from(key_spread as u64)]
+                for (i, v) in vec![F::from(key as u64), F::zero(), F::from(key_spread)]
                     .into_iter()
                     .enumerate()
                 {
@@ -109,7 +109,7 @@ impl<F: Field> Table<F> {
                 }
                 key_map.insert(vec![F::from(key as u64), F::zero()], row);
             } else {
-                for (i, v) in vec![F::from(key as u64), F::one(), F::from(key_spread as u64)]
+                for (i, v) in vec![F::from(key as u64), F::one(), F::from(key_spread)]
                     .into_iter()
                     .enumerate()
                 {
@@ -161,7 +161,7 @@ impl Sha256Word {
         }
         let tmp = value.into_repr();
         let value_u64 = tmp.as_ref();
-        let value_u64 = value_u64[0].clone();
+        let value_u64 = value_u64[0];
 
         let low_value = value_u64 % 65536;
         let hi_value = value_u64 >> 16;
@@ -181,7 +181,7 @@ impl Sha256Word {
         let hvar = cs.alloc(F::from(hi_value));
         let lvar = cs.alloc(F::from(low_value));
 
-        let spread16_index = cs.get_table_index(format!("spread_16bits_14bits"));
+        let spread16_index = cs.get_table_index("spread_16bits_14bits".to_string());
         assert!(spread16_index != 0);
 
         let hvar_spread = cs.read_from_table(spread16_index, vec![hvar, hi_sign])?;
@@ -190,7 +190,7 @@ impl Sha256Word {
         cs.poly_gate(
             vec![
                 (lvar, F::one()),
-                (hvar, F::from(65536 as u64)),
+                (hvar, F::from(65536_u64)),
                 (var, -F::one()),
             ],
             F::zero(),
@@ -220,11 +220,11 @@ impl Sha256Word {
 
         let tmp = hi_value.into_repr();
         let hi_value_u64 = tmp.as_ref();
-        let hi_value_u64 = hi_value_u64[0].clone();
+        let hi_value_u64 = hi_value_u64[0];
 
         let tmp = low_value.into_repr();
         let low_value_u64 = tmp.as_ref();
-        let low_value_u64 = low_value_u64[0].clone();
+        let low_value_u64 = low_value_u64[0];
 
         let low_sign = if low_value_u64 < (1u64 << 14) {
             cs.alloc(F::zero())
@@ -239,7 +239,7 @@ impl Sha256Word {
 
         assert_eq!(value, hi_value * F::from(1u64 << 16) + low_value);
 
-        let spread16_index = cs.get_table_index(format!("spread_16bits_14bits"));
+        let spread16_index = cs.get_table_index("spread_16bits_14bits".to_string());
         assert!(spread16_index != 0);
 
         let hvar_spread = cs.read_from_table(spread16_index, vec![hvar, hi_sign])?;
@@ -294,7 +294,7 @@ impl Sha256Word {
             F::zero(),
         );
 
-        let spread8_index = cs.get_table_index(format!("spread_8bits"));
+        let spread8_index = cs.get_table_index("spread_8bits".to_string());
         assert!(spread8_index != 0);
 
         let _ = cs.read_from_table(spread8_index, vec![char1])?;
@@ -321,7 +321,7 @@ pub fn sha256_chunk_words_var<F: Field>(
     assert_eq!(pre_hash.len(), 8);
     assert_eq!(chunk_messages.len(), 16);
 
-    let spread3_index = cs.get_table_index(format!("spread_3bits"));
+    let spread3_index = cs.get_table_index("spread_3bits".to_string());
     assert!(spread3_index != 0);
 
     // generate 64 words from chunk_messages
@@ -346,7 +346,7 @@ pub fn sha256_chunk_words_var<F: Field>(
         let all_add = tmp + w_minus_7_value + w_minus_16_value;
         let all_add = all_add.into_repr();
         let all_add_u64 = all_add.as_ref();
-        let all_add_u64 = all_add_u64[0].clone();
+        let all_add_u64 = all_add_u64[0];
         // cal mod 2^32
         let wi_value = all_add_u64 % (1u64 << 32);
         // cal carry
@@ -429,7 +429,7 @@ pub fn sha256_chunk_words_var<F: Field>(
     // init a b c d e f g h
     let mut tmp_hash = vec![];
     for &elem in pre_hash {
-        tmp_hash.push(elem.clone());
+        tmp_hash.push(elem);
     }
     // 64 rounds
     for i in 0..64 {
@@ -464,7 +464,7 @@ pub fn sha256_chunk_words_var<F: Field>(
         let Eadd = tmp0 + chi_value + D_value;
         let Eadd = Eadd.into_repr();
         let Eadd_u64 = Eadd.as_ref();
-        let Eadd_u64 = Eadd_u64[0].clone();
+        let Eadd_u64 = Eadd_u64[0];
         // cal mod 2^32
         let Enew_value = Eadd_u64 % (1u64 << 32);
         // cal carryE
@@ -548,7 +548,7 @@ pub fn sha256_chunk_words_var<F: Field>(
         let Aadd = tmp2 + sum_0_hi_value * F::from(1u64 << 16) + sum_0_low_value;
         let Aadd = Aadd.into_repr();
         let Aadd_u64 = Aadd.as_ref();
-        let Aadd_u64 = Aadd_u64[0].clone();
+        let Aadd_u64 = Aadd_u64[0];
         // cal mod 2^32
         let Anew_value = Aadd_u64 % (1u64 << 32);
         // cal carryA
@@ -643,7 +643,7 @@ pub fn sha256_chunk_words_var<F: Field>(
         let addv = tmphash_value + prehash_value;
         let addv = addv.into_repr();
         let addv_u64 = addv.as_ref();
-        let addv_u64 = addv_u64[0].clone();
+        let addv_u64 = addv_u64[0];
         // cal mod 2^32
         let hash_value = addv_u64 % (1u64 << 32);
         // cal carry
@@ -701,7 +701,7 @@ impl Sha256sigma0form {
 
         let tmp = value.into_repr();
         let value_u64 = tmp.as_ref();
-        let mut value_u64 = value_u64[0].clone();
+        let mut value_u64 = value_u64[0];
 
         let a_value = value_u64 % 8;
         value_u64 >>= 3;
@@ -718,14 +718,14 @@ impl Sha256sigma0form {
         let c = cs.alloc(F::from(c_value));
         let d = cs.alloc(F::from(d_value));
 
-        let spread3_index = cs.get_table_index(format!("spread_3bits"));
+        let spread3_index = cs.get_table_index("spread_3bits".to_string());
         assert!(spread3_index != 0);
 
-        let spread_14_index = cs.get_table_index(format!("spread_16bits_14bits"));
+        let spread_14_index = cs.get_table_index("spread_16bits_14bits".to_string());
         assert!(spread_14_index != 0);
-        let spread_4_index = cs.get_table_index(format!("spread_5bits_4bits"));
+        let spread_4_index = cs.get_table_index("spread_5bits_4bits".to_string());
         assert!(spread_4_index != 0);
-        let spread_11_index = cs.get_table_index(format!("spread_13bits_11bits"));
+        let spread_11_index = cs.get_table_index("spread_13bits_11bits".to_string());
         assert!(spread_11_index != 0);
 
         let a_spread = cs.read_from_table(spread3_index, vec![a])?;
@@ -737,8 +737,8 @@ impl Sha256sigma0form {
             cs.poly_gate_with_next(
                 vec![
                     (a, F::one()),
-                    (b, F::from(8 as u64)),   //2^(3)
-                    (c, F::from(128 as u64)), //2^(3+4)
+                    (b, F::from(8_u64)),   //2^(3)
+                    (c, F::from(128_u64)), //2^(3+4)
                     (d, F::from(1u64 << 18)), //2^(3+4+11)
                 ],
                 F::zero(),
@@ -750,8 +750,8 @@ impl Sha256sigma0form {
                 vec![
                     (word.var, -F::one()),
                     (a, F::one()),
-                    (b, F::from(8 as u64)),   //2^(3)
-                    (c, F::from(128 as u64)), //2^(3+4)
+                    (b, F::from(8_u64)),   //2^(3)
+                    (c, F::from(128_u64)), //2^(3+4)
                     (d, F::from(1u64 << 18)), //2^(3+4+11)
                 ],
                 F::zero(),
@@ -839,7 +839,7 @@ fn sha256_sigma_0<F: Field>(
 
     let tmp = R.into_repr();
     let R_u64 = tmp.as_ref();
-    let R_u64 = R_u64[0].clone();
+    let R_u64 = R_u64[0];
 
     let mut Reven_hi = 0u64;
     let mut Reven_low = 0u64;
@@ -848,7 +848,7 @@ fn sha256_sigma_0<F: Field>(
 
     let mut tmp = R_u64;
     // low
-    for i in 0..16 as u64 {
+    for i in 0..16_u64 {
         // first even
         let this_bit = tmp % 2;
         tmp >>= 1;
@@ -866,7 +866,7 @@ fn sha256_sigma_0<F: Field>(
         }
     }
     // hi
-    for i in 0..16 as u64 {
+    for i in 0..16_u64 {
         // first even
         let this_bit = tmp % 2;
         tmp >>= 1;
@@ -910,7 +910,7 @@ fn sha256_sigma_0<F: Field>(
     let Rodd_hi = cs.alloc(F::from(Rodd_hi));
     let Rodd_low = cs.alloc(F::from(Rodd_low));
 
-    let spread16_index = cs.get_table_index(format!("spread_16bits_14bits"));
+    let spread16_index = cs.get_table_index("spread_16bits_14bits".to_string());
     assert!(spread16_index != 0);
 
     let Reven_hi_spread = cs.read_from_table(spread16_index, vec![Reven_hi, Reven_hi_sign])?;
@@ -925,7 +925,7 @@ fn sha256_sigma_0<F: Field>(
                 (Reven_hi_spread[0], F::from(1u64 << 32)),
                 (Reven_low_spread[0], F::one()),
                 (Rodd_hi_spread[0], F::from(1u64 << 33)),
-                (Rodd_low_spread[0], F::from(2 as u64)),
+                (Rodd_low_spread[0], F::from(2_u64)),
             ],
             F::zero(),
             F::zero(),
@@ -938,7 +938,7 @@ fn sha256_sigma_0<F: Field>(
                 (Reven_hi_spread[0], F::from(1u64 << 32)),
                 (Reven_low_spread[0], F::one()),
                 (Rodd_hi_spread[0], F::from(1u64 << 33)),
-                (Rodd_low_spread[0], F::from(2 as u64)),
+                (Rodd_low_spread[0], F::from(2_u64)),
             ],
             F::zero(),
             F::zero(),
@@ -971,7 +971,7 @@ impl Sha256sigma1form {
 
         let tmp = value.into_repr();
         let value_u64 = tmp.as_ref();
-        let mut value_u64 = value_u64[0].clone();
+        let mut value_u64 = value_u64[0];
 
         let a_value = value_u64 % 1024;
         value_u64 >>= 10;
@@ -1004,14 +1004,14 @@ impl Sha256sigma1form {
         let c = cs.alloc(F::from(c_value));
         let d = cs.alloc(F::from(d_value));
 
-        let spread2_index = cs.get_table_index(format!("spread_2bits"));
+        let spread2_index = cs.get_table_index("spread_2bits".to_string());
         assert!(spread2_index != 0);
 
-        let spread_7_index = cs.get_table_index(format!("spread_7bits_6bits"));
+        let spread_7_index = cs.get_table_index("spread_7bits_6bits".to_string());
         assert!(spread_7_index != 0);
-        let spread_10_index = cs.get_table_index(format!("spread_10bits_9bits"));
+        let spread_10_index = cs.get_table_index("spread_10bits_9bits".to_string());
         assert!(spread_10_index != 0);
-        let spread_13_index = cs.get_table_index(format!("spread_13bits_11bits"));
+        let spread_13_index = cs.get_table_index("spread_13bits_11bits".to_string());
         assert!(spread_13_index != 0);
 
         let a_spread = cs.read_from_table(spread_10_index, vec![a, a_sign])?;
@@ -1023,7 +1023,7 @@ impl Sha256sigma1form {
             cs.poly_gate_with_next(
                 vec![
                     (a, F::one()),
-                    (b, F::from(1024 as u64)), //2^(10)
+                    (b, F::from(1024_u64)), //2^(10)
                     (c, F::from(1u64 << 17)),  //2^(10+7)
                     (d, F::from(1u64 << 19)),  //2^(10+7+2)
                 ],
@@ -1036,7 +1036,7 @@ impl Sha256sigma1form {
                 vec![
                     (word.var, -F::one()),
                     (a, F::one()),
-                    (b, F::from(1024 as u64)), //2^(10)
+                    (b, F::from(1024_u64)), //2^(10)
                     (c, F::from(1u64 << 17)),  //2^(10+7)
                     (d, F::from(1u64 << 19)),  //2^(10+7+2)
                 ],
@@ -1125,7 +1125,7 @@ fn sha256_sigma_1<F: Field>(
 
     let tmp = R.into_repr();
     let R_u64 = tmp.as_ref();
-    let R_u64 = R_u64[0].clone();
+    let R_u64 = R_u64[0];
 
     let mut Reven_hi = 0u64;
     let mut Reven_low = 0u64;
@@ -1134,7 +1134,7 @@ fn sha256_sigma_1<F: Field>(
 
     let mut tmp = R_u64;
     // low
-    for i in 0..16 as u64 {
+    for i in 0..16_u64 {
         // first even
         let this_bit = tmp % 2;
         tmp >>= 1;
@@ -1152,7 +1152,7 @@ fn sha256_sigma_1<F: Field>(
         }
     }
     // hi
-    for i in 0..16 as u64 {
+    for i in 0..16_u64 {
         // first even
         let this_bit = tmp % 2;
         tmp >>= 1;
@@ -1196,7 +1196,7 @@ fn sha256_sigma_1<F: Field>(
     let Rodd_hi = cs.alloc(F::from(Rodd_hi));
     let Rodd_low = cs.alloc(F::from(Rodd_low));
 
-    let spread16_index = cs.get_table_index(format!("spread_16bits_14bits"));
+    let spread16_index = cs.get_table_index("spread_16bits_14bits".to_string());
     assert!(spread16_index != 0);
 
     let Reven_hi_spread = cs.read_from_table(spread16_index, vec![Reven_hi, Reven_hi_sign])?;
@@ -1211,7 +1211,7 @@ fn sha256_sigma_1<F: Field>(
                 (Reven_hi_spread[0], F::from(1u64 << 32)),
                 (Reven_low_spread[0], F::one()),
                 (Rodd_hi_spread[0], F::from(1u64 << 33)),
-                (Rodd_low_spread[0], F::from(2 as u64)),
+                (Rodd_low_spread[0], F::from(2_u64)),
             ],
             F::zero(),
             F::zero(),
@@ -1224,7 +1224,7 @@ fn sha256_sigma_1<F: Field>(
                 (Reven_hi_spread[0], F::from(1u64 << 32)),
                 (Reven_low_spread[0], F::one()),
                 (Rodd_hi_spread[0], F::from(1u64 << 33)),
-                (Rodd_low_spread[0], F::from(2 as u64)),
+                (Rodd_low_spread[0], F::from(2_u64)),
             ],
             F::zero(),
             F::zero(),
@@ -1257,7 +1257,7 @@ impl Sha256sum0form {
 
         let tmp = value.into_repr();
         let value_u64 = tmp.as_ref();
-        let mut value_u64 = value_u64[0].clone();
+        let mut value_u64 = value_u64[0];
 
         let a_value = value_u64 % 4;
         value_u64 >>= 2;
@@ -1280,14 +1280,14 @@ impl Sha256sum0form {
         let c = cs.alloc(F::from(c_value));
         let d = cs.alloc(F::from(d_value));
 
-        let spread2_index = cs.get_table_index(format!("spread_2bits"));
+        let spread2_index = cs.get_table_index("spread_2bits".to_string());
         assert!(spread2_index != 0);
 
-        let spread_9_index = cs.get_table_index(format!("spread_10bits_9bits"));
+        let spread_9_index = cs.get_table_index("spread_10bits_9bits".to_string());
         assert!(spread_9_index != 0);
-        let spread_10_index = cs.get_table_index(format!("spread_10bits_9bits"));
+        let spread_10_index = cs.get_table_index("spread_10bits_9bits".to_string());
         assert!(spread_10_index != 0);
-        let spread_11_index = cs.get_table_index(format!("spread_13bits_11bits"));
+        let spread_11_index = cs.get_table_index("spread_13bits_11bits".to_string());
         assert!(spread_11_index != 0);
 
         let a_spread = cs.read_from_table(spread2_index, vec![a])?;
@@ -1299,7 +1299,7 @@ impl Sha256sum0form {
             cs.poly_gate_with_next(
                 vec![
                     (a, F::one()),
-                    (b, F::from(4 as u64)),   //2^(2)
+                    (b, F::from(4_u64)),   //2^(2)
                     (c, F::from(1u64 << 13)), //2^(11+2)
                     (d, F::from(1u64 << 22)), //2^(9+11+2)
                 ],
@@ -1312,7 +1312,7 @@ impl Sha256sum0form {
                 vec![
                     (word.var, -F::one()),
                     (a, F::one()),
-                    (b, F::from(4 as u64)),   //2^(2)
+                    (b, F::from(4_u64)),   //2^(2)
                     (c, F::from(1u64 << 13)), //2^(11+2)
                     (d, F::from(1u64 << 22)), //2^(9+11+2)
                 ],
@@ -1357,7 +1357,7 @@ impl Sha256sum1form {
 
         let tmp = value.into_repr();
         let value_u64 = tmp.as_ref();
-        let mut value_u64 = value_u64[0].clone();
+        let mut value_u64 = value_u64[0];
 
         let a_value = value_u64 % 64;
         value_u64 >>= 6;
@@ -1385,13 +1385,13 @@ impl Sha256sum1form {
         let c = cs.alloc(F::from(c_value));
         let d = cs.alloc(F::from(d_value));
 
-        let spread_6_index = cs.get_table_index(format!("spread_7bits_6bits"));
+        let spread_6_index = cs.get_table_index("spread_7bits_6bits".to_string());
         assert!(spread_6_index != 0);
-        let spread_7_index = cs.get_table_index(format!("spread_7bits_6bits"));
+        let spread_7_index = cs.get_table_index("spread_7bits_6bits".to_string());
         assert!(spread_7_index != 0);
-        let spread_14_index = cs.get_table_index(format!("spread_16bits_14bits"));
+        let spread_14_index = cs.get_table_index("spread_16bits_14bits".to_string());
         assert!(spread_14_index != 0);
-        let spread_5_index = cs.get_table_index(format!("spread_5bits_4bits"));
+        let spread_5_index = cs.get_table_index("spread_5bits_4bits".to_string());
         assert!(spread_5_index != 0);
 
         let a_spread = cs.read_from_table(spread_6_index, vec![a, Composer::<F>::null()])?;
@@ -1403,7 +1403,7 @@ impl Sha256sum1form {
             cs.poly_gate_with_next(
                 vec![
                     (a, F::one()),
-                    (b, F::from(64 as u64)),  //2^(6)
+                    (b, F::from(64_u64)),  //2^(6)
                     (c, F::from(1u64 << 11)), //2^(6+5)
                     (d, F::from(1u64 << 25)), //2^(6+5+14)
                 ],
@@ -1416,7 +1416,7 @@ impl Sha256sum1form {
                 vec![
                     (word.var, -F::one()),
                     (a, F::one()),
-                    (b, F::from(64 as u64)),  //2^(6)
+                    (b, F::from(64_u64)),  //2^(6)
                     (c, F::from(1u64 << 11)), //2^(6+5)
                     (d, F::from(1u64 << 25)), //2^(6+5+14)
                 ],
@@ -1511,7 +1511,7 @@ pub fn sha256_sum_0<F: Field>(
 
     let tmp = R.into_repr();
     let R_u64 = tmp.as_ref();
-    let R_u64 = R_u64[0].clone();
+    let R_u64 = R_u64[0];
 
     let mut Reven_hi = 0u64;
     let mut Reven_low = 0u64;
@@ -1520,7 +1520,7 @@ pub fn sha256_sum_0<F: Field>(
 
     let mut tmp = R_u64;
     // low
-    for i in 0..16 as u64 {
+    for i in 0..16_u64 {
         // first even
         let this_bit = tmp % 2;
         tmp >>= 1;
@@ -1538,7 +1538,7 @@ pub fn sha256_sum_0<F: Field>(
         }
     }
     // hi
-    for i in 0..16 as u64 {
+    for i in 0..16_u64 {
         // first even
         let this_bit = tmp % 2;
         tmp >>= 1;
@@ -1582,7 +1582,7 @@ pub fn sha256_sum_0<F: Field>(
     let Rodd_hi = cs.alloc(F::from(Rodd_hi));
     let Rodd_low = cs.alloc(F::from(Rodd_low));
 
-    let spread16_index = cs.get_table_index(format!("spread_16bits_14bits"));
+    let spread16_index = cs.get_table_index("spread_16bits_14bits".to_string());
     assert!(spread16_index != 0);
 
     let Reven_hi_spread = cs.read_from_table(spread16_index, vec![Reven_hi, Reven_hi_sign])?;
@@ -1594,10 +1594,10 @@ pub fn sha256_sum_0<F: Field>(
     if cs.program_width == 4 {
         cs.poly_gate_with_next(
             vec![
-                (Reven_hi_spread[0], F::from((1u64 << 32) as u64)),
+                (Reven_hi_spread[0], F::from(1u64 << 32)),
                 (Reven_low_spread[0], F::one()),
-                (Rodd_hi_spread[0], F::from((1u64 << 33) as u64)),
-                (Rodd_low_spread[0], F::from(2 as u64)),
+                (Rodd_hi_spread[0], F::from(1u64 << 33)),
+                (Rodd_low_spread[0], F::from(2_u64)),
             ],
             F::zero(),
             F::zero(),
@@ -1607,10 +1607,10 @@ pub fn sha256_sum_0<F: Field>(
         cs.poly_gate(
             vec![
                 (Rvar, -F::one()),
-                (Reven_hi_spread[0], F::from((1u64 << 32) as u64)),
+                (Reven_hi_spread[0], F::from(1u64 << 32)),
                 (Reven_low_spread[0], F::one()),
-                (Rodd_hi_spread[0], F::from((1u64 << 33) as u64)),
-                (Rodd_low_spread[0], F::from(2 as u64)),
+                (Rodd_hi_spread[0], F::from(1u64 << 33)),
+                (Rodd_low_spread[0], F::from(2_u64)),
             ],
             F::zero(),
             F::zero(),
@@ -1693,7 +1693,7 @@ pub fn sha256_sum_1<F: Field>(
 
     let tmp = R.into_repr();
     let R_u64 = tmp.as_ref();
-    let R_u64 = R_u64[0].clone();
+    let R_u64 = R_u64[0];
 
     let mut Reven_hi = 0u64;
     let mut Reven_low = 0u64;
@@ -1702,7 +1702,7 @@ pub fn sha256_sum_1<F: Field>(
 
     let mut tmp = R_u64;
     // low
-    for i in 0..16 as u64 {
+    for i in 0..16_u64 {
         // first even
         let this_bit = tmp % 2;
         tmp >>= 1;
@@ -1720,7 +1720,7 @@ pub fn sha256_sum_1<F: Field>(
         }
     }
     // hi
-    for i in 0..16 as u64 {
+    for i in 0..16_u64 {
         // first even
         let this_bit = tmp % 2;
         tmp >>= 1;
@@ -1764,7 +1764,7 @@ pub fn sha256_sum_1<F: Field>(
     let Rodd_hi = cs.alloc(F::from(Rodd_hi));
     let Rodd_low = cs.alloc(F::from(Rodd_low));
 
-    let spread16_index = cs.get_table_index(format!("spread_16bits_14bits"));
+    let spread16_index = cs.get_table_index("spread_16bits_14bits".to_string());
     assert!(spread16_index != 0);
 
     let Reven_hi_spread = cs.read_from_table(spread16_index, vec![Reven_hi, Reven_hi_sign])?;
@@ -1776,10 +1776,10 @@ pub fn sha256_sum_1<F: Field>(
     if cs.program_width == 4 {
         cs.poly_gate_with_next(
             vec![
-                (Reven_hi_spread[0], F::from((1u64 << 32) as u64)),
+                (Reven_hi_spread[0], F::from(1u64 << 32)),
                 (Reven_low_spread[0], F::one()),
-                (Rodd_hi_spread[0], F::from((1u64 << 33) as u64)),
-                (Rodd_low_spread[0], F::from(2 as u64)),
+                (Rodd_hi_spread[0], F::from(1u64 << 33)),
+                (Rodd_low_spread[0], F::from(2_u64)),
             ],
             F::zero(),
             F::zero(),
@@ -1789,10 +1789,10 @@ pub fn sha256_sum_1<F: Field>(
         cs.poly_gate(
             vec![
                 (Rvar, -F::one()),
-                (Reven_hi_spread[0], F::from((1u64 << 32) as u64)),
+                (Reven_hi_spread[0], F::from(1u64 << 32)),
                 (Reven_low_spread[0], F::one()),
-                (Rodd_hi_spread[0], F::from((1u64 << 33) as u64)),
-                (Rodd_low_spread[0], F::from(2 as u64)),
+                (Rodd_hi_spread[0], F::from(1u64 << 33)),
+                (Rodd_low_spread[0], F::from(2_u64)),
             ],
             F::zero(),
             F::zero(),
@@ -1830,7 +1830,7 @@ fn sha256_Maj<F: Field>(
     // cal Meven_H, Meven_L, Modd_H, Modd_L
     let tmp = M.into_repr();
     let M_u64 = tmp.as_ref();
-    let M_u64 = M_u64[0].clone();
+    let M_u64 = M_u64[0];
 
     let mut Meven_hi = 0u64;
     let mut Meven_low = 0u64;
@@ -1839,7 +1839,7 @@ fn sha256_Maj<F: Field>(
 
     let mut tmp = M_u64;
     // low
-    for i in 0..16 as u64 {
+    for i in 0..16_u64 {
         // first even
         let this_bit = tmp % 2;
         tmp >>= 1;
@@ -1857,7 +1857,7 @@ fn sha256_Maj<F: Field>(
         }
     }
     // hi
-    for i in 0..16 as u64 {
+    for i in 0..16_u64 {
         // first even
         let this_bit = tmp % 2;
         tmp >>= 1;
@@ -1901,7 +1901,7 @@ fn sha256_Maj<F: Field>(
     let Modd_hi = cs.alloc(F::from(Modd_hi));
     let Modd_low = cs.alloc(F::from(Modd_low));
 
-    let spread16_index = cs.get_table_index(format!("spread_16bits_14bits"));
+    let spread16_index = cs.get_table_index("spread_16bits_14bits".to_string());
     assert!(spread16_index != 0);
 
     let Meven_hi_spread = cs.read_from_table(spread16_index, vec![Meven_hi, Meven_hi_sign])?;
@@ -1919,7 +1919,7 @@ fn sha256_Maj<F: Field>(
                     (Meven_hi_spread[0], F::from(1u64 << 32)),
                     (Meven_low_spread[0], F::one()),
                     (Modd_hi_spread[0], F::from(1u64 << 33)),
-                    (Modd_low_spread[0], F::from(2 as u64)),
+                    (Modd_low_spread[0], F::from(2_u64)),
                 ],
                 vec![
                     (M_var, -F::one()),
@@ -1969,7 +1969,7 @@ fn sha256_Maj<F: Field>(
                 (Meven_hi_spread[0], F::from(1u64 << 32)),
                 (Meven_low_spread[0], F::one()),
                 (Modd_hi_spread[0], F::from(1u64 << 33)),
-                (Modd_low_spread[0], F::from(2 as u64)),
+                (Modd_low_spread[0], F::from(2_u64)),
             ],
             F::zero(),
             F::zero(),
@@ -2032,7 +2032,7 @@ fn sha256_Ch<F: Field>(
     // cal Peven_H, Peven_L, Podd_H, Podd_L
     let tmp = P.into_repr();
     let P_u64 = tmp.as_ref();
-    let P_u64 = P_u64[0].clone();
+    let P_u64 = P_u64[0];
 
     let mut Peven_hi = 0u64;
     let mut Peven_low = 0u64;
@@ -2041,7 +2041,7 @@ fn sha256_Ch<F: Field>(
 
     let mut tmp = P_u64;
     // low
-    for i in 0..16 as u64 {
+    for i in 0..16_u64 {
         // first even
         let this_bit = tmp % 2;
         tmp >>= 1;
@@ -2059,7 +2059,7 @@ fn sha256_Ch<F: Field>(
         }
     }
     // hi
-    for i in 0..16 as u64 {
+    for i in 0..16_u64 {
         // first even
         let this_bit = tmp % 2;
         tmp >>= 1;
@@ -2106,7 +2106,7 @@ fn sha256_Ch<F: Field>(
     let Podd_hi = cs.alloc(F::from(Podd_hi));
     let Podd_low = cs.alloc(F::from(Podd_low));
 
-    let spread16_index = cs.get_table_index(format!("spread_16bits_14bits"));
+    let spread16_index = cs.get_table_index("spread_16bits_14bits".to_string());
     assert!(spread16_index != 0);
 
     let Peven_hi_spread = cs.read_from_table(spread16_index, vec![Peven_hi, Peven_hi_sign])?;
@@ -2121,7 +2121,7 @@ fn sha256_Ch<F: Field>(
                 (Peven_hi_spread[0], F::from(1u64 << 32)),
                 (Peven_low_spread[0], F::one()),
                 (Podd_hi_spread[0], F::from(1u64 << 33)),
-                (Podd_low_spread[0], F::from(2 as u64)),
+                (Podd_low_spread[0], F::from(2_u64)),
             ],
             F::zero(),
             F::zero(),
@@ -2134,7 +2134,7 @@ fn sha256_Ch<F: Field>(
                 (Peven_hi_spread[0], F::from(1u64 << 32)),
                 (Peven_low_spread[0], F::one()),
                 (Podd_hi_spread[0], F::from(1u64 << 33)),
-                (Podd_low_spread[0], F::from(2 as u64)),
+                (Podd_low_spread[0], F::from(2_u64)),
             ],
             F::zero(),
             F::zero(),
@@ -2146,10 +2146,10 @@ fn sha256_Ch<F: Field>(
     let oh = cs.get_assignment(Podd_hi_spread[0]);
     let ol = cs.get_assignment(Podd_low_spread[0]);
     assert_eq!(
-        P - eh * F::from((1u64 << 32) as u64)
+        P - eh * F::from(1u64 << 32)
             - el
-            - oh * F::from((1u64 << 33) as u64)
-            - ol * F::from(2 as u64),
+            - oh * F::from(1u64 << 33)
+            - ol * F::from(2_u64),
         F::zero()
     );
 
@@ -2195,7 +2195,7 @@ fn sha256_Ch<F: Field>(
     // cal Qeven_H, Qeven_L, Qodd_H, Qodd_L
     let tmp = Q.into_repr();
     let Q_u64 = tmp.as_ref();
-    let Q_u64 = Q_u64[0].clone();
+    let Q_u64 = Q_u64[0];
 
     let mut Qeven_hi = 0u64;
     let mut Qeven_low = 0u64;
@@ -2204,7 +2204,7 @@ fn sha256_Ch<F: Field>(
 
     let mut tmp = Q_u64;
     // low
-    for i in 0..16 as u64 {
+    for i in 0..16_u64 {
         // first even
         let this_bit = tmp % 2;
         tmp >>= 1;
@@ -2222,7 +2222,7 @@ fn sha256_Ch<F: Field>(
         }
     }
     // hi
-    for i in 0..16 as u64 {
+    for i in 0..16_u64 {
         // first even
         let this_bit = tmp % 2;
         tmp >>= 1;
@@ -2281,7 +2281,7 @@ fn sha256_Ch<F: Field>(
                 (Qeven_hi_spread[0], F::from(1u64 << 32)),
                 (Qeven_low_spread[0], F::one()),
                 (Qodd_hi_spread[0], F::from(1u64 << 33)),
-                (Qodd_low_spread[0], F::from(2 as u64)),
+                (Qodd_low_spread[0], F::from(2_u64)),
             ],
             F::zero(),
             F::zero(),
@@ -2294,7 +2294,7 @@ fn sha256_Ch<F: Field>(
                 (Qeven_hi_spread[0], F::from(1u64 << 32)),
                 (Qeven_low_spread[0], F::one()),
                 (Qodd_hi_spread[0], F::from(1u64 << 33)),
-                (Qodd_low_spread[0], F::from(2 as u64)),
+                (Qodd_low_spread[0], F::from(2_u64)),
             ],
             F::zero(),
             F::zero(),
@@ -2533,7 +2533,7 @@ pub fn sha256_collect_8_outputs_to_2_128bits<F: Field>(
 ) -> Result<Vec<Variable>, Error> {
     assert_eq!(sha256_hash.len(), 8);
 
-    let out_hash_values = cs.get_assignments(&sha256_hash);
+    let out_hash_values = cs.get_assignments(sha256_hash);
     let tmp0 = out_hash_values[0] * F::from(1u128 << 96)
         + out_hash_values[1] * F::from(1u128 << 64)
         + out_hash_values[2] * F::from(1u128 << 32)
@@ -2578,7 +2578,7 @@ pub fn sha256_collect_8_outputs_to_field<F: Field>(
 ) -> Result<Variable, Error> {
     assert_eq!(sha256_hash.len(), 8);
 
-    let out_hash_values = cs.get_assignments(&sha256_hash);
+    let out_hash_values = cs.get_assignments(sha256_hash);
 
     //convert to u64
     let out_hash_0_uint: Vec<u64> = out_hash_values[0].into_repr().as_ref().into();
@@ -2606,7 +2606,7 @@ pub fn sha256_collect_8_outputs_to_field<F: Field>(
     let top_hvar = cs.alloc(F::from(top_hi_u64));
     let top_lvar = cs.alloc(F::from(top_low_u64));
 
-    let spread16_index = cs.get_table_index(format!("spread_16bits_14bits"));
+    let spread16_index = cs.get_table_index("spread_16bits_14bits".to_string());
     assert!(spread16_index != 0);
     let spread14_index = spread16_index;
 
@@ -2619,7 +2619,7 @@ pub fn sha256_collect_8_outputs_to_field<F: Field>(
     let _ = cs.read_from_table(spread14_index, vec![top_hvar, Composer::<F>::null()])?;
     let _ = cs.read_from_table(spread16_index, vec![top_lvar, top_low_sign])?;
 
-    let spread3_index = cs.get_table_index(format!("spread_3bits"));
+    let spread3_index = cs.get_table_index("spread_3bits".to_string());
     assert!(spread3_index != 0);
     let _ = cs.read_from_table(spread3_index, vec![remainder_var])?;
 
@@ -2775,7 +2775,7 @@ mod tests {
             let _ = cs.add_table(Table::spread_table_2in1(7, 6));
             let spread16_index = cs.add_table(Table::spread_table_2in1(16, 14));
 
-            let w = cs.alloc(Fr::from(65535 as u64));
+            let w = cs.alloc(Fr::from(65535_u64));
             let onevar = cs.alloc(Fr::one());
             let w_spread = cs.read_from_table(spread16_index, vec![w, onevar])?;
 

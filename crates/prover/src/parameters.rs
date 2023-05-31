@@ -51,7 +51,7 @@ pub fn load_params<E: PairingEngine>(p: &str) -> Result<PCKey<E>, SerializationE
     let pckey_file = io::BufReader::new(pckey_file);
     let pckey = PCKey::deserialize_unchecked(pckey_file)?;
 
-    return Ok(pckey);
+    Ok(pckey)
 }
 
 pub fn prepare_circuit_params<F: PrimeField, D: Domain<F>, E: PairingEngine>(
@@ -62,7 +62,7 @@ pub fn prepare_circuit_params<F: PrimeField, D: Domain<F>, E: PairingEngine>(
     let mut prover = Prover::<F, D, E>::new(pk.clone());
     let verifier_comms = prover.init_comms(pckey);
 
-    return Ok((prover, pk, verifier_comms));
+    Ok((prover, pk, verifier_comms))
 }
 
 pub fn store_prover_key<F: PrimeField, D: Domain<F>>(
@@ -83,7 +83,7 @@ pub fn load_prover_key<F: PrimeField, D: Domain<F>>(
     let pk_file = io::BufReader::new(pk_file);
     let pk = ProverKey::deserialize_unchecked(pk_file)?;
 
-    return Ok(pk);
+    Ok(pk)
 }
 
 pub fn store_verifier_comms<E: PairingEngine>(
@@ -103,5 +103,5 @@ pub fn load_verifier_comms<E: PairingEngine>(
     let vcomms_file = File::open(p)?;
     let vcomms_file = io::BufReader::new(vcomms_file);
     let vcomms = Vec::deserialize_unchecked(vcomms_file)?;
-    return Ok(vcomms);
+    Ok(vcomms)
 }

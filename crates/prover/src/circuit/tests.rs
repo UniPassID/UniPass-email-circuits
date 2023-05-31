@@ -326,7 +326,7 @@ fn test_email1024_circuit() {
         sha256_input.extend((padding_len(addr_len + 32) as u16 / 64).to_be_bytes());
 
         let mut public_input = sha2::Sha256::digest(&sha256_input).to_vec();
-        public_input[0] = public_input[0] & 0x1f;
+        public_input[0] &= 0x1f;
         println!("public_input: {}", to_0x_hex(&public_input));
 
         println!("[test_email1024_circuit] circuit construct finish");
@@ -377,7 +377,7 @@ fn test_email2048_circuit() {
         sha256_input.extend((padding_len(addr_len + 32) as u16 / 64).to_be_bytes());
 
         let mut public_input = sha2::Sha256::digest(&sha256_input).to_vec();
-        public_input[0] = public_input[0] & 0x1f;
+        public_input[0] &= 0x1f;
         println!("public_input: {}", to_0x_hex(&public_input));
 
         test_prove_verify(&mut cs, vec![Fr::from_be_bytes_mod_order(&public_input)]).unwrap();
@@ -404,7 +404,7 @@ fn test_email2048tri_circuit() {
 
     let mut sha256_input: Vec<u8> = vec![];
     let circuit =
-        Email2048TripleCircuitInput::new((&all_email_private_inputs[0..3]).to_vec()).unwrap();
+        Email2048TripleCircuitInput::new(all_email_private_inputs[0..3].to_vec()).unwrap();
 
     for (i, (email_public_inputs, email_private_inputs)) in all_email_public_inputs
         .iter()
@@ -423,14 +423,14 @@ fn test_email2048tri_circuit() {
         r.extend(&email_public_inputs.from_hash);
         r.extend(&bit_location_a);
         r.extend(&bit_location_b);
-        sha256_input.extend(sha2::Sha256::digest(&r.to_vec()));
+        sha256_input.extend(sha2::Sha256::digest(&r));
         sha256_input.extend(sha2::Sha256::digest(&circuit.email_header_pub_matches[i]).to_vec());
         sha256_input.extend((padding_len(header_len) as u16 / 64).to_be_bytes());
         sha256_input.extend((padding_len(addr_len + 32) as u16 / 64).to_be_bytes());
     }
 
     let mut public_input = sha2::Sha256::digest(&sha256_input).to_vec();
-    public_input[0] = public_input[0] & 0x1f;
+    public_input[0] &= 0x1f;
     println!("public_input: {}", to_0x_hex(&public_input));
 
     println!("[test_email2048tri_circuit] circuit construct finish");
@@ -474,8 +474,8 @@ fn test_openid_circuit() {
             HEADER_BASE64_MAX_LEN as u32,
         );
         let (location_payload_raw, location_email_addr) = bit_location(
-            circuit.addr_left_index as u32,
-            circuit.addr_len as u32,
+            circuit.addr_left_index,
+            circuit.addr_len,
             PAYLOAD_RAW_MAX_LEN as u32,
             EMAIL_ADDR_MAX_LEN as u32,
         );
@@ -488,7 +488,7 @@ fn test_openid_circuit() {
         hash_inputs.extend(location_email_addr);
 
         let mut public_input = sha2::Sha256::digest(&hash_inputs).to_vec();
-        public_input[0] = public_input[0] & 0x1f;
+        public_input[0] &= 0x1f;
 
         println!("public_input: {}", to_0x_hex(&public_input));
 
@@ -538,7 +538,7 @@ pub fn base64url_encode(data: &[u8]) -> String {
         let out4 = char3 & 0x3f;
         output.push(BASE64URL_ENCODE_CHARS[out4 as usize].into());
     }
-    return output;
+    output
 }
 
 pub struct Base64TestCircuit {

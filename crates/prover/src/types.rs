@@ -160,15 +160,15 @@ impl ContractTripleInput {
         Self {
             header_hashs: header_hashs
                 .into_iter()
-                .map(|header_hash| Bytes(header_hash))
+                .map(Bytes)
                 .collect(),
             addr_hashs: addr_hashs
                 .into_iter()
-                .map(|addr_hash| Bytes(addr_hash))
+                .map(Bytes)
                 .collect(),
             header_pub_matches: header_pub_matches
                 .into_iter()
-                .map(|header_pub_match| Bytes(header_pub_match))
+                .map(Bytes)
                 .collect(),
             header_lens,
             from_left_indexes,

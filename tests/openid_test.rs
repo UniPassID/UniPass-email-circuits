@@ -86,8 +86,8 @@ fn test_open_id() {
             HEADER_BASE64_MAX_LEN as u32,
         );
         let (location_payload_raw, location_email_addr) = bit_location(
-            circuit.addr_left_index as u32,
-            circuit.addr_len as u32,
+            circuit.addr_left_index,
+            circuit.addr_len,
             PAYLOAD_RAW_MAX_LEN as u32,
             EMAIL_ADDR_MAX_LEN as u32,
         );
@@ -102,7 +102,7 @@ fn test_open_id() {
         println!("hash_inputs: {}", to_0x_hex(&hash_inputs));
 
         let mut expected_public_input = sha2::Sha256::digest(&hash_inputs).to_vec();
-        expected_public_input[0] = expected_public_input[0] & 0x1f;
+        expected_public_input[0] &= 0x1f;
 
         println!("public_input: {}", to_0x_hex(&expected_public_input));
         let expected_public_input = vec![Fr::from_be_bytes_mod_order(&expected_public_input)];
@@ -128,7 +128,7 @@ fn test_open_id() {
                     .unwrap(),
             );
 
-            store_prover_key(pk_openid.as_ref().clone().unwrap(), "email_openid.pk").unwrap();
+            store_prover_key(pk_openid.as_ref().unwrap(), "email_openid.pk").unwrap();
         }
         println!("[main] compute_prover_key...done");
         let mut prover = Prover::<Fr, GeneralEvaluationDomain<Fr>, Bn254>::new(
@@ -138,7 +138,7 @@ fn test_open_id() {
         if verifier_comms_openid.is_none() {
             verifier_comms_openid = Some(prover.init_comms(&pckey));
             store_verifier_comms(
-                verifier_comms_openid.as_ref().clone().unwrap(),
+                verifier_comms_openid.as_ref().unwrap(),
                 "email_openid.vc",
             )
             .unwrap();

@@ -54,7 +54,7 @@ impl<F: Field> Table<F> {
     /// 3 colums, 2 are key, 1 is value. size of the table is "1 << bits * 2".
     pub fn xor_table(bits: usize) -> Self {
         let entries: u64 = 1 << bits;
-        let size = 1 << bits * 2; //size is l*r
+        let size = 1 << (bits * 2); //size is l*r
         let width = 3;
         let key_width = 2; //key is (l,r)
         let mut columns = vec![Vec::with_capacity(size); width];
@@ -195,11 +195,11 @@ impl<F: Field> Composer<F> {
             }
         }
 
-        return 0;
+        0
     }
 
     pub fn get_table(&self, index: usize) -> Result<&Table<F>, Error> {
-        if (index == 0) || (index - 1 >= self.tables.len()) {
+        if (index == 0) || (index > self.tables.len()) {
             return Err(Error::NoSuchTable);
         }
 
@@ -207,7 +207,7 @@ impl<F: Field> Composer<F> {
     }
 
     fn get_table_mut(&mut self, index: usize) -> Result<&mut Table<F>, Error> {
-        if (index == 0) || (index - 1 >= self.tables.len()) {
+        if (index == 0) || (index > self.tables.len()) {
             return Err(Error::NoSuchTable);
         }
 

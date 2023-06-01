@@ -33,7 +33,7 @@ impl<F: Field, D: Domain<F>> ProverKey<F, D> {
     ) -> Result<Self, Error> {
         let domain = D::new(circuit_size).ok_or(Error::PolynomialDegreeTooLarge)?;
 
-        let coset = D::new((domain.size() + 1) * program_width + 2)
+        let coset = D::new((domain.size() + 1) * program_width + 3)
             .ok_or(Error::PolynomialDegreeTooLarge)?;
 
         log::trace!("circuit_size={}", circuit_size);

@@ -96,14 +96,12 @@ impl<F: Field> Composer<F> {
     pub fn fully_costomizable_poly_gates(
         &mut self,
         multiple_wires: Vec<Vec<(Variable, F)>>,
-        q_arith: Vec<F>,
         q_m: Vec<F>,
         q_c: Vec<F>,
         q0next: Vec<F>,
     ) {
         assert!(!self.is_finalized);
         let n = multiple_wires.len();
-        assert_eq!(n, q_arith.len());
         assert_eq!(n, q_m.len());
         assert_eq!(n, q_c.len());
         assert_eq!(n, q0next.len());

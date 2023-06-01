@@ -426,7 +426,6 @@ mod tests {
                 ],
                 vec![(x, Fr::one()), (x, -Fr::one())],
             ],
-            vec![Fr::one(), Fr::one(), Fr::one()],
             vec![Fr::zero(), Fr::zero(), Fr::zero()],
             vec![Fr::zero(), Fr::zero(), Fr::zero()],
             vec![-Fr::one(), Fr::one(), Fr::zero()],

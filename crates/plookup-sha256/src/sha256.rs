@@ -360,7 +360,7 @@ pub fn sha256_chunk_words_var<F: Field>(
             // 2^{16}sigma0_H + sigma0_L + 2^{16}sigma1_H + sigma1_L = (tmp)next
             // tmp + w[i-7] + w[i-16] = 2^{32}carry + (wi)next
             // wi = 2^{16}wi_H + wi_L
-            cs.fully_costomizable_poly_gates(
+            cs.fully_customizable_poly_gates(
                 vec![
                     vec![
                         (sigma0h, F::from(1u64 << 16)),
@@ -475,7 +475,7 @@ pub fn sha256_chunk_words_var<F: Field>(
             // Wt + H + 2^{16}sum1_H + sum1_L + Kt = (tmp0)next
             // tmp0 + Ch + D = 2^{32}carry + (Enew)next
             // Enew = 2^{16}Enew_H + Enew_L
-            cs.fully_costomizable_poly_gates(
+            cs.fully_customizable_poly_gates(
                 vec![
                     vec![
                         (sum_1_hi, F::from(1u64 << 16)),
@@ -559,7 +559,7 @@ pub fn sha256_chunk_words_var<F: Field>(
             // tmp0 + Ch + 2^{16}Maj_h + Maj_l = (tmp2)next
             // tmp2 + 2^{16}sum0_H + sum0_L = 2^{32}carry + (Anew)next
             // Anew = 2^{16}Anew_H + Anew_L
-            cs.fully_costomizable_poly_gates(
+            cs.fully_customizable_poly_gates(
                 vec![
                     vec![
                         (tmp0var, F::one()),
@@ -1900,7 +1900,7 @@ fn sha256_Maj<F: Field>(
         // 2^{32}Meven_H' + Meven_L' + 2^{32}2Modd_H' + 2Modd_L' = (M')next
         // M' = 2^{32}C_H' + C_L' + A_L' + (tmp)next
         // tmp = 2^{32}B_H' + B_L' + 2^{32}A_H'
-        cs.fully_costomizable_poly_gates(
+        cs.fully_customizable_poly_gates(
             vec![
                 vec![
                     (Meven_hi_spread[0], F::from(1u64 << 32)),

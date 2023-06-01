@@ -93,7 +93,7 @@ impl<F: Field> Composer<F> {
 
     /// multiple: q_arith * (q_0 * w_0 + q_1 * w_1 + q_2 * w_2 + q_3 * w_3 +... + q_m * w_0 * w_1 + q_c + q0next * w0next) = 0.
     /// will create multiple poly gates adjacently. make better use of 'next'
-    pub fn fully_costomizable_poly_gates(
+    pub fn fully_customizable_poly_gates(
         &mut self,
         multiple_wires: Vec<Vec<(Variable, F)>>,
         q_m: Vec<F>,

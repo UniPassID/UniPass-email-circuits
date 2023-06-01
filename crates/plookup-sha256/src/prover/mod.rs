@@ -777,7 +777,7 @@ mod tests {
                 Fr::zero(),
                 vec![(x4x, -Fr::one())],
             );
-            cs.fully_costomizable_poly_gates(
+            cs.fully_customizable_poly_gates(
                 vec![
                     vec![
                         (x, Fr::one()),

@@ -251,15 +251,13 @@ pub(crate) fn blind_t<F: Field, R: Rng>(
         blind_rand.push(F::rand(rng));
     }
 
-    let tmp_coeff = vec![F::zero(); domain.size()];
-
-    let mut coeff0 = tmp_coeff.clone();
-    coeff0.push(blind_rand[0]);
+    let mut coeff0 = vec![F::zero(); domain.size() + 1];
+    coeff0[domain.size()] = blind_rand[0];
     polynomials[0] += &DensePolynomial::from_coefficients_vec(coeff0);
 
     for i in 1..len - 1 {
-        let mut coeff = tmp_coeff.clone();
-        coeff.push(blind_rand[i]);
+        let mut coeff = vec![F::zero(); domain.size() + 1];
+        coeff[domain.size()] = blind_rand[i];
         coeff[0] = -blind_rand[i - 1];
 
         polynomials[i] += &DensePolynomial::from_coefficients_vec(coeff);

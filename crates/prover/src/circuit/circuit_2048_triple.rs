@@ -35,6 +35,19 @@ impl Email2048TripleCircuitInput {
         let mut all_from_lens = vec![];
 
         for mut private_inputs in private_inputs {
+            if private_inputs.from_index >= private_inputs.from_left_index
+                || private_inputs.from_left_index >= private_inputs.from_right_index
+            {
+                return Err(ProverError::SpecificError(
+                    "private_inputs format error".to_owned(),
+                ));
+            }
+            if private_inputs.subject_index > private_inputs.subject_right_index {
+                return Err(ProverError::SpecificError(
+                    "private_inputs format error".to_owned(),
+                ));
+            }
+
             let email_addr_bytes = private_inputs.email_header
                 [private_inputs.from_left_index..private_inputs.from_right_index + 1]
                 .to_vec();

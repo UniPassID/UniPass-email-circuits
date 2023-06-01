@@ -367,7 +367,7 @@ mod tests {
         let rng = &mut test_rng();
         let pckey = PCKey::<ark_bn254::Bn254>::setup(16, rng);
 
-        pckey.check();
+        assert!(pckey.check());
 
         Ok(())
     }

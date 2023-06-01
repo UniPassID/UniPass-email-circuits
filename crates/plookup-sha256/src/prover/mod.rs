@@ -554,9 +554,9 @@ impl<'a, F: Field, D: Domain<F>, E: PairingEngine> Prover<F, D, E> {
 
         let zeta_n = zeta.pow([self.domain_size() as u64]);
 
-        let mut tmp = zeta_n;
-        let mut t_LC_terms = vec![(F::one(), format!("t_{}", 0))];
-        for i in 1..self.program_width {
+        let mut tmp = F::one();
+        let mut t_LC_terms = Vec::with_capacity(self.program_width);
+        for i in 0..self.program_width {
             let str = format!("t_{}", i);
             t_LC_terms.push((tmp, str));
 

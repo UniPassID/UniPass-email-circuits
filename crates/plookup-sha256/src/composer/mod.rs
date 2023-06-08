@@ -315,27 +315,26 @@ impl<F: Field> Composer<F> {
         // handle eq constraints
         self.handle_eq_constraints();
 
-        let public_input = self.public_input.clone();
         //put PI at the front of w_0, q0 must be 1 and other 'q' must be 0.
-        self.wires.iter_mut().for_each(|(label, wire)| {
-            let mut vars = if label == "w_0" {
-                public_input.clone()
+        for (label, wire) in self.wires.iter_mut() {
+            let vars = if label == "w_0" {
+                self.public_input.clone()
             } else {
                 vec![Self::null(); input_size]
             };
-            vars.append(wire);
-            std::mem::swap(wire, &mut vars)
-        });
 
-        self.selectors.iter_mut().for_each(|(label, selector)| {
-            let mut values = if label == "q_0" {
+            wire.splice(0..0, vars);
+        }
+
+        for (label, selector) in self.selectors.iter_mut() {
+            let values = if label == "q_0" {
                 vec![F::one(); input_size]
             } else {
                 vec![F::zero(); input_size]
             };
-            values.append(selector);
-            std::mem::swap(selector, &mut values)
-        });
+
+            selector.splice(0..0, values);
+        }
 
         self.is_finalized = true;
     }

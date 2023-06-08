@@ -11,7 +11,6 @@ mod arithmetic;
 mod lookup;
 mod permutation;
 pub use lookup::Table;
-mod mimc;
 mod range;
 mod substring;
 
@@ -35,7 +34,6 @@ pub struct ComposerConfig {
     pub enable_q0next: bool,
     pub enable_range: bool,
     pub enable_lookup: bool,
-    pub enable_mimc: bool,
     pub enable_private_substring: bool,
     pub enable_pubmatch: bool,
 }
@@ -476,35 +474,6 @@ mod tests {
         // cs
     }
 
-    fn composer_mimc(cs: &mut Composer<Fr>) {
-        let x1 = cs.alloc(Fr::from(1));
-        let x2 = cs.alloc(Fr::from(2));
-        let x3 = cs.alloc(Fr::from(3));
-        let x4 = cs.alloc(Fr::from(4));
-
-        let hash = cs.MiMC_sponge(&[x1, x2], 1);
-        let res1 = Fr::from(
-            BigUint::parse_bytes(
-                b"2BCEA035A1251603F1CEAF73CD4AE89427C47075BB8E3A944039FF1E3D6D2A6F",
-                16,
-            )
-            .unwrap(),
-        );
-        assert_eq!(res1, cs.get_assignment(hash[0]));
-
-        let hash1234 = cs.MiMC_sponge(&[x1, x2, x3, x4], 1);
-        let res2 = Fr::from(
-            BigUint::parse_bytes(
-                b"03E86BDC4EAC70BD601473C53D8233B145FE8FD8BF6EF25F0B217A1DA305665C",
-                16,
-            )
-            .unwrap(),
-        );
-        assert_eq!(res2, cs.get_assignment(hash1234[0]));
-
-        // cs
-    }
-
     // fn composer_substring(cs: &mut Composer<Fr>,) {
     //     // 608 bytes (4864 bits = 9*512 + 256)
     //     let sample_a = "66726f6d3a3d3f6762323331323f423f304c73677571504439773d3d3f3d203c6465657078686d406f75746c6f6f6b2e636f6d3e0d0a646174653a5475652c2032312044656320323032312031313a35363a3232202b303030300d0a7375626a6563743a55503078653633333139616239313563356539383638663133303761656463396131333733666561633465306261636633656333653161393961353134363834366537320d0a6d6573736167652d69643a3c535934503238324d42333734383043414546413237314643444337304532313632423537433940535934503238324d42333734382e415553503238322e50524f442e4f55544c4f4f4b2e434f4d3e0d0a636f6e74656e742d747970653a6d756c7469706172742f616c7465726e61746976653b20626f756e646172793d225f3030305f535934503238324d423337343830434145464132373146434443373045323136324235374339535934503238324d4233373438415553505f220d0a6d696d652d76657273696f6e3a312e300d0a646b696d2d7369676e61747572653a763d313b20613d7273612d7368613235363b20633d72656c617865642f72656c617865643b20643d6f75746c6f6f6b2e636f6d3b20733d73656c6563746f72313b20683d46726f6d3a446174653a5375626a6563743a4d6573736167652d49443a436f6e74656e742d547970653a4d494d452d56657273696f6e3a582d4d532d45786368616e67652d53656e6465724144436865636b3b2062683d6530753870745966706b432b336334486d6845595358336b43306c6d386a753372436a387678475a776d413d3b20623d";
@@ -681,7 +650,6 @@ mod tests {
         composer_q0next(&mut cs);
         composer_lookup2(&mut cs);
         composer_range(&mut cs);
-        composer_mimc(&mut cs);
         // composer_substring(&mut cs);
 
         test_prove_verify(&mut cs)?;
@@ -699,7 +667,6 @@ mod tests {
         // composer_q0next(&mut cs);
         composer_lookup2(&mut cs);
         composer_range(&mut cs);
-        composer_mimc(&mut cs);
         // composer_substring(&mut cs);
 
         test_prove_verify(&mut cs)?;

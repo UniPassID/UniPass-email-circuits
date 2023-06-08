@@ -48,9 +48,6 @@ pub fn gen_verify_comms_labels(
     if composer_config.enable_pubmatch {
         labels.push("q_pubmatch".to_string());
     }
-    if composer_config.enable_mimc {
-        labels.push("q_mimc".to_string());
-    }
 
     labels
 }
@@ -82,7 +79,6 @@ pub fn gen_verify_open_zeta_omega_labels(
 ) -> Vec<String> {
     let mut labels = vec![];
     if composer_config.enable_range
-        || composer_config.enable_mimc
         || composer_config.enable_private_substring
         || composer_config.enable_q0next
     {

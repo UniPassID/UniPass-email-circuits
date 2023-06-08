@@ -217,13 +217,19 @@ pub(crate) fn blind_and_coset_fft<F: Field, R: Rng>(
     rng: &mut R,
 ) -> (Vec<F>, DensePolynomial<F>) {
     assert!(open_num > 0);
-    let mut blind_coeffs = vec![F::rand(rng)];
-    for _ in 0..open_num - 1 {
+    let mut blind_coeffs = vec![];
+    for _ in 0..open_num {
         blind_coeffs.push(F::rand(rng));
     }
     let mut r = F::rand(rng);
-    while r.is_zero() {
-        r = F::rand(rng);
+    for i in 0..5 {
+        // The random number generator is likely to have issues.
+        assert!(i < 4);
+        if r.is_zero() {
+            r = F::rand(rng);
+        } else {
+            break;
+        }
     }
     blind_coeffs.push(r);
 

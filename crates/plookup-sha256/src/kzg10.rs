@@ -10,7 +10,7 @@ use ark_serialize::*;
 use ark_std::cfg_into_iter;
 use ark_std::{rand::RngCore, vec, vec::Vec};
 use sha2::{Digest, Sha256};
-use std::ops::Div;
+use ark_std::ops::Div;
 
 use crate::utils::convert_to_bigints;
 use rayon::prelude::*;

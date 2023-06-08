@@ -1,4 +1,4 @@
-use std::time::Instant;
+use ark_std::time::Instant;
 
 use crate::composer::ComposerConfig;
 use crate::{

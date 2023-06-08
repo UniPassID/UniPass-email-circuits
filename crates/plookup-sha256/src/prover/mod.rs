@@ -1,6 +1,6 @@
 #![allow(non_snake_case)]
 
-use std::time::Instant;
+use ark_std::time::Instant;
 
 #[cfg(feature = "parallel")]
 use rayon::prelude::*;
@@ -742,7 +742,7 @@ mod tests {
     use crate::GeneralEvaluationDomain;
 
     use super::*;
-    use std::time::Instant; // timer
+    use ark_std::time::Instant; // timer
 
     #[test]
     fn prover() -> Result<(), Error> {

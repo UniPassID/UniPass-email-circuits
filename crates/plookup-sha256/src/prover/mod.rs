@@ -1,6 +1,6 @@
 #![allow(non_snake_case)]
 
-use std::time::Instant;
+use ark_std::time::Instant;
 
 #[cfg(feature = "parallel")]
 use rayon::prelude::*;
@@ -19,7 +19,7 @@ pub use prover_key::*;
 use crate::composer::ComposerConfig;
 use crate::kzg10::PCKey;
 use crate::proof::Proof;
-use crate::prover::widget::{MiMCWidget, PubMatchWidget, SubStringWidget};
+use crate::prover::widget::{PubMatchWidget, SubStringWidget};
 use crate::transcript::TranscriptLibrary;
 use crate::utils::interpolate_and_coset_fft;
 use crate::{
@@ -272,9 +272,6 @@ impl<'a, F: Field, D: Domain<F>, E: PairingEngine> Prover<F, D, E> {
         if self.composer_config.enable_pubmatch {
             widgets.push(Box::new(PubMatchWidget::new(cs.program_width)));
         }
-        if self.composer_config.enable_mimc {
-            widgets.push(Box::new(MiMCWidget::new(cs.program_width)));
-        }
 
         let mut z_labels = vec!["z".to_string(), "z_lookup".to_string()];
         if self.composer_config.enable_private_substring {
@@ -370,7 +367,6 @@ impl<'a, F: Field, D: Domain<F>, E: PairingEngine> Prover<F, D, E> {
         for i in 0..self.program_width {
             let label = format!("w_{}", i);
             let open_num = if ((self.composer_config.enable_range
-                || self.composer_config.enable_mimc
                 || self.composer_config.enable_private_substring
                 || self.composer_config.enable_q0next)
                 && (i == 0))
@@ -742,7 +738,7 @@ mod tests {
     use crate::GeneralEvaluationDomain;
 
     use super::*;
-    use std::time::Instant; // timer
+    use ark_std::time::Instant; // timer
 
     #[test]
     fn prover() -> Result<(), Error> {
@@ -758,12 +754,6 @@ mod tests {
             cs.enforce_constant(v, Fr::from(35));
 
             cs.enforce_range(v, 16)?;
-
-            let x1 = cs.alloc(Fr::from(1));
-            let x2 = cs.alloc(Fr::from(2));
-            let x3 = cs.alloc(Fr::from(3));
-            let x4 = cs.alloc(Fr::from(4));
-            let _hash = cs.MiMC_sponge(&[x1, x2, x3, x4], 1);
 
             let x4x = cs.alloc(Fr::from(12));
             cs.poly_gate_with_next(

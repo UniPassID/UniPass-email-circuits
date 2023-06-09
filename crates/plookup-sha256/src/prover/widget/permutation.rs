@@ -141,11 +141,9 @@ impl<F: Field, D: Domain<F>, E: PairingEngine, R: RngCore> Widget<F, D, E, R>
         //free mem
         prover.remove_coset_values("z");
         prover.remove_coset_values("linear");
-        prover.remove_coset_values("sigma_0");
-        prover.remove_coset_values("sigma_1");
-        prover.remove_coset_values("sigma_2");
-        prover.remove_coset_values("sigma_3");
-        prover.remove_coset_values("sigma_4");
+        for i in 0..self.program_width {
+            prover.remove_coset_values(&format!("sigma_{}", i));
+        }
 
         Ok(())
     }

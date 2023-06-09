@@ -1,4 +1,4 @@
-use std::time::Instant;
+use ark_std::time::Instant;
 
 use crate::composer::ComposerConfig;
 use crate::{
@@ -265,10 +265,6 @@ impl<F: Field, D: Domain<F>, E: PairingEngine> Verifier<F, D, E> {
         if self.composer_config.enable_pubmatch {
             alpha_combinator *= alpha;
         }
-        // mimc
-        if self.composer_config.enable_mimc {
-            alpha_combinator *= alpha;
-        }
 
         let pi_poly =
             Evaluations::from_vec_and_domain(self.public_input.clone(), self.domain).interpolate();
@@ -452,24 +448,6 @@ impl<F: Field, D: Domain<F>, E: PairingEngine> Verifier<F, D, E> {
                         (alpha_combinator
                             * (self.evaluations["w_1_zeta"]
                                 * (self.evaluations["w_0_zeta"] - self.evaluations["w_1_zeta"])))
-                            .into_repr(),
-                    );
-
-                    // update alpha_comb
-                    alpha_combinator *= alpha;
-                }
-
-                // q_mimc
-                if self.composer_config.enable_mimc {
-                    let tmp1 = self.evaluations["w_0_zeta"] + self.evaluations["w_2_zeta"];
-                    let part1 = self.evaluations["w_3_zeta"] - tmp1.square();
-
-                    acc += self.commitments["q_mimc"].0.into_projective().mul(
-                        (alpha_combinator
-                            * (self.evaluations["w_0_zeta_omega"]
-                                - self.evaluations["w_3_zeta"].square() * tmp1
-                                - self.evaluations["w_1_zeta"]
-                                + eta * part1))
                             .into_repr(),
                     );
 

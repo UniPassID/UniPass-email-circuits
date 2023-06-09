@@ -64,7 +64,7 @@ impl<F: Field> Composer<F> {
         self.selectors.get_mut("q_c").unwrap()[index] = const_scaling;
     }
 
-    /// q_arith * (q_0 * w_0 + q_1 * w_1 + q_2 * w_2 + q_3 * w_3 +... + q_m * w_0 * w_1 + q_c + q0next * w0next) = 0.
+    /// (q_0 * w_0 + q_1 * w_1 + q_2 * w_2 + q_3 * w_3 +... + q_m * w_0 * w_1 + q_c + q0next * w0next) = 0.
     /// next_wire only accept one tuple as w0next. the other will be ignored
     pub fn poly_gate_with_next(
         &mut self,
@@ -91,7 +91,7 @@ impl<F: Field> Composer<F> {
         }
     }
 
-    /// multiple: q_arith * (q_0 * w_0 + q_1 * w_1 + q_2 * w_2 + q_3 * w_3 +... + q_m * w_0 * w_1 + q_c + q0next * w0next) = 0.
+    /// multiple: (q_0 * w_0 + q_1 * w_1 + q_2 * w_2 + q_3 * w_3 +... + q_m * w_0 * w_1 + q_c + q0next * w0next) = 0.
     /// will create multiple poly gates adjacently. make better use of 'next'
     pub fn fully_customizable_poly_gates(
         &mut self,

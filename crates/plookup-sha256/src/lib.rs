@@ -16,11 +16,11 @@ extern crate alloc;
 
 #[cfg(feature = "std")]
 // #[cfg(not(feature = "std"))]
-use std::collections::BTreeMap as Map;
+use ark_std::collections::BTreeMap as Map;
 
 // #[cfg(feature = "std")]
 #[cfg(not(feature = "std"))]
-use std::collections::HashMap as Map;
+use ark_std::collections::HashMap as Map;
 
 pub mod composer;
 pub use composer::Composer;

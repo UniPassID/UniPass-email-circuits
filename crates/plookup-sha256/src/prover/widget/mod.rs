@@ -17,9 +17,6 @@ pub(crate) use range::RangeWidget;
 mod lookup;
 pub(crate) use lookup::LookupWidget;
 
-mod mimc;
-pub(crate) use mimc::MiMCWidget;
-
 mod substring;
 pub(crate) use substring::SubStringWidget;
 

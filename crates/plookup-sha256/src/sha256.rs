@@ -2679,7 +2679,7 @@ mod tests {
     use crate::GeneralEvaluationDomain;
 
     use super::*;
-    use std::time::Instant; // timer
+    use ark_std::time::Instant; // timer
 
     #[test]
     fn spread_table() -> Result<(), Error> {

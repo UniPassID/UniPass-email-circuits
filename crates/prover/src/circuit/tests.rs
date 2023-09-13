@@ -7,7 +7,7 @@ use crate::{
         circuit_2048::Email2048CircuitInput,
         circuit_2048_triple::Email2048TripleCircuitInput,
         openid::{
-            OpenIdCircuit, EMAIL_ADDR_MAX_LEN, HEADER_BASE64_MAX_LEN, ID_TOKEN_MAX_LEN,
+            OpenIdCircuit, SUB_MAX_LEN, HEADER_BASE64_MAX_LEN, ID_TOKEN_MAX_LEN,
             PAYLOAD_BASE64_MAX_LEN, PAYLOAD_RAW_MAX_LEN,
         },
     },
@@ -453,11 +453,11 @@ fn test_openid_circuit() {
 
         let idtoken_hash = sha2::Sha256::digest(id_token).to_vec();
         let payload_pub_match_hash = sha2::Sha256::digest(&circuit.payload_pub_match).to_vec();
-        let email_addr_peper_hash = sha2::Sha256::digest(&circuit.email_addr_pepper_bytes).to_vec();
+        let sub_peper_hash = sha2::Sha256::digest(&circuit.sub_pepper_bytes).to_vec();
 
         let mut hash_inputs = vec![];
         hash_inputs.extend(idtoken_hash);
-        hash_inputs.extend(email_addr_peper_hash);
+        hash_inputs.extend(sub_peper_hash);
         hash_inputs.extend(header_hash);
         hash_inputs.extend(payload_pub_match_hash);
 
@@ -473,11 +473,11 @@ fn test_openid_circuit() {
             ID_TOKEN_MAX_LEN as u32,
             HEADER_BASE64_MAX_LEN as u32,
         );
-        let (location_payload_raw, location_email_addr) = bit_location(
+        let (location_payload_raw, location_sub) = bit_location(
             circuit.addr_left_index,
             circuit.addr_len,
             PAYLOAD_RAW_MAX_LEN as u32,
-            EMAIL_ADDR_MAX_LEN as u32,
+            SUB_MAX_LEN as u32,
         );
 
         hash_inputs.extend(location_id_token_1);
@@ -485,7 +485,7 @@ fn test_openid_circuit() {
         hash_inputs.extend(location_id_token_2);
         hash_inputs.extend(location_header_base64);
         hash_inputs.extend(location_payload_raw);
-        hash_inputs.extend(location_email_addr);
+        hash_inputs.extend(location_sub);
 
         let mut public_input = sha2::Sha256::digest(&hash_inputs).to_vec();
         public_input[0] &= 0x1f;

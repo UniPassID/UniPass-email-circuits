@@ -21,7 +21,7 @@ pub const HEADER_RAW_MAX_LEN: usize = 384;
 pub const HEADER_BASE64_MAX_LEN: usize = 512;
 
 pub const ID_TOKEN_MAX_LEN: usize = 2048;
-pub const EMAIL_ADDR_MAX_LEN: usize = 192;
+pub const SUB_MAX_LEN: usize = 192;
 
 fn find_subsequence(haystack: &[u8], needle: &[u8]) -> Option<usize> {
     haystack
@@ -34,7 +34,7 @@ pub struct OpenIdCircuit {
     pub header_raw_bytes: Vec<u8>,
     pub payload_raw_bytes: Vec<u8>,
 
-    pub email_addr_pepper_bytes: Vec<u8>,
+    pub sub_pepper_bytes: Vec<u8>,
     pub payload_pub_match: Vec<u8>,
 
     pub header_left_index: u32,
@@ -63,10 +63,10 @@ impl OpenIdCircuit {
         let addr_left_index = find_subsequence(&payload_raw_bytes, needle).unwrap() + needle.len();
         let addr_len = find_subsequence(&payload_raw_bytes[addr_left_index..], br#"""#).unwrap();
 
-        let mut email_addr_pepper_bytes =
+        let mut sub_pepper_bytes =
             payload_raw_bytes[addr_left_index..addr_left_index + addr_len].to_vec();
 
-        email_addr_pepper_bytes.extend(from_pepper);
+        sub_pepper_bytes.extend(from_pepper);
 
         let mut payload_pub_match = payload_raw_bytes.clone();
         for i in addr_left_index..addr_left_index + addr_len {
@@ -78,7 +78,7 @@ impl OpenIdCircuit {
             header_raw_bytes,
             payload_raw_bytes,
             payload_pub_match,
-            email_addr_pepper_bytes,
+            sub_pepper_bytes,
 
             header_left_index: 0,
             header_base64_len,
@@ -123,34 +123,34 @@ impl OpenIdCircuit {
         )
         .unwrap();
 
-        // get the email_addr hash
-        let email_addr_pepper_bytes_padding = padding_bytes(&self.email_addr_pepper_bytes);
-        let email_addr_padding_len = (email_addr_pepper_bytes_padding.len() / 64) as u32;
+        // get the sub hash
+        let sub_pepper_bytes_padding = padding_bytes(&self.sub_pepper_bytes);
+        let sub_padding_len = (sub_pepper_bytes_padding.len() / 64) as u32;
         // alloc variables for "b"
-        let mut email_addr_pepper_vars = vec![];
-        for e in &email_addr_pepper_bytes_padding {
-            email_addr_pepper_vars.push(cs.alloc(Fr::from(*e)));
+        let mut sub_pepper_vars = vec![];
+        for e in &sub_pepper_bytes_padding {
+            sub_pepper_vars.push(cs.alloc(Fr::from(*e)));
         }
-        let n = email_addr_pepper_vars.len();
-        // padding "email_addr" to EMAIL_ADDR_MAX_LENs
-        for _ in n..EMAIL_ADDR_MAX_LEN {
-            email_addr_pepper_vars.push(cs.alloc(Fr::zero()));
+        let n = sub_pepper_vars.len();
+        // padding "sub" to SUB_MAX_LENs
+        for _ in n..SUB_MAX_LEN {
+            sub_pepper_vars.push(cs.alloc(Fr::zero()));
         }
 
         // num of 512bits. we need the index to output correct sha256.
-        let email_addr_pepper_data_len = cs.alloc(Fr::from(email_addr_padding_len));
+        let sub_pepper_data_len = cs.alloc(Fr::from(sub_padding_len));
 
         // cal sha256 of email_pepper
         let mut sha256_addr_data = vec![];
-        for vs in email_addr_pepper_vars.chunks(4) {
+        for vs in sub_pepper_vars.chunks(4) {
             sha256_addr_data
                 .push(Sha256Word::new_from_8bits(&mut cs, vs[0], vs[1], vs[2], vs[3]).unwrap());
         }
-        let email_addr_pepper_hash = sha256_no_padding_words_var(
+        let sub_pepper_hash = sha256_no_padding_words_var(
             &mut cs,
             &sha256_addr_data,
-            email_addr_pepper_data_len,
-            EMAIL_ADDR_MAX_LEN * 8 / 512,
+            sub_pepper_data_len,
+            SUB_MAX_LEN * 8 / 512,
         )
         .unwrap();
 
@@ -337,28 +337,28 @@ impl OpenIdCircuit {
         // length of the email address
         let addr_len = cs.alloc(Fr::from(self.addr_len));
 
-        let (bit_location_payload_raw, bit_location_email_addr) = cs
+        let (bit_location_payload_raw, bit_location_sub) = cs
             .gen_bit_location_for_substr(
                 addr_left_index,
                 addr_len,
                 PAYLOAD_RAW_MAX_LEN,
-                EMAIL_ADDR_MAX_LEN,
+                SUB_MAX_LEN,
             )
             .unwrap();
         {
             let mask_r =
-                sha256_collect_8_outputs_to_field(&mut cs, &email_addr_pepper_hash).unwrap();
+                sha256_collect_8_outputs_to_field(&mut cs, &sub_pepper_hash).unwrap();
             // private substring check.
             cs.add_substring_mask_poly_return_words(
                 &payload_raw_vars,
-                &email_addr_pepper_vars,
+                &sub_pepper_vars,
                 &bit_location_payload_raw,
-                &bit_location_email_addr,
+                &bit_location_sub,
                 mask_r,
                 addr_left_index,
                 addr_len,
                 PAYLOAD_RAW_MAX_LEN,
-                EMAIL_ADDR_MAX_LEN,
+                SUB_MAX_LEN,
             )
             .unwrap();
         }
@@ -379,13 +379,13 @@ impl OpenIdCircuit {
         let output_words_payload_raw = cs
             .collect_bit_location_for_sha256(PAYLOAD_RAW_MAX_LEN, &bit_location_payload_raw)
             .unwrap();
-        let output_words_email_addr = cs
-            .collect_bit_location_for_sha256(EMAIL_ADDR_MAX_LEN, &bit_location_email_addr)
+        let output_words_sub = cs
+            .collect_bit_location_for_sha256(SUB_MAX_LEN, &bit_location_sub)
             .unwrap();
 
         // 8512bit, id_token_hash|email_hash|header_hash|payload_pubmatch_hash|bit_location_id_token_1|bit_location_payload_base64|
-        // bit_location_id_token_2|bit_location_header_base64|bit_location_payload_raw|bit_location_email_addr|
-        // id_token_len|header_raw_len|payload_raw_len|email_addr_pepper_len
+        // bit_location_id_token_2|bit_location_header_base64|bit_location_payload_raw|bit_location_sub|
+        // id_token_len|header_raw_len|payload_raw_len|sub_pepper_len
         let mut sha256_all_public_data = vec![];
         for wd in id_token_hash {
             let word = Sha256Word {
@@ -397,7 +397,7 @@ impl OpenIdCircuit {
             };
             sha256_all_public_data.push(word);
         }
-        for wd in email_addr_pepper_hash {
+        for wd in sub_pepper_hash {
             let word = Sha256Word {
                 var: wd,
                 hvar: Composer::<Fr>::null(),
@@ -477,7 +477,7 @@ impl OpenIdCircuit {
             };
             sha256_all_public_data.push(word);
         }
-        for wd in output_words_email_addr {
+        for wd in output_words_sub {
             let word = Sha256Word {
                 var: wd,
                 hvar: Composer::<Fr>::null(),

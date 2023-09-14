@@ -6,7 +6,7 @@ use plonk::{
         sha256_collect_8_outputs_to_field, sha256_no_padding_words_var,
         sha256_no_padding_words_var_fixed_length, Sha256Word,
     },
-    Composer, Field,
+    Composer,
 };
 
 use crate::utils::padding_bytes;
@@ -41,8 +41,8 @@ pub struct OpenIdCircuit {
     pub header_base64_len: u32,
     pub payload_left_index: u32,
     pub payload_base64_len: u32,
-    pub addr_left_index: u32,
-    pub addr_len: u32,
+    pub sub_left_index: u32,
+    pub sub_len: u32,
 }
 
 impl OpenIdCircuit {
@@ -59,17 +59,17 @@ impl OpenIdCircuit {
         let payload_raw_bytes = base64url_engine.decode(&payload_base64_bytes).unwrap();
         let header_raw_bytes = base64url_engine.decode(&header_base64_bytes).unwrap();
 
-        let needle = br#""email":""#;
-        let addr_left_index = find_subsequence(&payload_raw_bytes, needle).unwrap() + needle.len();
-        let addr_len = find_subsequence(&payload_raw_bytes[addr_left_index..], br#"""#).unwrap();
+        let needle = br#""sub":""#;
+        let sub_left_index = find_subsequence(&payload_raw_bytes, needle).unwrap() + needle.len();
+        let sub_len = find_subsequence(&payload_raw_bytes[sub_left_index..], br#"""#).unwrap();
 
         let mut sub_pepper_bytes =
-            payload_raw_bytes[addr_left_index..addr_left_index + addr_len].to_vec();
+            payload_raw_bytes[sub_left_index..sub_left_index + sub_len].to_vec();
 
         sub_pepper_bytes.extend(from_pepper);
 
         let mut payload_pub_match = payload_raw_bytes.clone();
-        for i in addr_left_index..addr_left_index + addr_len {
+        for i in sub_left_index..sub_left_index + sub_len {
             payload_pub_match[i] = 0;
         }
 
@@ -84,8 +84,8 @@ impl OpenIdCircuit {
             header_base64_len,
             payload_left_index,
             payload_base64_len,
-            addr_left_index: addr_left_index as u32,
-            addr_len: addr_len as u32,
+            sub_left_index: sub_left_index as u32,
+            sub_len: sub_len as u32,
         }
     }
     pub fn synthesize(&self) -> Composer<Fr> {
@@ -140,15 +140,15 @@ impl OpenIdCircuit {
         // num of 512bits. we need the index to output correct sha256.
         let sub_pepper_data_len = cs.alloc(Fr::from(sub_padding_len));
 
-        // cal sha256 of email_pepper
-        let mut sha256_addr_data = vec![];
+        // cal sha256 of sub_pepper
+        let mut sha256_sub_data = vec![];
         for vs in sub_pepper_vars.chunks(4) {
-            sha256_addr_data
+            sha256_sub_data
                 .push(Sha256Word::new_from_8bits(&mut cs, vs[0], vs[1], vs[2], vs[3]).unwrap());
         }
         let sub_pepper_hash = sha256_no_padding_words_var(
             &mut cs,
-            &sha256_addr_data,
+            &sha256_sub_data,
             sub_pepper_data_len,
             SUB_MAX_LEN * 8 / 512,
         )
@@ -167,14 +167,6 @@ impl OpenIdCircuit {
         let payload_encoded_vars =
             base64url_encode_gadget(&mut cs, &payload_raw_vars, PAYLOAD_RAW_MAX_LEN).unwrap();
 
-        {
-            let a = cs.get_assignments(&payload_encoded_vars);
-            let output_str: Vec<_> = a
-                .into_iter()
-                .map(|a| a.into_repr().as_ref()[0] as u8)
-                .collect();
-            println!("payload_encoded: {}", String::from_utf8_lossy(&output_str));
-        }
         // construct header_pub_match and calculate hash
         let payload_pub_match_padding = padding_bytes(&self.payload_pub_match);
         let payload_pub_match_padding_len = (payload_pub_match_padding.len() / 64) as u32;
@@ -220,15 +212,6 @@ impl OpenIdCircuit {
             header_raw_vars.push(cs.alloc(Fr::zero()));
         }
 
-        {
-            let a = cs.get_assignments(&header_raw_vars);
-            let output_str: Vec<_> = a
-                .into_iter()
-                .map(|a| a.into_repr().as_ref()[0] as u8)
-                .collect();
-            println!("header_raw: {}", String::from_utf8_lossy(&output_str));
-        }
-
         // num of 512bits. we need the index to output correct sha256.
         let header_raw_data_len = cs.alloc(Fr::from(header_raw_bytes_padding_len));
 
@@ -249,14 +232,7 @@ impl OpenIdCircuit {
         .unwrap();
         let header_encoded_vars =
             base64url_encode_gadget(&mut cs, &header_raw_vars, HEADER_RAW_MAX_LEN).unwrap();
-        {
-            let a = cs.get_assignments(&header_encoded_vars);
-            let output_str: Vec<_> = a
-                .into_iter()
-                .map(|a| a.into_repr().as_ref()[0] as u8)
-                .collect();
-            println!("header_encoded: {}", String::from_utf8_lossy(&output_str));
-        }
+
         // start index of the encoded payload
         let payload_left_index = cs.alloc(Fr::from(self.payload_left_index));
         // length of the encoded payload
@@ -332,22 +308,21 @@ impl OpenIdCircuit {
             )
             .unwrap();
         }
-        // start index of the email address
-        let addr_left_index = cs.alloc(Fr::from(self.addr_left_index));
-        // length of the email address
-        let addr_len = cs.alloc(Fr::from(self.addr_len));
+        // start index of the sub address
+        let sub_left_index = cs.alloc(Fr::from(self.sub_left_index));
+        // length of the sub address
+        let sub_len = cs.alloc(Fr::from(self.sub_len));
 
         let (bit_location_payload_raw, bit_location_sub) = cs
             .gen_bit_location_for_substr(
-                addr_left_index,
-                addr_len,
+                sub_left_index,
+                sub_len,
                 PAYLOAD_RAW_MAX_LEN,
                 SUB_MAX_LEN,
             )
             .unwrap();
         {
-            let mask_r =
-                sha256_collect_8_outputs_to_field(&mut cs, &sub_pepper_hash).unwrap();
+            let mask_r = sha256_collect_8_outputs_to_field(&mut cs, &sub_pepper_hash).unwrap();
             // private substring check.
             cs.add_substring_mask_poly_return_words(
                 &payload_raw_vars,
@@ -355,8 +330,8 @@ impl OpenIdCircuit {
                 &bit_location_payload_raw,
                 &bit_location_sub,
                 mask_r,
-                addr_left_index,
-                addr_len,
+                sub_left_index,
+                sub_len,
                 PAYLOAD_RAW_MAX_LEN,
                 SUB_MAX_LEN,
             )
@@ -383,7 +358,7 @@ impl OpenIdCircuit {
             .collect_bit_location_for_sha256(SUB_MAX_LEN, &bit_location_sub)
             .unwrap();
 
-        // 8512bit, id_token_hash|email_hash|header_hash|payload_pubmatch_hash|bit_location_id_token_1|bit_location_payload_base64|
+        // 8512bit, id_token_hash|sub_hash|header_hash|payload_pubmatch_hash|bit_location_id_token_1|bit_location_payload_base64|
         // bit_location_id_token_2|bit_location_header_base64|bit_location_payload_raw|bit_location_sub|
         // id_token_len|header_raw_len|payload_raw_len|sub_pepper_len
         let mut sha256_all_public_data = vec![];

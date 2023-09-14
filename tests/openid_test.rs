@@ -54,8 +54,8 @@ fn test_open_id() {
         println!(
             "id: [{}]",
             String::from_utf8_lossy(
-                &circuit.payload_raw_bytes[circuit.addr_left_index as usize
-                    ..(circuit.addr_left_index + circuit.addr_len) as usize]
+                &circuit.payload_raw_bytes[circuit.sub_left_index as usize
+                    ..(circuit.sub_left_index + circuit.sub_len) as usize]
             )
         );
         let header_hash = sha2::Sha256::digest(&circuit.header_raw_bytes).to_vec();
@@ -86,8 +86,8 @@ fn test_open_id() {
             HEADER_BASE64_MAX_LEN as u32,
         );
         let (location_payload_raw, location_sub) = bit_location(
-            circuit.addr_left_index,
-            circuit.addr_len,
+            circuit.sub_left_index,
+            circuit.sub_len,
             PAYLOAD_RAW_MAX_LEN as u32,
             SUB_MAX_LEN as u32,
         );
@@ -182,8 +182,8 @@ fn test_open_id() {
             circuit.header_base64_len,
             circuit.payload_left_index,
             circuit.payload_base64_len,
-            circuit.addr_left_index,
-            circuit.addr_len,
+            circuit.sub_left_index,
+            circuit.sub_len,
             &public_input,
             verifier.domain,
             verifier_comms_openid.as_ref().unwrap(),

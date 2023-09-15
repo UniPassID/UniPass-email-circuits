@@ -157,6 +157,214 @@ pub fn convert_bytes<F: PrimeField>(input: &[F]) -> String {
     output
 }
 
+pub fn convert_public_inputs_array<F: PrimeField>(public_input: &[F]) -> Vec<[u8; 32]> {
+    let mut res = vec![];
+    for e in public_input {
+        let mut tmp = [0u8; 32];
+        let _ = e.into_repr().to_bytes_be().write(&mut tmp[..]);
+
+        res.push(tmp);
+    }
+
+    res
+}
+
+pub fn convert_vk_data_array<F: PrimeField, D: Domain<F>, E: PairingEngine>(
+    domain: D,
+    verifier_comms: &Vec<Commitment<E>>,
+    g2x: E::G2Affine,
+) -> Vec<[u8; 32]> {
+    let mut vk_data = vec![];
+    // omega
+    let omega = domain.generator();
+    let mut x = [0u8; 32];
+    let _ = omega.into_repr().to_bytes_be().write(&mut x[..]);
+    vk_data.push(x);
+
+    // vk
+    for c in verifier_comms {
+        let tmp = c.0;
+        let mut bytes = [0u8; 64];
+        let _ = tmp.write(bytes.as_mut());
+        let mut x = [0u8; 32];
+        for j in 0..32 {
+            x[32 - j - 1] = bytes[j];
+        }
+        let mut y = [0u8; 32];
+        for j in 32..64 {
+            y[64 - j - 1] = bytes[j];
+        }
+        if tmp.is_zero() {
+            vk_data.push(x);
+            vk_data.push(x);
+        } else {
+            vk_data.push(x);
+            vk_data.push(y);
+        }
+    }
+
+    // g2x
+    let mut bytes = [0u8; 128];
+    let _ = g2x.write(bytes.as_mut());
+    let mut xc0 = [0u8; 32];
+    for j in 0..32 {
+        xc0[32 - j - 1] = bytes[j];
+    }
+    let mut xc1 = [0u8; 32];
+    for j in 32..64 {
+        xc1[64 - j - 1] = bytes[j];
+    }
+    let mut yc0 = [0u8; 32];
+    for j in 64..96 {
+        yc0[96 - j - 1] = bytes[j];
+    }
+    let mut yc1 = [0u8; 32];
+    for j in 96..128 {
+        yc1[128 - j - 1] = bytes[j];
+    }
+
+    vk_data.push(xc0);
+    vk_data.push(xc1);
+    vk_data.push(yc0);
+    vk_data.push(yc1);
+
+    vk_data
+}
+
+pub fn convert_proof_array<F: PrimeField, E: PairingEngine>(proof: &Proof<F, E>) -> Vec<[u8; 32]> {
+    let mut proof_data = vec![];
+
+    // proof
+    for c in &proof.commitments1 {
+        let tmp = c.0;
+        let mut bytes = [0u8; 64];
+        let _ = tmp.write(bytes.as_mut());
+        let mut x = [0u8; 32];
+        for j in 0..32 {
+            x[32 - j - 1] = bytes[j];
+        }
+        let mut y = [0u8; 32];
+        for j in 32..64 {
+            y[64 - j - 1] = bytes[j];
+        }
+        if tmp.is_zero() {
+            proof_data.push(x);
+            proof_data.push(x);
+        } else {
+            proof_data.push(x);
+            proof_data.push(y);
+        }
+    }
+
+    let tmp = proof.commitment2.0;
+    let mut bytes = [0u8; 64];
+    let _ = tmp.write(bytes.as_mut());
+    let mut x = [0u8; 32];
+    for j in 0..32 {
+        x[32 - j - 1] = bytes[j];
+    }
+    let mut y = [0u8; 32];
+    for j in 32..64 {
+        y[64 - j - 1] = bytes[j];
+    }
+    if tmp.is_zero() {
+        proof_data.push(x);
+        proof_data.push(x);
+    } else {
+        proof_data.push(x);
+        proof_data.push(y);
+    }
+
+    for c in &proof.commitments3 {
+        let tmp = c.0;
+        let mut bytes = [0u8; 64];
+        let _ = tmp.write(bytes.as_mut());
+        let mut x = [0u8; 32];
+        for j in 0..32 {
+            x[32 - j - 1] = bytes[j];
+        }
+        let mut y = [0u8; 32];
+        for j in 32..64 {
+            y[64 - j - 1] = bytes[j];
+        }
+        if tmp.is_zero() {
+            proof_data.push(x);
+            proof_data.push(x);
+        } else {
+            proof_data.push(x);
+            proof_data.push(y);
+        }
+    }
+    for c in &proof.commitments4 {
+        let tmp = c.0;
+        let mut bytes = [0u8; 64];
+        let _ = tmp.write(bytes.as_mut());
+        let mut x = [0u8; 32];
+        for j in 0..32 {
+            x[32 - j - 1] = bytes[j];
+        }
+        let mut y = [0u8; 32];
+        for j in 32..64 {
+            y[64 - j - 1] = bytes[j];
+        }
+        if tmp.is_zero() {
+            proof_data.push(x);
+            proof_data.push(x);
+        } else {
+            proof_data.push(x);
+            proof_data.push(y);
+        }
+    }
+    let mut buf = [0u8; 32];
+    for e in &proof.evaluations {
+        let _ = e.into_repr().to_bytes_be().write(&mut buf[..]);
+        proof_data.push(buf);
+    }
+    for e in &proof.evaluations_alt_point {
+        let _ = e.into_repr().to_bytes_be().write(&mut buf[..]);
+        proof_data.push(buf);
+    }
+
+    let tmp = proof.Wz_pi.0;
+    let mut bytes = [0u8; 64];
+    let _ = tmp.write(bytes.as_mut());
+    let mut x = [0u8; 32];
+    for j in 0..32 {
+        x[32 - j - 1] = bytes[j];
+    }
+    let mut y = [0u8; 32];
+    for j in 32..64 {
+        y[64 - j - 1] = bytes[j];
+    }
+    if tmp.is_zero() {
+        proof_data.push(x);
+        proof_data.push(x);
+    } else {
+        proof_data.push(x);
+        proof_data.push(y);
+    }
+
+    let tmp = proof.Wzw_pi.0;
+    let mut bytes = [0u8; 64];
+    let _ = tmp.write(bytes.as_mut());
+    let mut x = [0u8; 32];
+    for j in 0..32 {
+        x[32 - j - 1] = bytes[j];
+    }
+    let mut y = [0u8; 32];
+    for j in 32..64 {
+        y[64 - j - 1] = bytes[j];
+    }
+    if tmp.is_zero() {
+        proof_data.push(x);
+        proof_data.push(x);
+    } else {
+        proof_data.push(x);
+        proof_data.push(y);
+    }
+    proof_data
+}
+
 pub fn convert_vk_data<F: PrimeField, D: Domain<F>, E: PairingEngine>(
     domain: D,
     verifier_comms: &Vec<Commitment<E>>,
@@ -352,3 +560,6 @@ pub fn convert_proof<F: PrimeField, E: PairingEngine>(proof: &Proof<F, E>) -> Ve
     }
     proof_data
 }
+
+#[test]
+fn test_public() {}

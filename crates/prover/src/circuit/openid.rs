@@ -50,6 +50,7 @@ impl OpenIdCircuit {
         let id_tokens: Vec<_> = id_token.split('.').collect();
         let header_base64_bytes = id_tokens[0].as_bytes().to_vec();
         let payload_base64_bytes = id_tokens[1].as_bytes().to_vec();
+        let raw_id_tokens = String::from(id_tokens[0]) + "." + id_tokens[1];
 
         let payload_left_index = (header_base64_bytes.len() + 1) as u32;
         let payload_base64_len = payload_base64_bytes.len() as u32;
@@ -74,7 +75,7 @@ impl OpenIdCircuit {
         }
 
         OpenIdCircuit {
-            id_token_bytes: id_token.as_bytes().to_vec(),
+            id_token_bytes: raw_id_tokens.as_bytes().to_vec(),
             header_raw_bytes,
             payload_raw_bytes,
             payload_pub_match,
@@ -314,12 +315,7 @@ impl OpenIdCircuit {
         let sub_len = cs.alloc(Fr::from(self.sub_len));
 
         let (bit_location_payload_raw, bit_location_sub) = cs
-            .gen_bit_location_for_substr(
-                sub_left_index,
-                sub_len,
-                PAYLOAD_RAW_MAX_LEN,
-                SUB_MAX_LEN,
-            )
+            .gen_bit_location_for_substr(sub_left_index, sub_len, PAYLOAD_RAW_MAX_LEN, SUB_MAX_LEN)
             .unwrap();
         {
             let mask_r = sha256_collect_8_outputs_to_field(&mut cs, &sub_pepper_hash).unwrap();

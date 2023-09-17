@@ -492,8 +492,8 @@ fn test_openid_circuit() {
 
         println!("public_input: {}", to_0x_hex(&public_input));
 
-        // let mut cs = circuit.synthesize();
-        // test_prove_verify(&mut cs, vec![Fr::from_be_bytes_mod_order(&public_input)]).unwrap();
+        let mut cs = circuit.synthesize();
+        test_prove_verify(&mut cs, vec![Fr::from_be_bytes_mod_order(&public_input)]).unwrap();
     }
 }
 

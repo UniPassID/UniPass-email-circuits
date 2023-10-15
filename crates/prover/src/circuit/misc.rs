@@ -94,12 +94,6 @@ pub fn sha256_var<F: PrimeField>(
         input_padding_vars.push(cs.alloc(F::zero()));
     }
 
-    println!(
-        "input_padding_len: {}-{}",
-        input_bytes.len(),
-        input_padding_len
-    );
-
     // num of 512bits. we need the index to output correct sha256.
     let input_data_len = cs.alloc(F::from(input_padding_len));
 
@@ -153,6 +147,4 @@ pub fn public_match_before_index<F: PrimeField>(
         let tmp = cs.mul(eq[i], b[i]);
         cs.mul_gate(ci, tmp, Composer::<F>::null());
     }
-
-    // recommend hash "b" to compress public_input
 }

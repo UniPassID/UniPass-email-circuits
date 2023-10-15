@@ -89,18 +89,18 @@ pub fn new_baseurl_decode_chars_table<F: PrimeField>() -> Table<F> {
         .into_iter()
         .enumerate()
         .filter(|v| v.1 == false)
-        .map(|v| v.0)
+        .map(|v| v.0 as u64)
         .collect::<Vec<_>>();
 
     for key in not_base64url_chars {
-        for (i, v) in vec![F::from(key as u64), F::from(0 as u64), F::from(1 as u64)]
+        for (i, v) in vec![F::from(key), F::from(0 as u64), F::from(1 as u64)]
             .into_iter()
             .enumerate()
         {
             columns[i].push(v);
         }
 
-        key_map.insert(vec![F::from(key as u64)], row);
+        key_map.insert(vec![F::from(key)], row);
         row += 1;
     }
 
@@ -373,7 +373,7 @@ pub fn base64url_encode_gadget<F: PrimeField>(
 }
 
 // enforce encode_len is the base64url_encoded length of datalen
-// (encoded_len * 4 - data_len * 3) * (encoded_len * 4 + 2 - data_len * 3) * (encoded_len * 4 + 3 - data_len * 3) = 0
+// simple it to (data_len * 4 - encoded_len * 3) * ((data_len * 4  - (encoded_len * 3 -1)) * ((data_len * 4  - (encoded_len * 3 -2)) = 0
 pub fn enforce_encoded_len<F: PrimeField>(
     cs: &mut Composer<F>,
     data_len: Variable,
@@ -385,22 +385,29 @@ pub fn enforce_encoded_len<F: PrimeField>(
     cs.enforce_constant(three_var, F::from(3u64));
     let two_var = cs.alloc(F::from(2u64));
     cs.enforce_constant(two_var, F::from(2u64));
+    let one_var = cs.alloc(F::from(1u64));
+    cs.enforce_constant(one_var, F::from(1u64));
 
-    let encoded_len_mul_4 = cs.mul(encoded_len, four_var);
-    let data_len_mul_3 = cs.mul(data_len, three_var);
+    let encoded_len_mul_3 = cs.mul(encoded_len, three_var);
+    let data_len_mul_4 = cs.mul(data_len, four_var);
 
-    let tmp1 = cs.sub(data_len_mul_3, encoded_len_mul_4);
+    let tmp1 = cs.sub(data_len_mul_4, encoded_len_mul_3);
 
-    let tmp2_1 = cs.add(encoded_len_mul_4, two_var);
-    let tmp2 = cs.sub(data_len_mul_3, tmp2_1);
+    let tmp2_1 = cs.sub(encoded_len_mul_3, one_var);
+    let tmp2 = cs.sub(data_len_mul_4, tmp2_1);
 
-    let tmp3_1 = cs.add(encoded_len_mul_4, three_var);
-    let tmp3 = cs.sub(data_len_mul_3, tmp3_1);
+    let tmp3_1 = cs.sub(encoded_len_mul_3, two_var);
+    let tmp3 = cs.sub(data_len_mul_4, tmp3_1);
 
     let tmp4 = cs.mul(tmp1, tmp2);
     let tmp5 = cs.mul(tmp3, tmp4);
 
-    cs.enforce_constant(tmp5, F::zero());
+    cs.enforce_eq(tmp5, Composer::<F>::null());
 
     Ok(())
+}
+
+pub fn variable_to_u64<F: PrimeField>(cs: &Composer<F>, v: Variable) -> u64 {
+    let value = cs.get_assignment(v);
+    value.into_repr().as_ref()[0]
 }

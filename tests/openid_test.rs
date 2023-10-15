@@ -7,8 +7,8 @@ use plonk::Field;
 
 use plonk::{prover::Prover, verifier::Verifier, GeneralEvaluationDomain};
 use prover::circuit::openid::{
-    OpenIdCircuit, SUB_MAX_LEN, HEADER_BASE64_MAX_LEN, ID_TOKEN_MAX_LEN,
-    PAYLOAD_BASE64_MAX_LEN, PAYLOAD_RAW_MAX_LEN,
+    OpenIdCircuit, HEADER_BASE64_MAX_LEN, ID_TOKEN_MAX_LEN, PAYLOAD_BASE64_MAX_LEN,
+    PAYLOAD_RAW_MAX_LEN, SUB_MAX_LEN,
 };
 use prover::parameters::{prepare_generic_params, store_prover_key, store_verifier_comms};
 use prover::types::ContractOpenIdInput;
@@ -21,7 +21,7 @@ fn test_open_id() {
     println!("begin 1024 circuits tests...");
     let mut rng = test_rng();
     // prepare SRS
-    let pckey = prepare_generic_params(2097150, &mut rng);
+    let pckey = prepare_generic_params(2097152, &mut rng);
 
     println!("pckey degree: {}", pckey.max_degree);
 
@@ -75,13 +75,13 @@ fn test_open_id() {
 
         let (location_id_token_1, location_payload_base64) = bit_location(
             circuit.payload_left_index,
-            circuit.payload_base64_len - 1,
+            circuit.payload_base64_len,
             ID_TOKEN_MAX_LEN as u32,
             PAYLOAD_BASE64_MAX_LEN as u32,
         );
         let (location_id_token_2, location_header_base64) = bit_location(
             0,
-            circuit.header_base64_len - 1,
+            circuit.header_base64_len,
             ID_TOKEN_MAX_LEN as u32,
             HEADER_BASE64_MAX_LEN as u32,
         );
@@ -98,6 +98,8 @@ fn test_open_id() {
         hash_inputs.extend(location_header_base64);
         hash_inputs.extend(location_payload_raw);
         hash_inputs.extend(location_sub);
+        hash_inputs.extend((circuit.header_base64_len as u16).to_be_bytes());
+        hash_inputs.extend((circuit.payload_base64_len as u16).to_be_bytes());
 
         println!("hash_inputs: {}", to_0x_hex(&hash_inputs));
 
@@ -110,6 +112,10 @@ fn test_open_id() {
         let mut cs = circuit.synthesize();
         println!("[main] synthesize finish");
         let public_input = cs.compute_public_input();
+        println!("cs.size() {}", cs.size());
+        println!("cs.table_size() {}", cs.table_size());
+        println!("cs.sorted_size() {}", cs.sorted_size());
+
         println!(
             "[main] public input: {:?}",
             convert_public_inputs(&public_input)

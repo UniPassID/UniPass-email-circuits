@@ -149,31 +149,6 @@ impl OpenIdCircuit {
             &header_decoded_vars,
         );
 
-        let (bit_location_id_token_2, bit_location_header_base64) = cs
-            .gen_bit_location_for_substr(
-                header_left_index,
-                header_base64_len,
-                ID_TOKEN_MAX_LEN,
-                HEADER_BASE64_MAX_LEN,
-            )
-            .unwrap();
-        {
-            let mask_r = sha256_collect_8_outputs_to_field(&mut cs, &header_hash).unwrap();
-            // private substring check.
-            cs.add_substring_mask_poly_return_words(
-                &id_token_padding_vars,
-                &header_base64_vars,
-                &bit_location_id_token_2,
-                &bit_location_header_base64,
-                mask_r,
-                header_left_index,
-                header_base64_len,
-                ID_TOKEN_MAX_LEN,
-                HEADER_BASE64_MAX_LEN,
-            )
-            .unwrap();
-        }
-
         // calculate payload base64 encode
         let mut payload_base64_vars = vec![];
         for e in &self.payload_base64_bytes {
@@ -227,6 +202,31 @@ impl OpenIdCircuit {
                 payload_base64_len,
                 ID_TOKEN_MAX_LEN,
                 PAYLOAD_BASE64_MAX_LEN,
+            )
+            .unwrap();
+        }
+
+        let (bit_location_id_token_2, bit_location_header_base64) = cs
+            .gen_bit_location_for_substr(
+                header_left_index,
+                header_base64_len,
+                ID_TOKEN_MAX_LEN,
+                HEADER_BASE64_MAX_LEN,
+            )
+            .unwrap();
+        {
+            let mask_r = sha256_collect_8_outputs_to_field(&mut cs, &header_hash).unwrap();
+            // private substring check.
+            cs.add_substring_mask_poly_return_words(
+                &id_token_padding_vars,
+                &header_base64_vars,
+                &bit_location_id_token_2,
+                &bit_location_header_base64,
+                mask_r,
+                header_left_index,
+                header_base64_len,
+                ID_TOKEN_MAX_LEN,
+                HEADER_BASE64_MAX_LEN,
             )
             .unwrap();
         }

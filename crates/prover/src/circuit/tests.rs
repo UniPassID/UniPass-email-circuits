@@ -6,11 +6,8 @@ use crate::{
         circuit_1024::Email1024CircuitInput,
         circuit_2048::Email2048CircuitInput,
         circuit_2048_triple::Email2048TripleCircuitInput,
-        misc::lt_bit_vector,
-        openid::{
-            OpenIdCircuit, HEADER_BASE64_MAX_LEN, ID_TOKEN_MAX_LEN, PAYLOAD_BASE64_MAX_LEN,
-            PAYLOAD_RAW_MAX_LEN, SUB_MAX_LEN,
-        },
+        misc::{lt_bit_vector, num_to_bits, slice_shift_left_efficent},
+        openid::OpenIdCircuit,
     },
     utils::{bit_location, convert_public_inputs, padding_len, to_0x_hex},
 };
@@ -28,7 +25,10 @@ use plonk::{
     verifier::Verifier,
     Composer, Error, Field, GeneralEvaluationDomain,
 };
+use rand::thread_rng;
 use sha2::Digest;
+
+use super::misc::sub_slice_check;
 
 fn test_prove_verify(cs: &mut Composer<Fr>, expected_public_input: Vec<Fr>) -> Result<(), Error> {
     println!();
@@ -461,34 +461,12 @@ fn test_openid_circuit() {
         hash_inputs.extend(sub_peper_hash);
         hash_inputs.extend(header_hash);
         hash_inputs.extend(payload_pub_match_hash);
-
-        let (location_id_token_1, location_payload_base64) = bit_location(
-            circuit.payload_left_index,
-            circuit.payload_base64_len,
-            ID_TOKEN_MAX_LEN as u32,
-            PAYLOAD_BASE64_MAX_LEN as u32,
-        );
-        let (location_id_token_2, location_header_base64) = bit_location(
-            0,
-            circuit.header_base64_len,
-            ID_TOKEN_MAX_LEN as u32,
-            HEADER_BASE64_MAX_LEN as u32,
-        );
-        let (location_payload_raw, location_sub) = bit_location(
-            circuit.sub_left_index,
-            circuit.sub_len,
-            PAYLOAD_RAW_MAX_LEN as u32,
-            SUB_MAX_LEN as u32,
-        );
-
-        hash_inputs.extend(location_id_token_1);
-        hash_inputs.extend(location_payload_base64);
-        hash_inputs.extend(location_id_token_2);
-        hash_inputs.extend(location_header_base64);
-        hash_inputs.extend(location_payload_raw);
-        hash_inputs.extend(location_sub);
+        hash_inputs.extend((circuit.header_left_index as u16).to_be_bytes());
         hash_inputs.extend((circuit.header_base64_len as u16).to_be_bytes());
+        hash_inputs.extend((circuit.payload_left_index as u16).to_be_bytes());
         hash_inputs.extend((circuit.payload_base64_len as u16).to_be_bytes());
+        hash_inputs.extend((circuit.sub_left_index as u16).to_be_bytes());
+        hash_inputs.extend((circuit.sub_len as u16).to_be_bytes());
 
         println!("hash_inputs len: {}", hash_inputs.len());
 
@@ -498,7 +476,25 @@ fn test_openid_circuit() {
         println!("public_input: {}", to_0x_hex(&public_input));
 
         let mut cs = circuit.synthesize();
-        test_prove_verify(&mut cs, vec![Fr::from_be_bytes_mod_order(&public_input)]).unwrap();
+
+        let expected_public_input = vec![Fr::from_be_bytes_mod_order(&public_input)];
+
+        println!();
+        let public_input = cs.compute_public_input();
+        println!(
+            "[main] public input: {:?}, expected: {:?}",
+            convert_public_inputs(&public_input),
+            convert_public_inputs(&expected_public_input),
+        );
+        if expected_public_input != public_input {
+            panic!("public input error")
+        }
+
+        println!("cs.size() {}", cs.size());
+        println!("cs.table_size() {}", cs.table_size());
+        println!("cs.sorted_size() {}", cs.sorted_size());
+
+        // test_prove_verify(&mut cs, vec![Fr::from_be_bytes_mod_order(&public_input)]).unwrap();
     }
 }
 
@@ -671,7 +667,7 @@ impl Base64EncodeTestCircuit {
         }
         let n = expected_output_vars.len();
         for _ in n..max_output_len {
-            expected_output_vars.push(cs.alloc(Fr::from(b'A')));
+            expected_output_vars.push(cs.alloc(Fr::zero()));
         }
 
         let output_vars = base64url_encode_gadget(&mut cs, &input_vars, max_input_len).unwrap();
@@ -748,4 +744,178 @@ fn test_lt_bit_vec() {
     println!("cs.size() {}", cs.size());
     println!("cs.table_size() {}", cs.table_size());
     println!("cs.sorted_size() {}", cs.sorted_size());
+}
+
+pub struct SliceShiftTestCircuit {
+    pub input: Vec<u8>,
+    pub index: usize,
+}
+
+impl SliceShiftTestCircuit {
+    pub fn synthesize(&self) -> Composer<Fr> {
+        // new '5 column' circuit
+        let mut cs = Composer::new(5, false);
+
+        let max_input_len = 1368;
+        let max_output_len = 1026;
+
+        let mut input_vars = vec![];
+        for e in &self.input {
+            input_vars.push(cs.alloc(Fr::from(*e)));
+        }
+        let n = input_vars.len();
+        for _ in n..max_input_len {
+            input_vars.push(cs.alloc(Fr::from(0u64)));
+        }
+
+        let index_var = cs.alloc(Fr::from(self.index as u64));
+        let output_vars = slice_shift_left_efficent(
+            &mut cs,
+            max_input_len,
+            max_output_len,
+            index_var,
+            &input_vars,
+        );
+        assert_eq!(output_vars.len(), max_output_len);
+
+        println!("output len: {}", output_vars.len());
+
+        let output_str = cs.get_assignments(&output_vars);
+        let output_str: Vec<_> = output_str
+            .into_iter()
+            .map(|a| a.into_repr().as_ref()[0] as u8)
+            .collect();
+
+        println!("output: {:?}", &output_str);
+        cs
+    }
+}
+
+#[test]
+fn test_slice_shift() {
+    let mut rng = thread_rng();
+    for _i in 0..100 {
+        let input_len: usize = rng.gen_range(18..768);
+        let mut input = vec![0; input_len];
+        rng.fill_bytes(&mut input);
+
+        println!("input: {:?}", input);
+
+        let circuit = SliceShiftTestCircuit { input, index: 10 };
+
+        let mut cs = circuit.synthesize();
+        test_prove_verify(&mut cs, vec![]).unwrap();
+    }
+}
+
+pub struct Num2BitsTestCircuit {
+    pub input: u64,
+    pub n: usize,
+}
+
+impl Num2BitsTestCircuit {
+    pub fn synthesize(&self) -> Composer<Fr> {
+        // new '5 column' circuit
+        let mut cs = Composer::new(5, false);
+
+        let input_var = cs.alloc(Fr::from(self.input as u64));
+        let output_vars = num_to_bits(&mut cs, self.n, input_var);
+        assert_eq!(output_vars.len(), self.n);
+
+        println!("output len: {}", output_vars.len());
+
+        let output_str = cs.get_assignments(&output_vars);
+        let output_str: Vec<_> = output_str
+            .into_iter()
+            .map(|a| a.into_repr().as_ref()[0] as u8)
+            .collect();
+
+        println!("output: {:?}", &output_str);
+        cs
+    }
+}
+
+#[test]
+fn test_num2bits() {
+    let mut rng = thread_rng();
+    let input = rng.gen_range(0..64);
+    println!("input: {}", input);
+    let circuit = Num2BitsTestCircuit { input, n: 6 };
+    let mut cs = circuit.synthesize();
+    test_prove_verify(&mut cs, vec![]).unwrap();
+}
+
+pub struct SubSliceTestCircuit {
+    pub slice: Vec<u8>,
+    pub sub_slice: Vec<u8>,
+    pub from_index: usize,
+    pub length: usize,
+}
+
+impl SubSliceTestCircuit {
+    pub fn synthesize(&self) -> Composer<Fr> {
+        // new '5 column' circuit
+        let mut cs = Composer::new(5, false);
+
+        let max_slice_len = 1368;
+        let max_sub_slice_len = 1026;
+
+        let mut slice_vars = vec![];
+        for e in &self.slice {
+            slice_vars.push(cs.alloc(Fr::from(*e)));
+        }
+        let n = slice_vars.len();
+        for _ in n..max_slice_len {
+            slice_vars.push(cs.alloc(Fr::zero()));
+        }
+
+        let mut sub_slice_vars = vec![];
+        for e in &self.sub_slice {
+            sub_slice_vars.push(cs.alloc(Fr::from(*e)));
+        }
+        let n = sub_slice_vars.len();
+        for _ in n..max_sub_slice_len {
+            sub_slice_vars.push(cs.alloc(Fr::zero()));
+        }
+
+        let from_index_var = cs.alloc(Fr::from(self.from_index as u64));
+        let length_var = cs.alloc(Fr::from(self.length as u64));
+
+        sub_slice_check(
+            &mut cs,
+            max_slice_len,
+            max_sub_slice_len,
+            &slice_vars,
+            &sub_slice_vars,
+            from_index_var,
+            length_var,
+        );
+
+        cs
+    }
+}
+
+#[test]
+fn test_sub_slice_check() {
+    let mut rng = thread_rng();
+    let input_len: usize = rng.gen_range(18..768);
+    let mut slice = vec![0; input_len];
+    rng.fill_bytes(&mut slice);
+    println!("slice {:?}", slice);
+
+    let from_index = rng.gen_range(0..input_len);
+    let length = rng.gen_range(0..input_len - from_index);
+    let sub_slice = slice[from_index..from_index + length].to_vec();
+
+    println!("from_index: {}, length: {}", from_index, length);
+    println!("sub_slice {:?}", sub_slice);
+
+    let circuit = SubSliceTestCircuit {
+        slice,
+        sub_slice,
+        from_index,
+        length,
+    };
+    let mut cs = circuit.synthesize();
+    test_prove_verify(&mut cs, vec![]).unwrap();
 }

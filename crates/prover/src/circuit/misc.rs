@@ -1,7 +1,7 @@
 use plonk::{
     ark_ff::PrimeField,
     composer::Variable,
-    sha256::{sha256_no_padding_words_var, Sha256Word},
+    sha256::{num_to_selectors, sha256_no_padding_words_var, Sha256Word},
     Composer, Error,
 };
 
@@ -18,36 +18,29 @@ pub fn one_bit_vector<F: PrimeField>(
         tmp.as_ref()[0]
     };
     let mut outputs = vec![];
-    let mut lc = Composer::<F>::null();
+
     for i in 0..n {
         let tmp = if i as u64 == index { 1u64 } else { 0u64 };
         let tmp = cs.alloc(F::from(tmp));
+        cs.enforce_bool(tmp);
 
-        let i_var = cs.alloc(F::from(i as u64));
-        cs.enforce_constant(i_var, F::from(i as u64));
-
-        let index_minus_i_var = cs.sub(index_var, i_var);
         cs.poly_gate(
-            vec![(tmp, F::zero()), (index_minus_i_var, F::zero())],
+            vec![(tmp, -F::from(i as u128)), (index_var, F::zero())],
             F::one(),
             F::zero(),
         );
-        lc = cs.add(lc, tmp);
 
         outputs.push(tmp);
+    }
+
+    let mut lc = outputs[0];
+    for i in 1..n {
+        lc = cs.add(lc, outputs[i]);
     }
 
     cs.enforce_constant(lc, F::one());
     outputs
 }
-
-// fn gt_bit_vector<F: PrimeField>(
-//     cs: &mut Composer<F>,
-//     n: usize,
-//     index_var: Variable,
-// ) -> Result<Vec<Variable>, Error> {
-//     todo!()
-// }
 
 pub fn lt_bit_vector<F: PrimeField>(
     cs: &mut Composer<F>,
@@ -66,11 +59,11 @@ pub fn lt_bit_vector<F: PrimeField>(
         F::zero(),
         -F::one(),
     );
-    let eq = one_bit_vector(cs, n, index_minus_1_var);
+    let eqs = num_to_selectors(cs, index_minus_1_var, n);
     let mut outputs = vec![];
-    outputs.push(eq[n - 1]);
+    outputs.push(eqs[n - 1]);
     for i in 0..n - 1 {
-        outputs.push(cs.add(eq[n - 2 - i], outputs[i]))
+        outputs.push(cs.add(eqs[n - 2 - i], outputs[i]))
     }
 
     outputs.reverse();
@@ -120,10 +113,10 @@ pub fn enforce_eq_before_index<F: PrimeField>(
     assert_eq!(a.len(), n);
     assert_eq!(b.len(), n);
 
-    let eq = lt_bit_vector(cs, n, index_var);
     for i in 0..n {
+        let lts = lt_bit_vector(cs, n, index_var);
         let ci = cs.sub(a[i], b[i]);
-        cs.mul_gate(ci, eq[i], Composer::<F>::null());
+        cs.mul_gate(ci, lts[i], Composer::<F>::null());
     }
 }
 
@@ -133,18 +126,142 @@ pub fn public_match_before_index<F: PrimeField>(
     cs: &mut Composer<F>,
     n: usize,
     index_var: Variable,
-    a: &Vec<Variable>,
-    b: &Vec<Variable>,
+    a: &[Variable],
+    b: &[Variable],
 ) {
     assert_eq!(a.len(), n);
     assert_eq!(b.len(), n);
 
-    let eq = lt_bit_vector(cs, n, index_var);
+    let lts = lt_bit_vector(cs, n, index_var);
     // prove public_match
     // b * (a - b) * eq === 0
     for i in 0..n {
         let ci = cs.sub(a[i], b[i]);
-        let tmp = cs.mul(eq[i], b[i]);
+        let tmp = cs.mul(lts[i], b[i]);
         cs.mul_gate(ci, tmp, Composer::<F>::null());
     }
+}
+
+pub fn log2(input: u64) -> u64 {
+    if input == 0 {
+        return 0;
+    }
+    let mut n = 1;
+    let mut r = 1;
+    while n < input {
+        r += 1;
+        n *= 2;
+    }
+    return r;
+}
+
+pub fn num_to_bits<F: PrimeField>(
+    cs: &mut Composer<F>,
+    n: usize,
+    input_var: Variable,
+) -> Vec<Variable> {
+    let mut outputs = vec![];
+    let mut lc1 = Composer::<F>::null();
+    let mut e2 = cs.alloc(F::one());
+    cs.enforce_constant(e2, F::one());
+
+    let input = {
+        let input_value = cs.get_assignment(input_var);
+        let tmp = input_value.into_repr();
+        tmp.as_ref()[0]
+    };
+
+    for i in 0..n {
+        outputs.push(cs.alloc(F::from((input >> i) & 1)));
+        cs.enforce_bool(outputs[i]);
+
+        let tmp = cs.mul(outputs[i], e2);
+        lc1 = cs.add(lc1, tmp);
+        e2 = cs.add(e2, e2)
+    }
+    cs.enforce_eq(input_var, lc1);
+    outputs
+}
+
+pub fn slice_shift_left<F: PrimeField>(
+    cs: &mut Composer<F>,
+    max_slice_len: usize,
+    max_sub_slice_len: usize,
+    index_var: Variable,
+    slice: &[Variable],
+) -> Vec<Variable> {
+    let mut outs = vec![];
+    let eqs = one_bit_vector(cs, max_slice_len, index_var);
+    for i in 0..max_sub_slice_len {
+        let mut arr = vec![];
+        for j in 0..max_slice_len {
+            if j < i {
+                arr.push(Composer::<F>::null())
+            } else {
+                arr.push(eqs[j - i])
+            }
+        }
+
+        let mut lc = Composer::<F>::null();
+        for i in 0..max_slice_len {
+            let tmp = cs.mul(arr[i], slice[i]);
+            lc = cs.add(lc, tmp)
+        }
+
+        outs.push(lc)
+    }
+
+    outs
+}
+
+pub fn slice_shift_left_efficent<F: PrimeField>(
+    cs: &mut Composer<F>,
+    max_input_len: usize,
+    max_output_len: usize,
+    index_var: Variable,
+    slice: &[Variable],
+) -> Vec<Variable> {
+    let len_bits = log2(max_input_len as u64);
+    let n2b = num_to_bits(cs, len_bits as usize, index_var);
+    let mut outs = vec![];
+
+    let mut tmp = vec![];
+    for j in 0..len_bits as usize {
+        tmp.push(vec![]);
+        for i in 0..max_input_len {
+            let offset = (i + (1 << j)) % max_input_len;
+            if j == 0 {
+                let tmp1 = cs.sub(slice[offset], slice[i]);
+                let tmp2 = cs.mul(n2b[j], tmp1);
+                let tmp3 = cs.add(tmp2, slice[i]);
+                tmp[j].push(tmp3);
+            } else {
+                let tmp1 = cs.sub(tmp[j - 1][offset], tmp[j - 1][i]);
+                let tmp2 = cs.mul(n2b[j], tmp1);
+                let tmp3 = cs.add(tmp2, tmp[j - 1][i]);
+                tmp[j].push(tmp3);
+            }
+        }
+    }
+
+    for i in 0..max_output_len {
+        outs.push(tmp[len_bits as usize - 1][i])
+    }
+
+    outs
+}
+
+pub fn sub_slice_check<F: PrimeField>(
+    cs: &mut Composer<F>,
+    max_slice_len: usize,
+    max_sub_slice_len: usize,
+    slice: &Vec<Variable>,
+    sub_slice: &Vec<Variable>,
+    from_index: Variable,
+    length: Variable,
+) {
+    let shifted_slice =
+        slice_shift_left_efficent(cs, max_slice_len, max_sub_slice_len, from_index, slice);
+
+    enforce_eq_before_index(cs, max_sub_slice_len, length, sub_slice, &shifted_slice);
 }

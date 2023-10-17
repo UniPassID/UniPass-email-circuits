@@ -385,8 +385,8 @@ pub fn enforce_encoded_len<F: PrimeField>(
     cs.enforce_constant(three_var, F::from(3u64));
     let two_var = cs.alloc(F::from(2u64));
     cs.enforce_constant(two_var, F::from(2u64));
-    let one_var = cs.alloc(F::from(1u64));
-    cs.enforce_constant(one_var, F::from(1u64));
+    let one_var = cs.alloc(F::one());
+    cs.enforce_constant(one_var, F::one());
 
     let encoded_len_mul_3 = cs.mul(encoded_len, three_var);
     let data_len_mul_4 = cs.mul(data_len, four_var);

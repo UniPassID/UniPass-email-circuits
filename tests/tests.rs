@@ -6,3 +6,5 @@ mod email_2048_test;
 mod email_2048_triple_test;
 #[cfg(test)]
 mod openid_test;
+#[cfg(test)]
+mod openid_new_test;

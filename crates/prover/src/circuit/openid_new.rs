@@ -10,17 +10,17 @@ use plonk::{
 
 use super::{
     base64::{base64url_decode_gadget, enforce_encoded_len},
-    misc::{enforce_eq_before_index, public_match_before_index, sha256_var},
+    misc::{enforce_eq_before_index, public_match_before_index, sha256_var, sub_slice_check},
 };
 
-pub const PAYLOAD_RAW_MAX_LEN: usize = 1152;
+pub const PAYLOAD_RAW_MAX_LEN: usize = 960;
 // (PAYLOAD_RAW_MAX_LEN / 3) * 4
-pub const PAYLOAD_BASE64_MAX_LEN: usize = 1536;
+pub const PAYLOAD_BASE64_MAX_LEN: usize = 1280;
 
-pub const HEADER_RAW_MAX_LEN: usize = 384;
-pub const HEADER_BASE64_MAX_LEN: usize = 512;
+pub const HEADER_RAW_MAX_LEN: usize = 192;
+pub const HEADER_BASE64_MAX_LEN: usize = 256;
 
-pub const ID_TOKEN_MAX_LEN: usize = 2048;
+pub const ID_TOKEN_MAX_LEN: usize = 1536;
 pub const SUB_MAX_LEN: usize = 192;
 
 fn find_subsequence(haystack: &[u8], needle: &[u8]) -> Option<usize> {
@@ -81,6 +81,16 @@ impl OpenIdCircuit {
             payload_pub_match[i] = 0;
         }
 
+        println!(
+            "header_raw_len: {}, header_base64_len: {}",
+            header_raw_len, header_base64_len
+        );
+        println!(
+            "payload_raw_len: {}, payload_base64_len: {}",
+            payload_raw_len, payload_base64_len
+        );
+        println!("idtoken_len: {}", raw_id_tokens.as_bytes().len());
+
         OpenIdCircuit {
             id_token_bytes: raw_id_tokens.as_bytes().to_vec(),
             header_base64_bytes,
@@ -110,15 +120,12 @@ impl OpenIdCircuit {
         // get the sub_pepper hash
         let (sub_pepper_vars, sub_pepper_hash) =
             sha256_var(&mut cs, &self.sub_pepper_bytes, SUB_MAX_LEN).unwrap();
-
         // construct header_pub_match and calculate hash
         let (payload_pub_match_vars, payload_pub_match_hash) =
             sha256_var(&mut cs, &self.payload_pub_match, PAYLOAD_RAW_MAX_LEN).unwrap();
-
         // calculate header_raw hash
         let (header_raw_vars, header_hash) =
             sha256_var(&mut cs, &self.header_raw_bytes, HEADER_RAW_MAX_LEN).unwrap();
-
         let mut header_base64_vars = vec![];
         for e in &self.header_base64_bytes {
             header_base64_vars.push(cs.alloc(Fr::from(*e)));
@@ -181,104 +188,43 @@ impl OpenIdCircuit {
             &payload_pub_match_vars,
         );
 
-        let (bit_location_id_token_1, bit_location_payload_base64) = cs
-            .gen_bit_location_for_substr(
-                payload_left_index,
-                payload_base64_len,
-                ID_TOKEN_MAX_LEN,
-                PAYLOAD_BASE64_MAX_LEN,
-            )
-            .unwrap();
-        {
-            let mask_r = sha256_collect_8_outputs_to_field(&mut cs, &id_token_hash).unwrap();
-            // private substring check.
-            cs.add_substring_mask_poly_return_words(
-                &id_token_padding_vars,
-                &payload_base64_vars,
-                &bit_location_id_token_1,
-                &bit_location_payload_base64,
-                mask_r,
-                payload_left_index,
-                payload_base64_len,
-                ID_TOKEN_MAX_LEN,
-                PAYLOAD_BASE64_MAX_LEN,
-            )
-            .unwrap();
-        }
+        sub_slice_check(
+            &mut cs,
+            ID_TOKEN_MAX_LEN,
+            PAYLOAD_BASE64_MAX_LEN,
+            &id_token_padding_vars,
+            &payload_base64_vars,
+            payload_left_index,
+            payload_base64_len,
+        );
 
-        let (bit_location_id_token_2, bit_location_header_base64) = cs
-            .gen_bit_location_for_substr(
-                header_left_index,
-                header_base64_len,
-                ID_TOKEN_MAX_LEN,
-                HEADER_BASE64_MAX_LEN,
-            )
-            .unwrap();
-        {
-            let mask_r = sha256_collect_8_outputs_to_field(&mut cs, &header_hash).unwrap();
-            // private substring check.
-            cs.add_substring_mask_poly_return_words(
-                &id_token_padding_vars,
-                &header_base64_vars,
-                &bit_location_id_token_2,
-                &bit_location_header_base64,
-                mask_r,
-                header_left_index,
-                header_base64_len,
-                ID_TOKEN_MAX_LEN,
-                HEADER_BASE64_MAX_LEN,
-            )
-            .unwrap();
-        }
+        sub_slice_check(
+            &mut cs,
+            ID_TOKEN_MAX_LEN,
+            HEADER_BASE64_MAX_LEN,
+            &id_token_padding_vars,
+            &header_base64_vars,
+            header_left_index,
+            header_base64_len,
+        );
 
         // start index of the sub address
         let sub_left_index = cs.alloc(Fr::from(self.sub_left_index));
         // length of the sub address
         let sub_len = cs.alloc(Fr::from(self.sub_len));
 
-        let (bit_location_payload_raw, bit_location_sub) = cs
-            .gen_bit_location_for_substr(sub_left_index, sub_len, PAYLOAD_RAW_MAX_LEN, SUB_MAX_LEN)
-            .unwrap();
-        {
-            let mask_r = sha256_collect_8_outputs_to_field(&mut cs, &sub_pepper_hash).unwrap();
-            // private substring check.
-            cs.add_substring_mask_poly_return_words(
-                &payload_decoded_vars,
-                &sub_pepper_vars,
-                &bit_location_payload_raw,
-                &bit_location_sub,
-                mask_r,
-                sub_left_index,
-                sub_len,
-                PAYLOAD_RAW_MAX_LEN,
-                SUB_MAX_LEN,
-            )
-            .unwrap();
-        }
-        let output_words_id_token_1 = cs
-            .collect_bit_location_for_sha256(ID_TOKEN_MAX_LEN, &bit_location_id_token_1)
-            .unwrap();
-        let output_words_payload_base64 = cs
-            .collect_bit_location_for_sha256(PAYLOAD_BASE64_MAX_LEN, &bit_location_payload_base64)
-            .unwrap();
+        sub_slice_check(
+            &mut cs,
+            PAYLOAD_RAW_MAX_LEN,
+            SUB_MAX_LEN,
+            &payload_decoded_vars,
+            &sub_pepper_vars,
+            sub_left_index,
+            sub_len,
+        );
 
-        let output_words_id_token_2 = cs
-            .collect_bit_location_for_sha256(ID_TOKEN_MAX_LEN, &bit_location_id_token_2)
-            .unwrap();
-        let output_words_header_base64 = cs
-            .collect_bit_location_for_sha256(HEADER_BASE64_MAX_LEN, &bit_location_header_base64)
-            .unwrap();
-
-        let output_words_payload_raw = cs
-            .collect_bit_location_for_sha256(PAYLOAD_RAW_MAX_LEN, &bit_location_payload_raw)
-            .unwrap();
-        let output_words_sub = cs
-            .collect_bit_location_for_sha256(SUB_MAX_LEN, &bit_location_sub)
-            .unwrap();
-
-        // 8544 bit, id_token_hash(256)|sub_hash(256)|header_hash(256)|payload_pubmatch_hash(256)
-        // |bit_location_id_token_1(2048)|bit_location_payload_base64(1536)|bit_location_id_token_2(2048)|bit_location_header_base64(512)
-        // |bit_location_payload_raw(1152)|bit_location_sub(192)|header_base64_len(16)|payload_base64_len(16)
+        // 1120 bit, id_token_hash(256)|sub_hash(256)|header_hash(256)|payload_pubmatch_hash(256)
+        // |header_left_index(16)|header_base64_len(16)|payload_left_index|payload_base64_len(16)|sub_left_index(16)|sub_len(16)
         let mut sha256_all_public_data = vec![];
         for wd in id_token_hash {
             let word = Sha256Word {
@@ -320,74 +266,57 @@ impl OpenIdCircuit {
             };
             sha256_all_public_data.push(word);
         }
-        for wd in output_words_id_token_1 {
-            let word = Sha256Word {
-                var: wd,
-                hvar: Composer::<Fr>::null(),
-                lvar: Composer::<Fr>::null(),
-                hvar_spread: Composer::<Fr>::null(),
-                lvar_spread: Composer::<Fr>::null(),
-            };
-            sha256_all_public_data.push(word);
-        }
-        for wd in output_words_payload_base64 {
-            let word = Sha256Word {
-                var: wd,
-                hvar: Composer::<Fr>::null(),
-                lvar: Composer::<Fr>::null(),
-                hvar_spread: Composer::<Fr>::null(),
-                lvar_spread: Composer::<Fr>::null(),
-            };
-            sha256_all_public_data.push(word);
-        }
-        for wd in output_words_id_token_2 {
-            let word = Sha256Word {
-                var: wd,
-                hvar: Composer::<Fr>::null(),
-                lvar: Composer::<Fr>::null(),
-                hvar_spread: Composer::<Fr>::null(),
-                lvar_spread: Composer::<Fr>::null(),
-            };
-            sha256_all_public_data.push(word);
-        }
-        for wd in output_words_header_base64 {
-            let word = Sha256Word {
-                var: wd,
-                hvar: Composer::<Fr>::null(),
-                lvar: Composer::<Fr>::null(),
-                hvar_spread: Composer::<Fr>::null(),
-                lvar_spread: Composer::<Fr>::null(),
-            };
-            sha256_all_public_data.push(word);
-        }
-        for wd in output_words_payload_raw {
-            let word = Sha256Word {
-                var: wd,
-                hvar: Composer::<Fr>::null(),
-                lvar: Composer::<Fr>::null(),
-                hvar_spread: Composer::<Fr>::null(),
-                lvar_spread: Composer::<Fr>::null(),
-            };
-            sha256_all_public_data.push(word);
-        }
-        for wd in output_words_sub {
-            let word = Sha256Word {
-                var: wd,
-                hvar: Composer::<Fr>::null(),
-                lvar: Composer::<Fr>::null(),
-                hvar_spread: Composer::<Fr>::null(),
-                lvar_spread: Composer::<Fr>::null(),
-            };
-            sha256_all_public_data.push(word);
-        }
-        // (header_base64_len|payload_base64_len) as a 32bits word
+
+        // (header_left_index|header_base64_len) as a 32bits word
         let word_var = {
             let spread16_index = cs.get_table_index("spread_16bits_14bits".to_string());
             assert!(spread16_index != 0);
             let _ = cs
                 .read_from_table(
                     spread16_index,
+                    vec![header_left_index, Composer::<Fr>::null()],
+                )
+                .unwrap();
+            let _ = cs
+                .read_from_table(
+                    spread16_index,
                     vec![header_base64_len, Composer::<Fr>::null()],
+                )
+                .unwrap();
+
+            let word_var = cs.alloc(
+                Fr::from(self.header_left_index as u64) * Fr::from(1u64 << 16)
+                    + Fr::from(self.header_base64_len as u64),
+            );
+
+            cs.poly_gate(
+                vec![
+                    (word_var, -Fr::one()),
+                    (header_left_index, Fr::from(1u64 << 16)),
+                    (header_base64_len, Fr::one()),
+                ],
+                Fr::zero(),
+                Fr::zero(),
+            );
+
+            word_var
+        };
+        let word = Sha256Word {
+            var: word_var,
+            hvar: Composer::<Fr>::null(),
+            lvar: Composer::<Fr>::null(),
+            hvar_spread: Composer::<Fr>::null(),
+            lvar_spread: Composer::<Fr>::null(),
+        };
+        sha256_all_public_data.push(word);
+        // (payload_left_index|payload_base64_len) as a 32bits word
+        let word_var = {
+            let spread16_index = cs.get_table_index("spread_16bits_14bits".to_string());
+            assert!(spread16_index != 0);
+            let _ = cs
+                .read_from_table(
+                    spread16_index,
+                    vec![payload_left_index, Composer::<Fr>::null()],
                 )
                 .unwrap();
             let _ = cs
@@ -398,14 +327,14 @@ impl OpenIdCircuit {
                 .unwrap();
 
             let word_var = cs.alloc(
-                Fr::from(self.header_base64_len as u64) * Fr::from(1u64 << 16)
+                Fr::from(self.payload_left_index as u64) * Fr::from(1u64 << 16)
                     + Fr::from(self.payload_base64_len as u64),
             );
 
             cs.poly_gate(
                 vec![
                     (word_var, -Fr::one()),
-                    (header_base64_len, Fr::from(1u64 << 16)),
+                    (payload_left_index, Fr::from(1u64 << 16)),
                     (payload_base64_len, Fr::one()),
                 ],
                 Fr::zero(),
@@ -422,8 +351,44 @@ impl OpenIdCircuit {
             lvar_spread: Composer::<Fr>::null(),
         };
         sha256_all_public_data.push(word);
+        // (sub_left_index|sub_len) as a 32bits word
+        let word_var = {
+            let spread16_index = cs.get_table_index("spread_16bits_14bits".to_string());
+            assert!(spread16_index != 0);
+            let _ = cs
+                .read_from_table(spread16_index, vec![sub_left_index, Composer::<Fr>::null()])
+                .unwrap();
+            let _ = cs
+                .read_from_table(spread16_index, vec![sub_len, Composer::<Fr>::null()])
+                .unwrap();
 
-        // padding (96bits + 64bits)
+            let word_var = cs.alloc(
+                Fr::from(self.sub_left_index as u64) * Fr::from(1u64 << 16)
+                    + Fr::from(self.sub_len as u64),
+            );
+
+            cs.poly_gate(
+                vec![
+                    (word_var, -Fr::one()),
+                    (sub_left_index, Fr::from(1u64 << 16)),
+                    (sub_len, Fr::one()),
+                ],
+                Fr::zero(),
+                Fr::zero(),
+            );
+
+            word_var
+        };
+        let word = Sha256Word {
+            var: word_var,
+            hvar: Composer::<Fr>::null(),
+            lvar: Composer::<Fr>::null(),
+            hvar_spread: Composer::<Fr>::null(),
+            lvar_spread: Composer::<Fr>::null(),
+        };
+        sha256_all_public_data.push(word);
+
+        // padding (352bits + 64bits)
         {
             let pad_value = Fr::from(1u64 << 31);
             let tmp_var = cs.alloc(pad_value);
@@ -436,7 +401,7 @@ impl OpenIdCircuit {
                 lvar_spread: Composer::<Fr>::null(),
             };
             sha256_all_public_data.push(word);
-            for _ in 0..3 {
+            for _ in 0..11 {
                 let word = Sha256Word {
                     var: Composer::<Fr>::null(),
                     hvar: Composer::<Fr>::null(),
@@ -446,7 +411,7 @@ impl OpenIdCircuit {
                 };
                 sha256_all_public_data.push(word);
             }
-            let pad_value = Fr::from(8544u64);
+            let pad_value = Fr::from(1120u64);
             let tmp_var = cs.alloc(pad_value);
             cs.enforce_constant(tmp_var, pad_value);
             let word = Sha256Word {
@@ -460,7 +425,7 @@ impl OpenIdCircuit {
         }
 
         let all_public_hash =
-            sha256_no_padding_words_var_fixed_length(&mut cs, &sha256_all_public_data, 17).unwrap();
+            sha256_no_padding_words_var_fixed_length(&mut cs, &sha256_all_public_data, 3).unwrap();
 
         let public_inputs_hash =
             sha256_collect_8_outputs_to_field(&mut cs, &all_public_hash).unwrap();

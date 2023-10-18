@@ -552,6 +552,7 @@ dependencies = [
  "hex",
  "log",
  "plonk",
+ "rand",
  "serde",
  "serde_json",
  "sha2",

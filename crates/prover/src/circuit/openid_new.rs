@@ -13,14 +13,14 @@ use super::{
     misc::{enforce_eq_before_index, public_match_before_index, sha256_var, sub_slice_check},
 };
 
-pub const PAYLOAD_RAW_MAX_LEN: usize = 1152;
+pub const PAYLOAD_RAW_MAX_LEN: usize = 960;
 // (PAYLOAD_RAW_MAX_LEN / 3) * 4
-pub const PAYLOAD_BASE64_MAX_LEN: usize = 1536;
+pub const PAYLOAD_BASE64_MAX_LEN: usize = 1280;
 
-pub const HEADER_RAW_MAX_LEN: usize = 384;
-pub const HEADER_BASE64_MAX_LEN: usize = 512;
+pub const HEADER_RAW_MAX_LEN: usize = 192;
+pub const HEADER_BASE64_MAX_LEN: usize = 256;
 
-pub const ID_TOKEN_MAX_LEN: usize = 2048;
+pub const ID_TOKEN_MAX_LEN: usize = 1536;
 pub const SUB_MAX_LEN: usize = 192;
 
 fn find_subsequence(haystack: &[u8], needle: &[u8]) -> Option<usize> {
@@ -81,6 +81,16 @@ impl OpenIdCircuit {
             payload_pub_match[i] = 0;
         }
 
+        println!(
+            "header_raw_len: {}, header_base64_len: {}",
+            header_raw_len, header_base64_len
+        );
+        println!(
+            "payload_raw_len: {}, payload_base64_len: {}",
+            payload_raw_len, payload_base64_len
+        );
+        println!("idtoken_len: {}", raw_id_tokens.as_bytes().len());
+
         OpenIdCircuit {
             id_token_bytes: raw_id_tokens.as_bytes().to_vec(),
             header_base64_bytes,
@@ -110,15 +120,12 @@ impl OpenIdCircuit {
         // get the sub_pepper hash
         let (sub_pepper_vars, sub_pepper_hash) =
             sha256_var(&mut cs, &self.sub_pepper_bytes, SUB_MAX_LEN).unwrap();
-
         // construct header_pub_match and calculate hash
         let (payload_pub_match_vars, payload_pub_match_hash) =
             sha256_var(&mut cs, &self.payload_pub_match, PAYLOAD_RAW_MAX_LEN).unwrap();
-
         // calculate header_raw hash
         let (header_raw_vars, header_hash) =
             sha256_var(&mut cs, &self.header_raw_bytes, HEADER_RAW_MAX_LEN).unwrap();
-
         let mut header_base64_vars = vec![];
         for e in &self.header_base64_bytes {
             header_base64_vars.push(cs.alloc(Fr::from(*e)));

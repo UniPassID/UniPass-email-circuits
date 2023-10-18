@@ -113,8 +113,8 @@ pub fn enforce_eq_before_index<F: PrimeField>(
     assert_eq!(a.len(), n);
     assert_eq!(b.len(), n);
 
+    let lts = lt_bit_vector(cs, n, index_var);
     for i in 0..n {
-        let lts = lt_bit_vector(cs, n, index_var);
         let ci = cs.sub(a[i], b[i]);
         cs.mul_gate(ci, lts[i], Composer::<F>::null());
     }

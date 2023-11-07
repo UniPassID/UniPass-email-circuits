@@ -7,10 +7,9 @@ use plonk::Field;
 
 use email_parser::parser::parse_email;
 use plonk::{prover::Prover, verifier::Verifier, GeneralEvaluationDomain};
-use prover::circuit::circuit_2048_triple::Email2048TripleCircuitInput;
+use prover::circuit::email_2048_triple::Email2048TripleCircuitInput;
 use prover::parameters::{prepare_generic_params, store_verifier_comms};
 use prover::types::ContractTripleInput;
-use prover::utils::{bit_location, padding_len};
 use prover::utils::{convert_public_inputs, to_0x_hex};
 use sha2::Digest;
 
@@ -473,29 +472,21 @@ X-MS-Exchange-Transport-CrossTenantHeadersStamped: OS3P286MB2152
         .zip(&all_email_private_inputs[0..3])
         .enumerate()
     {
-        let header_len = email_private_inputs.email_header.len() as u32;
-        let addr_len = (email_private_inputs.from_right_index
+        let from_len = (email_private_inputs.from_right_index
             - email_private_inputs.from_left_index
             + 1) as u32;
         let from_left_index = email_private_inputs.from_left_index;
-        let (bit_location_a, bit_location_b) =
-            bit_location(from_left_index as u32, addr_len, 2048, 192);
-        let mut r: Vec<u8> = vec![];
-        r.extend(&email_public_inputs.header_hash);
-        r.extend(&email_public_inputs.from_hash);
-        r.extend(&bit_location_a);
-        r.extend(&bit_location_b);
 
-        println!("r: {}", to_0x_hex(&r));
+        sha256_input.extend(&email_public_inputs.header_hash);
+        sha256_input.extend(&email_public_inputs.from_hash);
 
         println!(
             "email_header_pub_matches: {}",
             to_0x_hex(&circuit.email_header_pub_matches[i])
         );
-        sha256_input.extend(sha2::Sha256::digest(&r));
         sha256_input.extend(sha2::Sha256::digest(&circuit.email_header_pub_matches[i]).to_vec());
-        sha256_input.extend((padding_len(header_len) as u16 / 64).to_be_bytes());
-        sha256_input.extend((padding_len(addr_len + 32) as u16 / 64).to_be_bytes());
+        sha256_input.extend((from_left_index as u16).to_be_bytes());
+        sha256_input.extend((from_len as u16).to_be_bytes());
     }
 
     println!("sha256_input: {}", to_0x_hex(&sha256_input));

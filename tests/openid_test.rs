@@ -6,13 +6,9 @@ use plonk::ark_std::test_rng;
 use plonk::Field;
 
 use plonk::{prover::Prover, verifier::Verifier, GeneralEvaluationDomain};
-use prover::circuit::openid::{
-    OpenIdCircuit, HEADER_BASE64_MAX_LEN, ID_TOKEN_MAX_LEN, PAYLOAD_BASE64_MAX_LEN,
-    PAYLOAD_RAW_MAX_LEN, SUB_MAX_LEN,
-};
+use prover::circuit::openid::OpenIdCircuit;
 use prover::parameters::{prepare_generic_params, store_prover_key, store_verifier_comms};
 use prover::types::ContractOpenIdInput;
-use prover::utils::bit_location;
 use prover::utils::{convert_public_inputs, to_0x_hex};
 use sha2::Digest;
 
@@ -70,36 +66,12 @@ fn test_open_id() {
         hash_inputs.extend(sub_peper_hash.clone());
         hash_inputs.extend(header_hash);
         hash_inputs.extend(payload_pub_match_hash);
-
-        println!("concat_hash: {}", to_0x_hex(&hash_inputs));
-
-        let (location_id_token_1, location_payload_base64) = bit_location(
-            circuit.payload_left_index,
-            circuit.payload_base64_len,
-            ID_TOKEN_MAX_LEN as u32,
-            PAYLOAD_BASE64_MAX_LEN as u32,
-        );
-        let (location_id_token_2, location_header_base64) = bit_location(
-            0,
-            circuit.header_base64_len,
-            ID_TOKEN_MAX_LEN as u32,
-            HEADER_BASE64_MAX_LEN as u32,
-        );
-        let (location_payload_raw, location_sub) = bit_location(
-            circuit.sub_left_index,
-            circuit.sub_len,
-            PAYLOAD_RAW_MAX_LEN as u32,
-            SUB_MAX_LEN as u32,
-        );
-
-        hash_inputs.extend(location_id_token_1);
-        hash_inputs.extend(location_payload_base64);
-        hash_inputs.extend(location_id_token_2);
-        hash_inputs.extend(location_header_base64);
-        hash_inputs.extend(location_payload_raw);
-        hash_inputs.extend(location_sub);
+        hash_inputs.extend((circuit.header_left_index as u16).to_be_bytes());
         hash_inputs.extend((circuit.header_base64_len as u16).to_be_bytes());
+        hash_inputs.extend((circuit.payload_left_index as u16).to_be_bytes());
         hash_inputs.extend((circuit.payload_base64_len as u16).to_be_bytes());
+        hash_inputs.extend((circuit.sub_left_index as u16).to_be_bytes());
+        hash_inputs.extend((circuit.sub_len as u16).to_be_bytes());
 
         println!("hash_inputs: {}", to_0x_hex(&hash_inputs));
 

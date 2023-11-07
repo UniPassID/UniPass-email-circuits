@@ -7,10 +7,9 @@ use plonk::Field;
 
 use email_parser::parser::parse_email;
 use plonk::{prover::Prover, verifier::Verifier, GeneralEvaluationDomain};
-use prover::circuit::circuit_2048::Email2048CircuitInput;
+use prover::circuit::email_2048::Email2048CircuitInput;
 use prover::parameters::prepare_generic_params;
 use prover::types::ContractInput;
-use prover::utils::{bit_location, padding_len};
 use prover::utils::{convert_public_inputs, to_0x_hex};
 use sha2::Digest;
 
@@ -38,7 +37,7 @@ fn test_2048() {
             parse_email(&email_bytes, from_pepper.to_vec()).unwrap();
 
         let header_len = email_private_inputs.email_header.len() as u32;
-        let addr_len = (email_private_inputs.from_right_index
+        let from_len = (email_private_inputs.from_right_index
             - email_private_inputs.from_left_index
             + 1) as u32;
         let from_left_index = email_private_inputs.from_left_index;
@@ -50,23 +49,12 @@ fn test_2048() {
         let circuit = Email2048CircuitInput::new(email_private_inputs).unwrap();
         println!("[main] circuit construct finish");
 
-        let (bit_location_a, bit_location_b) =
-            bit_location(from_left_index as u32, addr_len, 2048, 192);
-
-        println!(
-            "bit_loaction_a: {}, bit_location_b: {}",
-            hex::encode(&bit_location_a),
-            hex::encode(&bit_location_b)
-        );
-
         let mut sha256_input: Vec<u8> = vec![];
         sha256_input.extend(&email_public_inputs.header_hash);
         sha256_input.extend(&email_public_inputs.from_hash);
-        sha256_input.extend(bit_location_a);
-        sha256_input.extend(bit_location_b);
         sha256_input.extend(sha2::Sha256::digest(&circuit.email_header_pub_match).to_vec());
-        sha256_input.extend((padding_len(header_len) as u16 / 64).to_be_bytes());
-        sha256_input.extend((padding_len(addr_len + 32) as u16 / 64).to_be_bytes());
+        sha256_input.extend((from_left_index as u16).to_be_bytes());
+        sha256_input.extend((from_len as u16).to_be_bytes());
 
         let mut expected_public_input = sha2::Sha256::digest(&sha256_input).to_vec();
         expected_public_input[0] &= 0x1f;

@@ -3,13 +3,13 @@ use std::time::Instant;
 use crate::{
     circuit::{
         base64::{base64url_decode_gadget, base64url_encode_gadget, BASE64URL_ENCODE_CHARS},
-        circuit_1024::Email1024CircuitInput,
-        circuit_2048::Email2048CircuitInput,
-        circuit_2048_triple::Email2048TripleCircuitInput,
+        email_1024::Email1024CircuitInput,
+        email_2048::Email2048CircuitInput,
+        email_2048_triple::Email2048TripleCircuitInput,
         misc::{lt_bit_vector, num_to_bits, slice_shift_left_efficent},
-        openid, openid_new,
+        openid,
     },
-    utils::{bit_location, convert_public_inputs, padding_len, to_0x_hex},
+    utils::{convert_public_inputs, to_0x_hex},
 };
 
 use email_parser::parser::parse_email;
@@ -301,8 +301,8 @@ fn test_email1024_circuit() {
         let (email_public_inputs, email_private_inputs) =
             parse_email(email_bytes.as_bytes(), from_pepper.clone()).unwrap();
 
-        let header_len = email_private_inputs.email_header.len() as u32;
-        let sub_len = (email_private_inputs.from_right_index - email_private_inputs.from_left_index
+        let from_len = (email_private_inputs.from_right_index
+            - email_private_inputs.from_left_index
             + 1) as u32;
         let from_left_index = email_private_inputs.from_left_index;
         index += 1;
@@ -314,19 +314,12 @@ fn test_email1024_circuit() {
 
         let circuit = Email1024CircuitInput::new(email_private_inputs).unwrap();
 
-        let (bit_location_a, bit_location_b) =
-            bit_location(from_left_index as u32, sub_len, 1024, 192);
-
         let mut sha256_input: Vec<u8> = vec![];
         sha256_input.extend(&email_public_inputs.header_hash);
         sha256_input.extend(&email_public_inputs.from_hash);
-
-        sha256_input.extend(bit_location_a);
-        sha256_input.extend(bit_location_b);
-
         sha256_input.extend(sha2::Sha256::digest(&circuit.email_header_pub_match).to_vec());
-        sha256_input.extend((padding_len(header_len) as u16 / 64).to_be_bytes());
-        sha256_input.extend((padding_len(sub_len + 32) as u16 / 64).to_be_bytes());
+        sha256_input.extend((from_left_index as u16).to_be_bytes());
+        sha256_input.extend((from_len as u16).to_be_bytes());
 
         let mut public_input = sha2::Sha256::digest(&sha256_input).to_vec();
         public_input[0] &= 0x1f;
@@ -336,7 +329,21 @@ fn test_email1024_circuit() {
         let mut cs = circuit.synthesize();
         println!("[test_email1024_circuit] synthesize finish");
 
-        test_prove_verify(&mut cs, vec![Fr::from_be_bytes_mod_order(&public_input)]).unwrap();
+        println!();
+        let computed_public_input = cs.compute_public_input();
+        let expected_public_input = vec![Fr::from_be_bytes_mod_order(&public_input)];
+        println!(
+            "[main] public input: {:?}, expected: {:?}",
+            convert_public_inputs(&computed_public_input),
+            convert_public_inputs(&expected_public_input),
+        );
+        if expected_public_input != computed_public_input {
+            panic!("public input error")
+        }
+
+        println!("cs.size() {}", cs.size());
+        println!("cs.table_size() {}", cs.table_size());
+        println!("cs.sorted_size() {}", cs.sorted_size());
     }
 }
 
@@ -351,8 +358,8 @@ fn test_email2048_circuit() {
             parse_email(email_bytes.as_bytes(), from_pepper.clone()).unwrap();
         index += 1;
 
-        let header_len = email_private_inputs.email_header.len() as u32;
-        let sub_len = (email_private_inputs.from_right_index - email_private_inputs.from_left_index
+        let from_len = (email_private_inputs.from_right_index
+            - email_private_inputs.from_left_index
             + 1) as u32;
         let from_left_index = email_private_inputs.from_left_index;
 
@@ -364,25 +371,33 @@ fn test_email2048_circuit() {
         let mut cs = circuit.synthesize();
         println!("[main] synthesize finish");
 
-        let (bit_location_a, bit_location_b) =
-            bit_location(from_left_index as u32, sub_len, 2048, 192);
-
         let mut sha256_input: Vec<u8> = vec![];
         sha256_input.extend(&email_public_inputs.header_hash);
         sha256_input.extend(&email_public_inputs.from_hash);
 
-        sha256_input.extend(bit_location_a);
-        sha256_input.extend(bit_location_b);
-
         sha256_input.extend(sha2::Sha256::digest(&circuit.email_header_pub_match).to_vec());
-        sha256_input.extend((padding_len(header_len) as u16 / 64).to_be_bytes());
-        sha256_input.extend((padding_len(sub_len + 32) as u16 / 64).to_be_bytes());
+        sha256_input.extend((from_left_index as u16).to_be_bytes());
+        sha256_input.extend((from_len as u16).to_be_bytes());
 
         let mut public_input = sha2::Sha256::digest(&sha256_input).to_vec();
         public_input[0] &= 0x1f;
         println!("public_input: {}", to_0x_hex(&public_input));
 
-        test_prove_verify(&mut cs, vec![Fr::from_be_bytes_mod_order(&public_input)]).unwrap();
+        println!();
+        let computed_public_input = cs.compute_public_input();
+        let expected_public_input = vec![Fr::from_be_bytes_mod_order(&public_input)];
+        println!(
+            "[main] public input: {:?}, expected: {:?}",
+            convert_public_inputs(&computed_public_input),
+            convert_public_inputs(&expected_public_input),
+        );
+        if expected_public_input != computed_public_input {
+            panic!("public input error")
+        }
+
+        println!("cs.size() {}", cs.size());
+        println!("cs.table_size() {}", cs.table_size());
+        println!("cs.sorted_size() {}", cs.sorted_size());
     }
 }
 
@@ -413,21 +428,16 @@ fn test_email2048tri_circuit() {
         .zip(&all_email_private_inputs)
         .enumerate()
     {
-        let header_len = email_private_inputs.email_header.len() as u32;
-        let sub_len = (email_private_inputs.from_right_index - email_private_inputs.from_left_index
+        let from_len = (email_private_inputs.from_right_index
+            - email_private_inputs.from_left_index
             + 1) as u32;
         let from_left_index = email_private_inputs.from_left_index;
-        let (bit_location_a, bit_location_b) =
-            bit_location(from_left_index as u32, sub_len, 2048, 192);
-        let mut r: Vec<u8> = vec![];
-        r.extend(&email_public_inputs.header_hash);
-        r.extend(&email_public_inputs.from_hash);
-        r.extend(&bit_location_a);
-        r.extend(&bit_location_b);
-        sha256_input.extend(sha2::Sha256::digest(&r));
+
+        sha256_input.extend(&email_public_inputs.header_hash);
+        sha256_input.extend(&email_public_inputs.from_hash);
         sha256_input.extend(sha2::Sha256::digest(&circuit.email_header_pub_matches[i]).to_vec());
-        sha256_input.extend((padding_len(header_len) as u16 / 64).to_be_bytes());
-        sha256_input.extend((padding_len(sub_len + 32) as u16 / 64).to_be_bytes());
+        sha256_input.extend((from_left_index as u16).to_be_bytes());
+        sha256_input.extend((from_len as u16).to_be_bytes());
     }
 
     let mut public_input = sha2::Sha256::digest(&sha256_input).to_vec();
@@ -438,7 +448,21 @@ fn test_email2048tri_circuit() {
     let mut cs = circuit.synthesize();
     println!("[test_email2048tri_circuit] synthesize finish");
 
-    test_prove_verify(&mut cs, vec![Fr::from_be_bytes_mod_order(&public_input)]).unwrap();
+    println!();
+    let computed_public_input = cs.compute_public_input();
+    let expected_public_input = vec![Fr::from_be_bytes_mod_order(&public_input)];
+    println!(
+        "[main] public input: {:?}, expected: {:?}",
+        convert_public_inputs(&computed_public_input),
+        convert_public_inputs(&expected_public_input),
+    );
+    if expected_public_input != computed_public_input {
+        panic!("public input error")
+    }
+
+    println!("cs.size() {}", cs.size());
+    println!("cs.table_size() {}", cs.table_size());
+    println!("cs.sorted_size() {}", cs.sorted_size());
 }
 
 #[test]
@@ -448,67 +472,6 @@ fn test_openid_circuit() {
     for id_token in id_tokens {
         let from_pepper = [0u8; 32];
         let circuit = openid::OpenIdCircuit::new(id_token, &from_pepper);
-
-        let header_hash = sha2::Sha256::digest(&circuit.header_raw_bytes).to_vec();
-        println!("header hash: {}", to_0x_hex(&header_hash));
-
-        let idtoken_hash = sha2::Sha256::digest(id_token).to_vec();
-        let payload_pub_match_hash = sha2::Sha256::digest(&circuit.payload_pub_match).to_vec();
-        let sub_peper_hash = sha2::Sha256::digest(&circuit.sub_pepper_bytes).to_vec();
-
-        let mut hash_inputs = vec![];
-        hash_inputs.extend(idtoken_hash.clone());
-        hash_inputs.extend(sub_peper_hash.clone());
-        hash_inputs.extend(header_hash);
-        hash_inputs.extend(payload_pub_match_hash);
-
-        let (location_id_token_1, location_payload_base64) = bit_location(
-            circuit.payload_left_index,
-            circuit.payload_base64_len,
-            openid::ID_TOKEN_MAX_LEN as u32,
-            openid::PAYLOAD_BASE64_MAX_LEN as u32,
-        );
-        let (location_id_token_2, location_header_base64) = bit_location(
-            0,
-            circuit.header_base64_len,
-            openid::ID_TOKEN_MAX_LEN as u32,
-            openid::HEADER_BASE64_MAX_LEN as u32,
-        );
-        let (location_payload_raw, location_sub) = bit_location(
-            circuit.sub_left_index,
-            circuit.sub_len,
-            openid::PAYLOAD_RAW_MAX_LEN as u32,
-            openid::SUB_MAX_LEN as u32,
-        );
-
-        hash_inputs.extend(location_id_token_1);
-        hash_inputs.extend(location_payload_base64);
-        hash_inputs.extend(location_id_token_2);
-        hash_inputs.extend(location_header_base64);
-        hash_inputs.extend(location_payload_raw);
-        hash_inputs.extend(location_sub);
-        hash_inputs.extend((circuit.header_base64_len as u16).to_be_bytes());
-        hash_inputs.extend((circuit.payload_base64_len as u16).to_be_bytes());
-
-        println!("hash_inputs len: {}", hash_inputs.len());
-
-        let mut public_input = sha2::Sha256::digest(&hash_inputs).to_vec();
-        public_input[0] &= 0x1f;
-
-        println!("public_input: {}", to_0x_hex(&public_input));
-
-        let mut cs = circuit.synthesize();
-        test_prove_verify(&mut cs, vec![Fr::from_be_bytes_mod_order(&public_input)]).unwrap();
-    }
-}
-
-#[test]
-fn test_openid_new_circuit() {
-    let id_tokens = ["eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6ImgzejJzZnFQcU1WQmNKQUJKM1FRQSJ9.eyJuaWNrbmFtZSI6IjEzMjExMTQ2IiwibmFtZSI6IuWNkyDpg5EiLCJwaWN0dXJlIjoiaHR0cHM6Ly9zLmdyYXZhdGFyLmNvbS9hdmF0YXIvZGQ1YjJjM2NjNjU2ZTgzYWYxOTE5NmI4YzA1OGZkYTg_cz00ODAmcj1wZyZkPWh0dHBzJTNBJTJGJTJGY2RuLmF1dGgwLmNvbSUyRmF2YXRhcnMlMkZkZWZhdWx0LnBuZyIsInVwZGF0ZWRfYXQiOiIyMDIzLTAzLTAzVDA4OjQyOjQxLjc5M1oiLCJlbWFpbCI6IjEzMjExMTQ2QGJqdHUuZWR1LmNuIiwiZW1haWxfdmVyaWZpZWQiOiJ0cnVlIiwiaXNzIjoiaHR0cHM6Ly9hdXRoLndhbGxldC51bmlwYXNzLmlkLyIsImF1ZCI6InZyNktJZ2h4Q3FtRWxwQWQ0VE5EMG5yTUJpQVIzWDJtIiwiaWF0IjoxNjc3ODMyOTYyLCJleHAiOjE2Nzc4MzY1NjIsInN1YiI6ImFwcGxlfDAwMDA2MS4xZTkzNmMwNmUzNWE0OWI5YmJmYzBmMzJjY2FlNTMyZC4xNDMzIiwiYXV0aF90aW1lIjoxNjc3ODMyOTYxLCJhdF9oYXNoIjoiVmpLekRsMEU1SlhyZDRxYkItQm9LZyIsInNpZCI6InBSYWxnWkMwUlhtTng3SjlCRzEtSjBWbGQtbXd4QmpHIiwibm9uY2UiOiJHRllRWE1RVEpoSnRiUWlxdHNsaHR2SEZ1WDRyYzdVZyJ9",
-        "eyJhbGciOiJSUzI1NiIsImtpZCI6IjI1NWNjYTZlYzI4MTA2MDJkODBiZWM4OWU0NTZjNDQ5NWQ3NDE4YmIiLCJ0eXAiOiJKV1QifQ.eyJpc3MiOiJodHRwczovL2FjY291bnRzLmdvb2dsZS5jb20iLCJhenAiOiIxMDc2MjQ5Njg2NjQyLWcwZDQyNTI0ZmhkaXJqZWhvMHQ2bjNjamQ3cHVsbW5zLmFwcHMuZ29vZ2xldXNlcmNvbnRlbnQuY29tIiwiYXVkIjoiMTA3NjI0OTY4NjY0Mi1nMGQ0MjUyNGZoZGlyamVobzB0Nm4zY2pkN3B1bG1ucy5hcHBzLmdvb2dsZXVzZXJjb250ZW50LmNvbSIsInN1YiI6IjEwNDMzMTY2MDQxMDE2NDA1MzAyMSIsImhkIjoibGF5Mi5kZXYiLCJlbWFpbCI6Inp6aGVuQGxheTIuZGV2IiwiZW1haWxfdmVyaWZpZWQiOnRydWUsImF0X2hhc2giOiJqNmQ1aHRFLTF0Mm1Pd2ZQRUFTMXpRIiwibm9uY2UiOiIyYWVjNzM4MSIsImlhdCI6MTY3ODE4OTg4NCwiZXhwIjoxNjc4MTkzNDg0LCJqdGkiOiJkMTRkNTcxYTlhNmRmZmZjNmU2OTM2NjBiNDhlODdlYjIyNTMyYjg5In0"];
-    for id_token in id_tokens {
-        let from_pepper = [0u8; 32];
-        let circuit = openid_new::OpenIdCircuit::new(id_token, &from_pepper);
 
         let header_hash = sha2::Sha256::digest(&circuit.header_raw_bytes).to_vec();
         println!("header hash: {}", to_0x_hex(&header_hash));

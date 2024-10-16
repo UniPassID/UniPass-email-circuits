@@ -202,7 +202,7 @@ fn test_open_id() {
                 to_0x_hex(&idtoken_hash)
             ))
             .unwrap();
-        file.write(&serde_json::to_vec_pretty(&contract_inputs).unwrap())
+        file.write_all(&serde_json::to_vec_pretty(&contract_inputs).unwrap())
             .unwrap();
         file.flush().unwrap();
     }

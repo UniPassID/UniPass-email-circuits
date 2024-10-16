@@ -57,17 +57,17 @@ impl<'a, R: Read + Seek> BinFile<'a, R> {
         let mut u32_buf = [0u8; 4];
         let mut u64_buf = [0u8; 8];
 
-        reader.read(&mut u32_buf)?;
+        reader.read_exact(&mut u32_buf)?;
         let version = u32::from_le_bytes(u32_buf);
 
-        reader.read(&mut u32_buf)?;
+        reader.read_exact(&mut u32_buf)?;
         let num_sections = u32::from_le_bytes(u32_buf);
 
         let mut sections = HashMap::new();
         for _ in 0..num_sections {
-            reader.read(&mut u32_buf)?;
+            reader.read_exact(&mut u32_buf)?;
             let section_id = u32::from_le_bytes(u32_buf);
-            reader.read(&mut u64_buf)?;
+            reader.read_exact(&mut u64_buf)?;
             let section_length = u64::from_le_bytes(u64_buf);
 
             let section = sections.entry(section_id).or_insert_with(Vec::new);

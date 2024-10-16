@@ -127,7 +127,7 @@ pub fn parse_email_with_domain(
         .get_dkim_message()
         .into_iter()
         .zip(email.dkim_headers.iter())
-        .find(|(_dkim_msg, dkim_header)| &dkim_header.sdid == domain)
+        .find(|(_dkim_msg, dkim_header)| dkim_header.sdid == domain)
     {
         Some((dkim_msg, dkim_header)) => (dkim_msg, dkim_header),
         None => (Default::default(), &binding),

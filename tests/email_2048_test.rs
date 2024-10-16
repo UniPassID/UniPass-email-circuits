@@ -172,7 +172,7 @@ fn test_2048() {
                 to_0x_hex(&email_public_inputs.header_hash)
             ))
             .unwrap();
-        file.write(&serde_json::to_vec_pretty(&contract_inputs).unwrap())
+        file.write_all(&serde_json::to_vec_pretty(&contract_inputs).unwrap())
             .unwrap();
         file.flush().unwrap();
     }

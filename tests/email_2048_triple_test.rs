@@ -612,7 +612,7 @@ X-MS-Exchange-Transport-CrossTenantHeadersStamped: OS3P286MB2152
             to_0x_hex(&all_email_public_inputs[0].header_hash)
         ))
         .unwrap();
-    file.write(&serde_json::to_vec_pretty(&contract_inputs).unwrap())
+    file.write_all(&serde_json::to_vec_pretty(&contract_inputs).unwrap())
         .unwrap();
     file.flush().unwrap();
 }
